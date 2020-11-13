@@ -7,4 +7,5 @@
 2. https://pkg.go.dev/github.com/ethereum/go-ethereum@v1.9.23/core/vm/runtime#example-Execute - bingo
     - you can try: `go run geth/main.go` from here (having `go get`-ed `go-ethereum` into your `GOPATH`)
     - results make little sense at this point. Try `GOGC=off`, which even out slightly
+    - usage: `go run main.go --bytecode 6020 --sampleSize 23`
     - apparently this does many more things than we want to monitor (**TODO**)
