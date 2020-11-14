@@ -34,7 +34,7 @@ func main() {
 	retWarmUp, _, errWarmUp := runtime.Execute(bytecode, nil, cfg)
 
 	cfg.EVMConfig.Debug = true
-	tracer := instrumenter.NewStructLogger(nil)
+	tracer := instrumenter.NewInstrumenterLogger(nil)
 	cfg.EVMConfig.Tracer = tracer
 
 	sampleStart := time.Now()
@@ -60,7 +60,7 @@ func main() {
 	fmt.Println("Return:", retWarmUp)
 	fmt.Println(sampleDuration)
 
-	structLogs := tracer.StructLogs()
+	structLogs := tracer.InstrumenterLogs()
 	instrumenter.WriteTrace(os.Stdout, structLogs)
 
 }

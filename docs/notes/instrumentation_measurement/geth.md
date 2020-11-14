@@ -7,6 +7,7 @@
     - we should investigate the overhead of some operations before entering the interpreter loop happening after `CaptureStart` (see rough notes)
     - we should remember to implement or `Tracer` so that it's operation has smallest overhead (e.g. make sure it doesn't suddenly allocate stuff after N instructions, or produce other fluctuations). We should have steps in the Analysis toolbox that would detect such problems.
     - it should be relatively easy to write a `Tracer` implementation which does what we want
+    - we're removing all storage and stack tracking. Storage is out of scope and stack we'll do with the vanilla `StructLogger` (if necessary); it requires access to `vm` package internals. Same with memory and return data tracing for consistency
 2. New tasks:
     - (to do immediately) spike an instrumenting `Tracer` which measures Nth instruction clock time, in terms of `program counter`/`pc`
     - investigate the overhead of some operations before entering the interpreter loop happening after `CaptureStart` (see rough notes). Remove these operations and compare measurements. If necessary, implement a fork of `go-ethereum` where the impact is minimized

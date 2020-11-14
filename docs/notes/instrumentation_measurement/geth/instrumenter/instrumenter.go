@@ -17,34 +17,15 @@
 package instrumenter
 
 import (
-	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 )
-
-var errTraceLimitReached = errors.New("the number of logs reached the specified limit")
-
-// Storage represents a contract's storage.
-type Storage map[common.Hash]common.Hash
-
-// Copy duplicates the current storage.
-func (s Storage) Copy() Storage {
-	cpy := make(Storage)
-	for key, value := range s {
-		cpy[key] = value
-	}
-	return cpy
-}
 
 // LogConfig are the configuration options for structured logger the vm.EVM
 type LogConfig struct {
@@ -58,64 +39,37 @@ type LogConfig struct {
 	Overrides *params.ChainConfig `json:"overrides,omitempty"`
 }
 
-//go:generate gencodec -type StructLog -field-override structLogMarshaling -out gen_structlog.go
+//go:generate gencodec -type InstrumenterLog -field-override structLogMarshaling -out gen_structlog.go
 
-// StructLog is emitted to the vm.EVM each cycle and lists information about the current internal state
+// InstrumenterLog is emitted to the vm.EVM each cycle and lists information about the current internal state
 // prior to the execution of the statement.
-type StructLog struct {
-	Pc            uint64    `json:"pc"`
-	Op            vm.OpCode `json:"op"`
-	Gas           uint64    `json:"gas"`
-	GasCost       uint64    `json:"gasCost"`
-	Depth         int       `json:"depth"`
-	RefundCounter uint64    `json:"refund"`
-	Err           error     `json:"-"`
-}
-
-// overrides for gencodec
-type structLogMarshaling struct {
-	Stack       []*math.HexOrDecimal256
-	ReturnStack []math.HexOrDecimal64
-	Gas         math.HexOrDecimal64
-	GasCost     math.HexOrDecimal64
-	Memory      hexutil.Bytes
-	ReturnData  hexutil.Bytes
-	OpName      string `json:"opName"` // adds call to OpName() in MarshalJSON
-	ErrorString string `json:"error"`  // adds call to ErrorString() in MarshalJSON
+type InstrumenterLog struct {
+	Pc     uint64    `json:"pc"`
+	Op     vm.OpCode `json:"op"`
+	TimeNs int64     `json:"timeNs"`
 }
 
 // OpName formats the operand name in a human-readable format.
-func (s *StructLog) OpName() string {
+func (s *InstrumenterLog) OpName() string {
 	return s.Op.String()
 }
 
-// ErrorString formats the log's error as a string.
-func (s *StructLog) ErrorString() string {
-	if s.Err != nil {
-		return s.Err.Error()
-	}
-	return ""
-}
-
-// StructLogger is an vm.EVM state logger and implements Tracer.
+// InstrumenterLogger is an vm.EVM state logger and implements Tracer.
 //
-// StructLogger can capture state based on the given Log configuration and also keeps
+// InstrumenterLogger can capture state based on the given Log configuration and also keeps
 // a track record of modified storage which is used in reporting snapshots of the
 // contract their storage.
-type StructLogger struct {
+type InstrumenterLogger struct {
 	cfg LogConfig
 
-	storage map[common.Address]Storage
-	logs    []StructLog
-	output  []byte
-	err     error
+	logs                 []InstrumenterLog
+	lastCaptureTime      time.Time
+	previousLogTimeNsPtr *int64
 }
 
-// NewStructLogger returns a new logger
-func NewStructLogger(cfg *LogConfig) *StructLogger {
-	logger := &StructLogger{
-		storage: make(map[common.Address]Storage),
-	}
+// NewInstrumenterLogger returns a new logger
+func NewInstrumenterLogger(cfg *LogConfig) *InstrumenterLogger {
+	logger := &InstrumenterLogger{}
 	if cfg != nil {
 		logger.cfg = *cfg
 	}
@@ -123,75 +77,56 @@ func NewStructLogger(cfg *LogConfig) *StructLogger {
 }
 
 // CaptureStart implements the Tracer interface to initialize the tracing operation.
-func (l *StructLogger) CaptureStart(from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) error {
+// we append a log for a faux-opcode 0xbe, to be able to capture the overhead to set up appropriately
+func (l *InstrumenterLogger) CaptureStart(from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) error {
+	log := InstrumenterLog{0, 0xbe, 0}
+	l.logs = append(l.logs, log)
+	l.previousLogTimeNsPtr = &l.logs[len(l.logs)-1].TimeNs
+	l.lastCaptureTime = time.Now()
 	return nil
 }
 
 // CaptureState logs a new structured log message and pushes it out to the environment
 //
-// CaptureState also tracks SLOAD/SSTORE ops to track storage change.
-func (l *StructLogger) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, rStack *vm.ReturnStack, rData []byte, contract *vm.Contract, depth int, err error) error {
-	// check if already accumulated the specified number of logs
-	if l.cfg.Limit != 0 && l.cfg.Limit <= len(l.logs) {
-		return errTraceLimitReached
-	}
-	// create a new snapshot of the vm.EVM.
-	log := StructLog{pc, op, gas, cost, depth, env.StateDB.GetRefund(), err}
+// time capturing works as follows
+//   - in the preceding step we remembered the time and the reference to previous time logged
+//   - we're capturing the time
+//   - we're appending a new log row with a **dummy value of TimeNs**
+//   - we're writing the actual time (which is actually the previous instruction time) to the previous log
+//     using the reference rememberd in the previous CaptureState
+func (l *InstrumenterLogger) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, rStack *vm.ReturnStack, rData []byte, contract *vm.Contract, depth int, err error) error {
+	timeSincePrevious := time.Since(l.lastCaptureTime)
+	log := InstrumenterLog{pc, op, 0}
+	*l.previousLogTimeNsPtr = timeSincePrevious.Nanoseconds()
 	l.logs = append(l.logs, log)
+	l.previousLogTimeNsPtr = &l.logs[len(l.logs)-1].TimeNs
+	l.lastCaptureTime = time.Now()
 	return nil
 }
 
 // CaptureFault implements the Tracer interface to trace an execution fault
 // while running an opcode.
-func (l *StructLogger) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, rStack *vm.ReturnStack, contract *vm.Contract, depth int, err error) error {
+func (l *InstrumenterLogger) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, rStack *vm.ReturnStack, contract *vm.Contract, depth int, err error) error {
 	return nil
 }
 
 // CaptureEnd is called after the call finishes to finalize the tracing.
-func (l *StructLogger) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
-	l.output = output
-	l.err = err
-	if l.cfg.Debug {
-		fmt.Printf("0x%x\n", output)
-		if err != nil {
-			fmt.Printf(" error: %v\n", err)
-		}
-	}
+//
+// in this step we actually write down the duration of the very last instruction (STOP/RETURN/SELFDESTRUCT)
+// using the reference from the last CaptureState
+func (l *InstrumenterLogger) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
+	timeSincePrevious := time.Since(l.lastCaptureTime)
+	*l.previousLogTimeNsPtr = timeSincePrevious.Nanoseconds()
 	return nil
 }
 
-// StructLogs returns the captured log entries.
-func (l *StructLogger) StructLogs() []StructLog { return l.logs }
-
-// Error returns the VM error captured by the trace.
-func (l *StructLogger) Error() error { return l.err }
-
-// Output returns the VM return value captured by the trace.
-func (l *StructLogger) Output() []byte { return l.output }
+// InstrumenterLogs returns the captured log entries.
+func (l *InstrumenterLogger) InstrumenterLogs() []InstrumenterLog { return l.logs }
 
 // WriteTrace writes a formatted trace to the given writer
-func WriteTrace(writer io.Writer, logs []StructLog) {
+func WriteTrace(writer io.Writer, logs []InstrumenterLog) {
 	for _, log := range logs {
-		fmt.Fprintf(writer, "%-16spc=%08d gas=%v cost=%v", log.Op, log.Pc, log.Gas, log.GasCost)
-		if log.Err != nil {
-			fmt.Fprintf(writer, " ERROR: %v", log.Err)
-		}
-		fmt.Fprintln(writer)
-
-		fmt.Fprintln(writer)
-	}
-}
-
-// WriteLogs writes vm logs in a readable format to the given writer
-func WriteLogs(writer io.Writer, logs []*types.Log) {
-	for _, log := range logs {
-		fmt.Fprintf(writer, "LOG%d: %x bn=%d txi=%x\n", len(log.Topics), log.Address, log.BlockNumber, log.TxIndex)
-
-		for i, topic := range log.Topics {
-			fmt.Fprintf(writer, "%08d  %x\n", i, topic)
-		}
-
-		fmt.Fprint(writer, hex.Dump(log.Data))
+		fmt.Fprintf(writer, "%-24spc=%08d time_ns=%v", log.Op, log.Pc, log.TimeNs)
 		fmt.Fprintln(writer)
 	}
 }
