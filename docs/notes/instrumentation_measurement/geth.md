@@ -20,6 +20,10 @@
     - (optional) implement an Analysis tool to detect problems with uneven overhead of instrumentation (e.g. every program has Nth instruction exceedingly costly, because our `Tracer` is doing something)
     - (for Stage II) implement a `Tracer` satisfying all the criteria
     - (for Stage II) ensure the `steps%1000` line (see rough notes below) doesn't affect us
+3. `Tracer.CaptureState` layout in `interpreter.go` must be altered, because otherwise time measurements captured will be skewed (measure two neighboring instructions mixed)
+4. Care must be taken with warm-up.
+    - If you warm up with tracing off, weird effects happen - first traced execution of `SHA3` gets a huge result.
+    - Warm-up still doesn't alleviate the effect of multiple occurrence of `SHA3` instruction in a single program - first one is always more costly.
 
 
 ### Rough notes
