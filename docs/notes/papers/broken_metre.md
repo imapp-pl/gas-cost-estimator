@@ -1,5 +1,9 @@
 ## Broken Metre:Attacking Resource Metering in EVM
 
+Daniel Perez Benjamin Livshits
+
+https://arxiv.org/pdf/1909.07220.pdf
+
 ### Thoughts
 
 1. We originally wanted to separate sample program generation from model, and have them communicate via some form of an "API".
@@ -17,6 +21,7 @@
     3. Chen etal.  [18]  propose  a  mechanism  where  contracts  using  a  singleinstruction  in  excess  would  be  penalised.
         - aimed at opportunistically punishing the abusing contracts (which do an excessively expensive operation)
     4. IMPORTANT: Yang et al. [58] have recently empiricallyanalysed  the  resource  usage  and  gas  usage  of  the  EVM  in-structions. They provide an in-depth analysis of the time takenfor  each  instructions  both  on  commodity  and  professionalhardware.
+        - done in [`empirically_analyzing.md`](./empirically_analyzing.md)
     5. Gas  Usage  Optimisation:Gasper  [17]  is  one  of  the  firstpaper which has focused on finding gas related anti-patterns forsmart contracts
     6. MadMax  [32]  is  a  static  analysis  tool  to  find  gas-focusedvulnerabilities
     7. Gastap [5] is a static analysis tool which allows to computesound  upper  bounds  for  smart  contracts
