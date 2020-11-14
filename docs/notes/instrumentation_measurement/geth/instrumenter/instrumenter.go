@@ -62,9 +62,8 @@ func (s *InstrumenterLog) OpName() string {
 type InstrumenterLogger struct {
 	cfg LogConfig
 
-	logs                 []InstrumenterLog
-	lastCaptureTime      time.Time
-	previousLogTimeNsPtr *int64
+	logs            []InstrumenterLog
+	lastCaptureTime time.Time
 }
 
 // NewInstrumenterLogger returns a new logger
@@ -77,29 +76,16 @@ func NewInstrumenterLogger(cfg *LogConfig) *InstrumenterLogger {
 }
 
 // CaptureStart implements the Tracer interface to initialize the tracing operation.
-// we append a log for a faux-opcode 0xbe, to be able to capture the overhead to set up appropriately
 func (l *InstrumenterLogger) CaptureStart(from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) error {
-	log := InstrumenterLog{0, 0xbe, 0}
-	l.logs = append(l.logs, log)
-	l.previousLogTimeNsPtr = &l.logs[len(l.logs)-1].TimeNs
 	l.lastCaptureTime = time.Now()
 	return nil
 }
 
 // CaptureState logs a new structured log message and pushes it out to the environment
-//
-// time capturing works as follows
-//   - in the preceding step we remembered the time and the reference to previous time logged
-//   - we're capturing the time
-//   - we're appending a new log row with a **dummy value of TimeNs**
-//   - we're writing the actual time (which is actually the previous instruction time) to the previous log
-//     using the reference rememberd in the previous CaptureState
 func (l *InstrumenterLogger) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, rStack *vm.ReturnStack, rData []byte, contract *vm.Contract, depth int, err error) error {
 	timeSincePrevious := time.Since(l.lastCaptureTime)
-	log := InstrumenterLog{pc, op, 0}
-	*l.previousLogTimeNsPtr = timeSincePrevious.Nanoseconds()
+	log := InstrumenterLog{pc, op, timeSincePrevious.Nanoseconds()}
 	l.logs = append(l.logs, log)
-	l.previousLogTimeNsPtr = &l.logs[len(l.logs)-1].TimeNs
 	l.lastCaptureTime = time.Now()
 	return nil
 }
@@ -111,12 +97,7 @@ func (l *InstrumenterLogger) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, 
 }
 
 // CaptureEnd is called after the call finishes to finalize the tracing.
-//
-// in this step we actually write down the duration of the very last instruction (STOP/RETURN/SELFDESTRUCT)
-// using the reference from the last CaptureState
 func (l *InstrumenterLogger) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
-	timeSincePrevious := time.Since(l.lastCaptureTime)
-	*l.previousLogTimeNsPtr = timeSincePrevious.Nanoseconds()
 	return nil
 }
 
@@ -126,7 +107,7 @@ func (l *InstrumenterLogger) InstrumenterLogs() []InstrumenterLog { return l.log
 // WriteTrace writes a formatted trace to the given writer
 func WriteTrace(writer io.Writer, logs []InstrumenterLog) {
 	for _, log := range logs {
-		fmt.Fprintf(writer, "%-24spc=%08d time_ns=%v", log.Op, log.Pc, log.TimeNs)
+		fmt.Fprintf(writer, "%-16spc=%08d time_ns=%v", log.Op, log.Pc, log.TimeNs)
 		fmt.Fprintln(writer)
 	}
 }

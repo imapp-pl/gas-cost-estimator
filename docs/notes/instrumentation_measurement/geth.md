@@ -1,5 +1,10 @@
 # Instrumentation and measurement using `go-ethereum` (`geth`)
 
+### Usage of `interpreter.go`
+
+0. Need to use `go-ethereum` with moved `CaptureState` in `github.com/ethereum/go-ethereum/core/vm/interpreter.go`, `CaptureState` must be after `execute`
+1. `GOGC=off go run main.go --bytecode 62FFFFFF60002062FFFFFF600020`
+
 ### Take aways
 
 1. `Tracer` interface (and `StructLogger` being a template implementation) is a good instrumenter
