@@ -10,10 +10,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/core/vm/runtime"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+
+	"./instrumenter"
 )
 
 func main() {
@@ -33,7 +34,7 @@ func main() {
 	retWarmUp, _, errWarmUp := runtime.Execute(bytecode, nil, cfg)
 
 	cfg.EVMConfig.Debug = true
-	tracer := vm.NewStructLogger(nil)
+	tracer := instrumenter.NewStructLogger(nil)
 	cfg.EVMConfig.Tracer = tracer
 
 	sampleStart := time.Now()
@@ -60,7 +61,7 @@ func main() {
 	fmt.Println(sampleDuration)
 
 	structLogs := tracer.StructLogs()
-	vm.WriteTrace(os.Stdout, structLogs)
+	instrumenter.WriteTrace(os.Stdout, structLogs)
 
 }
 
