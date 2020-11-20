@@ -51,7 +51,7 @@ func main() {
 			fmt.Println(err)
 		}
 		if printEach {
-			fmt.Println(duration.Nanoseconds())
+			fmt.Println("Run duration:", duration)
 
 			structLogs := tracer.InstrumenterLogs()
 			instrumenter.WriteTrace(os.Stdout, structLogs)
@@ -64,7 +64,7 @@ func main() {
 		fmt.Println(errWarmUp)
 	}
 	fmt.Println("Return:", retWarmUp)
-	fmt.Println(sampleDuration)
+	fmt.Println("Sample duration:", sampleDuration)
 
 }
 

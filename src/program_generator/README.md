@@ -1,0 +1,25 @@
+## Program generator
+
+### Installation
+
+```
+virtualenv --python=python3 ~/.venv/gce
+source ~/.venv/gce/bin/activate
+pip install -r requirements.txt
+```
+
+### Usage
+
+```
+python3 program_generator.py generate --help
+```
+
+#### Use together with `instrumenter.go`
+
+From `src`
+
+```
+export GOPATH=
+export GOGC=off
+python3 program_generator/program_generator.py generate | xargs -L1 go run ./instrumentation_measurement/geth/main.go --bytecode
+```
