@@ -21,12 +21,14 @@ func main() {
 	bytecodePtr := flag.String("bytecode", "", "EVM bytecode to execute and measure")
 	sampleSizePtr := flag.Int("sampleSize", 1, "Size of the sample - number of measured repetitions of execution")
 	printEachPtr := flag.Bool("printEach", true, "If false, printing of each execution time is skipped")
+	printCSVPtr := flag.Bool("printCSV", false, "If true, will print a CSV with standard results to STDOUT")
 
 	flag.Parse()
 
 	bytecode := common.Hex2Bytes(*bytecodePtr)
 	sampleSize := *sampleSizePtr
 	printEach := *printEachPtr
+	printCSV := *printCSVPtr
 
 	cfg := new(runtime.Config)
 	setDefaults(cfg)
@@ -48,23 +50,29 @@ func main() {
 		duration := time.Since(start)
 
 		if err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, err)
 		}
 		if printEach {
-			fmt.Println("Run duration:", duration)
+			fmt.Fprintln(os.Stderr, "Run duration:", duration)
 
-			structLogs := tracer.InstrumenterLogs()
-			instrumenter.WriteTrace(os.Stdout, structLogs)
+			instrumenterLogs := tracer.InstrumenterLogs()
+			instrumenter.WriteTrace(os.Stderr, instrumenterLogs)
+		}
+
+		if printCSV {
+			instrumenterLogs := tracer.InstrumenterLogs()
+			instrumenter.WriteCSVTrace(os.Stdout, instrumenterLogs, 0, 0, i)
 		}
 	}
 
 	sampleDuration := time.Since(sampleStart)
 
 	if errWarmUp != nil {
-		fmt.Println(errWarmUp)
+		fmt.Fprintln(os.Stderr, errWarmUp)
 	}
-	fmt.Println("Return:", retWarmUp)
-	fmt.Println("Sample duration:", sampleDuration)
+	fmt.Fprintln(os.Stderr, "Program: ", *bytecodePtr)
+	fmt.Fprintln(os.Stderr, "Return:", retWarmUp)
+	fmt.Fprintln(os.Stderr, "Sample duration:", sampleDuration)
 
 }
 
