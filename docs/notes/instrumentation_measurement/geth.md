@@ -1,5 +1,10 @@
 # Instrumentation and measurement using `go-ethereum` (`geth`)
 
+### Usage of `interpreter.go`
+
+0. Need to use `go-ethereum` with moved `CaptureState` in `github.com/ethereum/go-ethereum/core/vm/interpreter.go`, `CaptureState` must be after `execute`
+1. `GOGC=off go run main.go --bytecode 62FFFFFF60002062FFFFFF600020`
+
 ### Take aways
 
 1. `Tracer` interface (and `StructLogger` being a template implementation) is a good instrumenter
@@ -7,13 +12,20 @@
     - we should investigate the overhead of some operations before entering the interpreter loop happening after `CaptureStart` (see rough notes)
     - we should remember to implement or `Tracer` so that it's operation has smallest overhead (e.g. make sure it doesn't suddenly allocate stuff after N instructions, or produce other fluctuations). We should have steps in the Analysis toolbox that would detect such problems.
     - it should be relatively easy to write a `Tracer` implementation which does what we want
-2. New tasks:
-    - (to do immediately) spike an instrumenting `Tracer` which measures Nth instruction clock time, in terms of `program counter`/`pc`
+    - we're removing all storage and stack tracking. Storage is out of scope and stack we'll do with the vanilla `StructLogger` (if necessary); it requires access to `vm` package internals. Same with memory and return data tracing for consistency
+2. New tasks (**TODO**):
+    - tidy up `main.go` and `instrumenter.go` code, possibly draft some simple unit test before adding more functionality
+    - properly fork and manage the `go-ethereum` dependency
+    - implement standardized output from instrumentation (as per [strategy.md](/docs/strategy.md))
     - investigate the overhead of some operations before entering the interpreter loop happening after `CaptureStart` (see rough notes). Remove these operations and compare measurements. If necessary, implement a fork of `go-ethereum` where the impact is minimized
     - ensure `Tracer` implementation has negligible and even overhead (e.g. make sure it doesn't suddenly allocate stuff after N instructions, or produce other fluctuations)
     - (optional) implement an Analysis tool to detect problems with uneven overhead of instrumentation (e.g. every program has Nth instruction exceedingly costly, because our `Tracer` is doing something)
     - (for Stage II) implement a `Tracer` satisfying all the criteria
     - (for Stage II) ensure the `steps%1000` line (see rough notes below) doesn't affect us
+3. `Tracer.CaptureState` layout in `interpreter.go` must be altered, because otherwise time measurements captured will be skewed (measure two neighboring instructions mixed)
+4. Care must be taken with warm-up.
+    - If you warm up with tracing off, weird effects happen - first traced execution of `SHA3` gets a huge result.
+    - Warm-up still doesn't alleviate the effect of multiple occurrence of `SHA3` instruction in a single program - first one is always more costly.
 
 
 ### Rough notes

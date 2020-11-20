@@ -10,10 +10,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/core/vm/runtime"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+
+	"./instrumenter"
 )
 
 func main() {
@@ -30,14 +31,17 @@ func main() {
 	cfg := new(runtime.Config)
 	setDefaults(cfg)
 
-	retWarmUp, _, errWarmUp := runtime.Execute(bytecode, nil, cfg)
-
+	// Warm-up. **NOTE** we're keeping tracing on during warm-up, otherwise measurements are off
 	cfg.EVMConfig.Debug = true
-	tracer := vm.NewStructLogger(nil)
+	tracer := instrumenter.NewInstrumenterLogger(nil)
 	cfg.EVMConfig.Tracer = tracer
+	retWarmUp, _, errWarmUp := runtime.Execute(bytecode, nil, cfg)
+	// End warm-up
 
 	sampleStart := time.Now()
 	for i := 0; i < sampleSize; i++ {
+		tracer = instrumenter.NewInstrumenterLogger(nil)
+		cfg.EVMConfig.Tracer = tracer
 		go_runtime.GC()
 		start := time.Now()
 		_, _, err := runtime.Execute(bytecode, nil, cfg)
@@ -48,6 +52,9 @@ func main() {
 		}
 		if printEach {
 			fmt.Println(duration.Nanoseconds())
+
+			structLogs := tracer.InstrumenterLogs()
+			instrumenter.WriteTrace(os.Stdout, structLogs)
 		}
 	}
 
@@ -58,9 +65,6 @@ func main() {
 	}
 	fmt.Println("Return:", retWarmUp)
 	fmt.Println(sampleDuration)
-
-	structLogs := tracer.StructLogs()
-	vm.WriteTrace(os.Stdout, structLogs)
 
 }
 
