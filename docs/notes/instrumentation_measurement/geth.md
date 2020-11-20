@@ -1,9 +1,8 @@
 # Instrumentation and measurement using `go-ethereum` (`geth`)
 
-### Usage of `interpreter.go`
+### Simple instrumenter
 
-0. Need to use `go-ethereum` with moved `CaptureState` in `github.com/ethereum/go-ethereum/core/vm/interpreter.go`, `CaptureState` must be after `execute`
-1. `GOGC=off go run main.go --bytecode 62FFFFFF60002062FFFFFF600020`
+A simple instrumenter (`instrumenter.go`) (to be further developed and research according to this doc) to be found [here](/src/interumentation_measurement/geth).
 
 ### Take aways
 
@@ -33,9 +32,8 @@
 
 1. https://pkg.go.dev/github.com/ethereum/go-ethereum@v1.9.23/core/vm#EVMInterpreter - revisit this, but doesn't give an immediate answer on how to do what we want to do
 2. https://pkg.go.dev/github.com/ethereum/go-ethereum@v1.9.23/core/vm/runtime#example-Execute - bingo
-    - you can try: `go run geth/main.go` from here (having `go get`-ed `go-ethereum` into your `GOPATH`)
-    - results make little sense at this point. Try `GOGC=off`, which even out slightly
-    - usage: `go run main.go --bytecode 6020 --sampleSize 23`
+    - this is used in `instrumenter.go` see there for usage
+    - `GOGC=off` seems to necessary have some stability of measurements, together with forcing garbage collection on every sample. **TODO** consider measuring with normal garbage collection and its effects on measurements.
     - apparently this does many more things than we want to monitor, see next points
 3. A better approach is to:
     - run via `runtime.Execute`
