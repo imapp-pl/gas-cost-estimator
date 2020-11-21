@@ -50,11 +50,12 @@ class ProgramGenerator(object):
       opcodes = [operation['Mnemonic'] for operation in self._operations]
       measured_op_positions = [program.measured_op_position for program in programs]
       bytecodes = [program.bytecode for program in programs]
+      program_ids = range(0, len(bytecodes))
 
-      header = ['opcode_measured', 'measured_op_position', 'bytecode']
+      header = ['program_id', 'opcode_measured', 'measured_op_position', 'bytecode']
       writer.writerow(header)
 
-      rows = zip(opcodes, measured_op_positions, bytecodes)
+      rows = zip(program_ids, opcodes, measured_op_positions, bytecodes)
       for row in rows:
         writer.writerow(row)
     else:

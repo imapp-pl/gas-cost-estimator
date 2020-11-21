@@ -61,7 +61,7 @@ func main() {
 
 		if printCSV {
 			instrumenterLogs := tracer.InstrumenterLogs()
-			instrumenter.WriteCSVTrace(os.Stdout, instrumenterLogs, 0, 0, i)
+			instrumenter.WriteCSVTrace(os.Stdout, instrumenterLogs, i)
 		}
 	}
 

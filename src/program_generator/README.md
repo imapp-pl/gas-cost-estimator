@@ -23,3 +23,17 @@ export GOPATH=
 export GOGC=off
 python3 program_generator/program_generator.py generate | xargs -L1 go run ./instrumentation_measurement/geth/main.go --bytecode
 ```
+
+#### Use together with `measurements.py`
+
+From `src`
+
+(`go` exports as above)
+
+```
+python3 program_generator/program_generator.py generate --fullCsv | python3 instrumentation_measurement/measurements.py measure > ../../result.csv
+```
+
+or similar.
+
+**TODO** needs cleaning up

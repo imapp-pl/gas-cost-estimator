@@ -112,13 +112,11 @@ func WriteTrace(writer io.Writer, logs []InstrumenterLog) {
 	}
 }
 
-func WriteCSVTrace(writer io.Writer, logs []InstrumenterLog, programId int, sampleId int, runId int) {
-	// CSV header
-	// fmt.Fprintln(writer, "program_id,sample_id,run_id,instruction_id,measure_all_time_ns,measure_one_time_ns")
-
+func WriteCSVTrace(writer io.Writer, logs []InstrumenterLog, runId int) {
+	// CSV header must be in sync with these fields here :(, but it's in measurements.py
 	for instructionId, log := range logs {
 		// NOTE: we don't have measure_one_time_ns for now, we leave it out at the end
-		fmt.Fprintf(writer, "%v,%v,%v,%v,%v,", programId, sampleId, runId, instructionId, log.TimeNs)
+		fmt.Fprintf(writer, "%v,%v,%v,", runId, instructionId, log.TimeNs)
 		fmt.Fprintln(writer)
 	}
 }
