@@ -19,6 +19,11 @@ class Program(object):
 class ProgramGenerator(object):
   """
   Sample program generator for EVM instrumentation
+
+  If used with `--fullCsv`, will print out a CSV in the following format:
+  ```
+  | program_id | opcode_measured | measured_op_position | bytecode |
+  ```
   """
 
   def __init__(self):
@@ -48,9 +53,11 @@ class ProgramGenerator(object):
     if fullCsv:
       writer = csv.writer(sys.stdout, delimiter=',', quotechar='"')
       opcodes = [operation['Mnemonic'] for operation in self._operations]
+
+      # TODO: for now we only have a single program per opcode, hence the program_id is:
+      program_ids = [opcode + '_0' for opcode in opcodes]
       measured_op_positions = [program.measured_op_position for program in programs]
       bytecodes = [program.bytecode for program in programs]
-      program_ids = range(0, len(bytecodes))
 
       header = ['program_id', 'opcode_measured', 'measured_op_position', 'bytecode']
       writer.writerow(header)
