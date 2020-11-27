@@ -1,7 +1,7 @@
 # Gas Cost Estimator approach strategy
 
 Here we organize thoughts on different approaches to consider.
-We focus on EVM for simplicity, but this should be substitutable by eWASM throughout the document.
+We focus on EVM for simplicity, but this should be substitutable by ewasm (Ethereum flavored WebAssembly) throughout the document.
 
 ### Goal
 
@@ -42,7 +42,7 @@ Q: will manual, "best guess" generation of sample programs do, or should it be a
 
 ### Additional ideas
 
-1. "Broken metre" paper does a genetic algorithm minimizing the gas throughput (gas/second).
+1. ["Broken metre" paper](https://arxiv.org/pdf/1909.07220.pdf) does a genetic algorithm minimizing the gas throughput (gas/second).
 Could we modify this idea to run a genetic algorithm maximizing our desired properties, i.e.:
     - maximize variance (information) captured in the measurement of a particular OPCODE
     - minimize variance (noise) coming from different environments
