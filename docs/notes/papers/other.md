@@ -29,3 +29,4 @@
         - https://github.com/pirapira/awesome-ethereum-virtual-machine - great list of resources, but nothing immediately useful. Revisit
         - https://ethereum-magicians.org/t/eip-1109-remove-call-costs-for-precompiled-contracts/447/14
         - https://ethereum-magicians.org/t/eip-1884-repricing-for-trie-size-dependent-opcodes/3024/38
+1. https://www.codeproject.com/Articles/8672/Virtual-Machine-Opcode-Resolution-Performance-Test - "Virtual Machine Opcode Resolution, Performance Tests"
