@@ -11,6 +11,10 @@
     - measure footprint of each opcode (how?) in these dimensions - see columns B-G
     - express this footprint in gas - see column H
 6. https://github.com/wolflo/evm-opcodes - source for `www.ethervm.io`, but with a nice compilation of gas cost formulas from the yellow paper. Not exactly sure about up-to-dateness, e.g. it mentions 700 for STATICCALL, while other sources 40 (after EIP-2046)
+7. https://dave.cheney.net/high-performance-go-workshop/dotgo-paris.html - some materials on go profiling and benchmarks. Not immediately useful but:
+    - tips on profiling with garbage collector
+    - compiler optimization traps
+    - avoiding appending (**TODO** ensure we don't)
 
 
 ## Other resources scanned, which aren't relevant to us
@@ -30,3 +34,14 @@
         - https://ethereum-magicians.org/t/eip-1109-remove-call-costs-for-precompiled-contracts/447/14
         - https://ethereum-magicians.org/t/eip-1884-repricing-for-trie-size-dependent-opcodes/3024/38
 1. https://www.codeproject.com/Articles/8672/Virtual-Machine-Opcode-Resolution-Performance-Test - "Virtual Machine Opcode Resolution, Performance Tests"
+1. http://mural.maynoothuniversity.ie/6432/1/JP-Relating-Static.pdf - "Relating Staticand Dynamic Measurements for the Java Virtual Machine Instruction Set"
+1. https://www.researchgate.net/publication/3929823_Measurement_and_Analysis_of_Runtime_Profiling_Data_for_Java_Programs - "Measurement and Analysis of Runtime Profiling Data for Java Programs"
+1. https://stackoverflow.com/questions/37740081/bytecode-instruction-cost - "Bytecode instruction cost" - SO thread for Python, nothing useful
+## search queries
+1. ftp://ftp.cs.wisc.edu/paradyn/technical_papers/paradynJ.pdf - "Performance Measurement of Dynamically Compiled Java Executions"
+
+"virtual machine instruction measurement" and variations using: "java" / "clr cil" / "comparison" / "benchmark",
+
+measure bytecode instructions performance -"platform independent timing of java"
+
+time vs instruction count correlation

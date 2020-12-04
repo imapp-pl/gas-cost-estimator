@@ -26,6 +26,20 @@ A simple instrumenter (`instrumenter.go`) (to be further developed and research 
     - If you warm up with tracing off, weird effects happen - first traced execution of `SHA3` gets a huge result.
     - Warm-up still doesn't alleviate the effect of multiple occurrence of `SHA3` instruction in a single program - first one is always more costly.
 
+### Notes on `time.Time` precision and monotonicity
+
+1. `time.Since` is handled by monotonic time, as we use it, since go 1.9 [time.Time](https://golang.org/pkg/time/#Time), [discussion](https://github.com/golang/go/issues/12914#issuecomment-277335863), [monotonic clocks](https://golang.org/pkg/time/#hdr-Monotonic_Clocks)
+2. from [here](https://stackoverflow.com/questions/14610459/how-precise-is-gos-time-really) we get:
+    ```
+    $ go run ./src/instrumentation_measurement/clock_resolution_go/main.go
+    Monotonic clock resolution is 1 nanoseconds
+    ```
+3. I tested the overhead of that `clock_gettime` with `time.Since()`:
+   - overhead is 10 times smaller using `time.Since`
+   - **TODO** investigate: sometimes both overheads are smaller, sometimes both are bigger, up to 3 fold. (rerun the `main.go`)
+       - it might be worthwhile to measure and record the overhead on every OpCode, in case the overhead suffers from such long-running fluctuations
+
+
 
 ### Rough notes
 
