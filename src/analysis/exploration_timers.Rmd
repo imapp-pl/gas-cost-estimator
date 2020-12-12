@@ -56,7 +56,10 @@ quantile(time$runtime_nano, probs=c(0.85, 0.9, 0.95, 0.99, 0.999, 0.9999, 0.9999
 
 Summary:
 
-1. We should discard about 5000 first observations
-2. It is probably a good idea to monitor the timer during the measurements.
-2. Due to periods of increased overhead, sometimes the measurements might be over-timed for several consecutive measurements. Should we discard all measurements where "just time" measurement is above a threshold?
+1. We should discard about 5000 first observations (**TODO**)
+2. It is probably a good idea to monitor and register the timer overhead during the opcode measurements (**TODO**).
+2. Due to periods of increased overhead, sometimes the measurements might be over-timed for several consecutive measurements. Should we discard all measurements where "just time" measurement is above a threshold? (**TODO**)
 3. `runtimeNano` is clearly the winner, but it still has high values quite often, and is subject to large overhead during warm-up and during the "temporary increase periods"
+4. We can also subtract the minimum observed timer overhead (I've seen 21ns) of `runtimeNano` from all the measurements (**TODO**)
+5. Next step would be to consider subtracting more, considering it's a justified move (**TODO**)
+6. Alternatively, we could do more in-depth analysis of the behaviors observed and try to normalize the timer readings more (**TODO** optional)

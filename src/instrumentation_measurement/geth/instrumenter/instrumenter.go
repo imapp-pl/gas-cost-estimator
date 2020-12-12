@@ -63,7 +63,7 @@ type InstrumenterLogger struct {
 	cfg LogConfig
 
 	logs            []InstrumenterLog
-	lastCaptureTime time.Time
+	lastCaptureTime int64
 }
 
 // NewInstrumenterLogger returns a new logger
@@ -77,16 +77,16 @@ func NewInstrumenterLogger(cfg *LogConfig) *InstrumenterLogger {
 
 // CaptureStart implements the Tracer interface to initialize the tracing operation.
 func (l *InstrumenterLogger) CaptureStart(from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) error {
-	l.lastCaptureTime = time.Now()
+	l.lastCaptureTime = runtimeNano()
 	return nil
 }
 
 // CaptureState logs a new structured log message and pushes it out to the environment
 func (l *InstrumenterLogger) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, rStack *vm.ReturnStack, rData []byte, contract *vm.Contract, depth int, err error) error {
-	timeSincePrevious := time.Since(l.lastCaptureTime)
-	log := InstrumenterLog{pc, op, timeSincePrevious.Nanoseconds()}
+	timeSincePrevious := runtimeNano() - l.lastCaptureTime
+	log := InstrumenterLog{pc, op, timeSincePrevious}
 	l.logs = append(l.logs, log)
-	l.lastCaptureTime = time.Now()
+	l.lastCaptureTime = runtimeNano()
 	return nil
 }
 

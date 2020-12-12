@@ -15,9 +15,9 @@ A simple instrumenter (`instrumenter.go`) (to be further developed and research 
 2. New tasks (**TODO**):
     - tidy up `main.go` and `instrumenter.go` code, possibly draft some simple unit test before adding more functionality
     - properly fork and manage the `go-ethereum` dependency
-    - implement standardized output from instrumentation (as per [strategy.md](/docs/strategy.md))
     - investigate the overhead of some operations before entering the interpreter loop happening after `CaptureStart` (see rough notes). Remove these operations and compare measurements. If necessary, implement a fork of `go-ethereum` where the impact is minimized
     - ensure `Tracer` implementation has negligible and even overhead (e.g. make sure it doesn't suddenly allocate stuff after N instructions, or produce other fluctuations)
+    - improve the timing used (`runtimeNano` is used already) according to  [`exploration_timers.Rmd`](/src/analysis/exploration_timers.Rmd)
     - (optional) implement an Analysis tool to detect problems with uneven overhead of instrumentation (e.g. every program has Nth instruction exceedingly costly, because our `Tracer` is doing something)
     - (for Stage II) implement a `Tracer` satisfying all the criteria
     - (for Stage II) ensure the `steps%1000` line (see rough notes below) doesn't affect us
@@ -34,13 +34,19 @@ A simple instrumenter (`instrumenter.go`) (to be further developed and research 
     $ go run ./src/instrumentation_measurement/clock_resolution_go/main.go
     Monotonic clock resolution is 1 nanoseconds
     ```
-3. I tested the overhead of that `clock_gettime` with `time.Since()` (and a trick `runtimeNano`):
-   - overhead is 10 times smaller using `time.Since`
-   - investigate: sometimes both overheads are smaller, sometimes both are bigger, up to 3 fold. (rerun the `main.go`)
+3. I tested the overhead of that `clock_gettime` with `time.Since()` (and a trick one: `runtimeNano`):
+   - overhead is 10 times smaller using `time.Since`, and even smaller using `runtimeNano`
+   - investigate: sometimes both overheads are smaller, sometimes both are bigger, up to 3 fold.
        - it might be worthwhile to measure and record the overhead on every OpCode, in case the overhead suffers from such long-running fluctuations <- yes, we're going to do that
    - overhead of golang's timers analyzed in [`exploration_timers.Rmd`](/src/analysis/exploration_timers.Rmd)
 
+#### Timer takeaways
 
+- timers have periods of better behavior and worse behavior; we might want to filter out measurements from the "worse periods"
+- `runtimeNano` seems to be the least overhead overall. Switching from `time.Now` to `runtimeNano` allowed us to measure a quickest opcode execution at 52ns, compared to 67ns with `time.Now`. It's enough to look at the code of [`time.Now`](https://golang.org/src/time/time.go) to see how much it does before capturing time.
+- timers seem to require a lot of warm-up
+- we will be monitoring the timers during opcode measurements, the noise introduced by that shouldn't be large
+- more in [`exploration_timers.Rmd`](/src/analysis/exploration_timers.Rmd) or [quick preview of notebook results](https://htmlpreview.github.io/?https://github.com/imapp-pl/gas-cost-estimator/blob/master/src/analysis/exploration_timers.nb.html)
 
 ### Rough notes
 
