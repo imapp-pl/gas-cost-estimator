@@ -34,10 +34,11 @@ A simple instrumenter (`instrumenter.go`) (to be further developed and research 
     $ go run ./src/instrumentation_measurement/clock_resolution_go/main.go
     Monotonic clock resolution is 1 nanoseconds
     ```
-3. I tested the overhead of that `clock_gettime` with `time.Since()`:
+3. I tested the overhead of that `clock_gettime` with `time.Since()` (and a trick `runtimeNano`):
    - overhead is 10 times smaller using `time.Since`
-   - **TODO** investigate: sometimes both overheads are smaller, sometimes both are bigger, up to 3 fold. (rerun the `main.go`)
-       - it might be worthwhile to measure and record the overhead on every OpCode, in case the overhead suffers from such long-running fluctuations
+   - investigate: sometimes both overheads are smaller, sometimes both are bigger, up to 3 fold. (rerun the `main.go`)
+       - it might be worthwhile to measure and record the overhead on every OpCode, in case the overhead suffers from such long-running fluctuations <- yes, we're going to do that
+   - overhead of golang's timers analyzed in [`exploration_timers.Rmd`](/src/analysis/exploration_timers.Rmd)
 
 
 

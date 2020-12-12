@@ -1,0 +1,62 @@
+---
+title: "R Notebook: exploration of various timers"
+output: html_notebook
+---
+
+Read in the output of `go run ./srcinstrumentation_measurement/clock_resolution_go/main.go`
+
+```{r fig.width=20}
+setwd("~/sources/imapp/gas-cost-estimator/src")
+time_all = read.csv("../../time.csv")
+N = 20000
+time = head(time_all, N)
+head(time)
+```
+The temporal dynamics of all timers must be accounted for. They all seem to warm up for a long time.
+
+```{r fig.width=20}
+plot(NULL, xlim=c(1, N), ylim=c(0, 3000))
+lines(time$clock_gettime, type = "l", col = "red")
+lines(time$time, type = "l", col = "blue")
+lines(time$runtime_nano, type = "l", col = "green")
+```
+
+```{r fig.width=20}
+plot(NULL, xlim=c(1, N), ylim=c(1, 3.5))
+par(ylog=TRUE)
+lines(time$clock_gettime, type = "l", col = "red")
+lines(time$time, type = "l", col = "blue")
+lines(time$runtime_nano, type = "l", col = "green")
+```
+
+It seems `runtimeNano` is the most accurate and stable one. We could perhaps subtract the `Min.` of this from all the measurements
+
+```{r fig.width=20}
+summary(time)
+```
+
+```{r fig.width=20}
+boxplot(time)
+```
+
+Explore the effect of the overhead increasing for all timers:
+```{r fig.width=20}
+var(time)
+cor(time)
+```
+
+```{r fig.width=20}
+frequencies = sort(table(time$runtime_nano), decreasing=TRUE)
+plot(frequencies[1:50])
+```
+
+```{r fig.width=20}
+quantile(time$runtime_nano, probs=c(0.85, 0.9, 0.95, 0.99, 0.999, 0.9999, 0.99999))
+```
+
+Summary:
+
+1. We should discard about 5000 first observations
+2. It is probably a good idea to monitor the timer during the measurements.
+2. Due to periods of increased overhead, sometimes the measurements might be over-timed for several consecutive measurements. Should we discard all measurements where "just time" measurement is above a threshold?
+3. `runtimeNano` is clearly the winner, but it still has high values quite often, and is subject to large overhead during warm-up and during the "temporary increase periods"
