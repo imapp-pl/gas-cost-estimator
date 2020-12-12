@@ -29,6 +29,7 @@ executes opcodes repeatedly, taking care of stack managementchallenges  that  re
         - runs setup
         - suggest to only use `min` on the timing vector, not mean/stddev
     - there is a claim, that benchmarking on a higher (not opcode, but entire contract) level is not sufficient, around citation [15]
+        - followed citation [15] in [`performance_benchmarking.md`](./performance_benchmarking.md)
 5. Program generation: "we  generate  the bytecode for a fully executable smart contract, which contains repeated bytecode instances of the opcode intended to be measured,  as  well  as  the  required PUSHs and POPs opcodes  to successfully manipulate the EVM stack. "
     - for selected opcodes they do different versions for different sizes of the data manipulated
     - for selected opcodes ("Formula-based", 6 of them) they craft custom approaches
@@ -38,4 +39,4 @@ executes opcodes repeatedly, taking care of stack managementchallenges  that  re
 8. Paper seems to focus on miner rewards coming from the gas schedule, instead of network security, balanced execution or enabling execution on consumer hardware.
 9. Paper claims that gas schedule from the yellow paper does not provide a basis for it, but the basis was there (maybe it was not cited in YP) - see the old spreadsheet
 10. References to follow:
-    - GASPER again, as in "Broken Metre"
+    - (done irrelevant) GASPER again, as in "Broken Metre"

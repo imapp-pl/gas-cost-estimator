@@ -14,7 +14,7 @@ EVM*: From Offline Detection to OnlineReinforcement for Ethereum Virtual Machine
 3. https://ethereum.stackexchange.com/questions/4446/instrumenting-evm - "Instrumenting EVM"
     - _Maybe useful_ - "To do this, you need to define a VM log collector, which implements StructLogCollector. This function gets called on every step of the VM, and is provided with copies of the memory, stack, and modified parts of the storage, along with the program counter, current opcode...", this is for `go-ethereum`.
     - follow the Nick Johnsons link to etherquery
-    - TODO: revisit if `go-ethereum` specific measuring needs to be done using this
+    - (done) revisit if `go-ethereum` specific measuring needs to be done using this
 4. https://publik.tuwien.ac.at/files/publik_278277.pdf - "A Survey of Tools forAnalyzing Ethereum Smart Contracts" - mentions one tool for EVM instrumentation: ContractLarva
     - https://www.researchgate.net/publication/327834131_Monitoring_Smart_Contracts_ContractLarva_and_Open_Challenges_Beyond - ContractLarva
         - not relevant to us, Solidity level

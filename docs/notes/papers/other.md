@@ -15,6 +15,9 @@
     - tips on profiling with garbage collector
     - compiler optimization traps
     - avoiding appending (**TODO** ensure we don't)
+1. https://eips.ethereum.org/EIPS/eip-150 - new gas costs there calculated along the lines of the original model - good to cite for motivations of gas research. Only IO intensive
+8. https://eips.ethereum.org/EIPS/eip-1884 - good to cite for motivations of gas research. Measurements were done on chain history, via ms/MGas metric. Only IO intensive
+    - **TODO** - gather and write down rationale towards focusing on non-IO operations
 
 
 ## Other resources scanned, which aren't relevant to us
@@ -37,7 +40,15 @@
 1. http://mural.maynoothuniversity.ie/6432/1/JP-Relating-Static.pdf - "Relating Staticand Dynamic Measurements for the Java Virtual Machine Instruction Set"
 1. https://www.researchgate.net/publication/3929823_Measurement_and_Analysis_of_Runtime_Profiling_Data_for_Java_Programs - "Measurement and Analysis of Runtime Profiling Data for Java Programs"
 1. https://stackoverflow.com/questions/37740081/bytecode-instruction-cost - "Bytecode instruction cost" - SO thread for Python, nothing useful
+1. https://www.aminer.org/pub/53e9b6cab7602d97042540cd/a-portable-research-framework-for-the-execution-of-java-bytecode - http://www.sable.mcgill.ca/publications/thesis/phd-gagnon/sable-thesis-2002-phd-gagnon.pdf -  "A portable research framework for the execution of java bytecode"
+1. https://www.researchgate.net/publication/2649955_The_Jalapeno_Dynamic_Optimizing_Compiler_for_Java - "The Jalapeño Dynamic Optimizing Compiler for Java"
+1. https://www.researchgate.net/publication/2569394_Characterizing_Computer_Systems%27_Workloads - "Characterizing Computer Systems' Workloads"
+1.
+
+
+
 ## search queries
+
 1. ftp://ftp.cs.wisc.edu/paradyn/technical_papers/paradynJ.pdf - "Performance Measurement of Dynamically Compiled Java Executions"
 
 "virtual machine instruction measurement" and variations using: "java" / "clr cil" / "comparison" / "benchmark",
