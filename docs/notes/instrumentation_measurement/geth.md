@@ -77,3 +77,5 @@ A simple instrumenter (`instrumenter.go`) (to be further developed and research 
         - `logged, pcCopy, gasCopy = false, pc, contract.Gas` if tracing is on
         - `in.cfg.Tracer.CaptureState(...)` tracing itself, just before `execute` of an opcode
         - `logged = true` if tracing is on
+4. Final `STOP` instruction - where does it come from:
+    - most likely `github.com/ethereum/go-ethereum/core/vm/contract.go:163`

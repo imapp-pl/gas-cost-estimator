@@ -31,7 +31,7 @@ From `src`
 (`go` exports as above)
 
 ```
-python3 program_generator/program_generator.py generate --fullCsv | python3 instrumentation_measurement/measurements.py measure --sampleSize=50 --nSamples=4 > ../../result.csv
+python3 program_generator/program_generator.py generate --fullCsv | python3 instrumentation_measurement/measurements.py measure --sampleSize=50 --nSamples=4 > ../../result_geth.csv
 ```
 
 or similar.
