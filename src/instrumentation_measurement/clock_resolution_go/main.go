@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/dterei/gotsc"
 	"golang.org/x/sys/unix"
 	"os"
 	"time"
@@ -22,6 +23,9 @@ func main() {
 	unix.ClockGetres(unix.CLOCK_MONOTONIC, &res)
 	fmt.Fprintf(os.Stderr, "Monotonic clock resolution is %d nanoseconds\n", res.Nsec)
 
+	tsc := gotsc.TSCOverhead()
+	fmt.Fprintf(os.Stderr, "TSC Overhead: %d\n", tsc)
+
 	const N = 2000000
 	res1 := unix.Timespec{}
 	res2 := unix.Timespec{}
@@ -32,8 +36,11 @@ func main() {
 	runtimeNano1 := int64(0)
 	runtimeNano2 := int64(0)
 	sinceRuntimeNano := int64(0)
+	gotsc1 := uint64(0)
+	gotsc2 := uint64(0)
+	sinceGotsc := uint64(0)
 
-	fmt.Println("clock_gettime,time,runtime_nano")
+	fmt.Println("clock_gettime,time,runtime_nano,gotsc")
 
 	for i := 1; i < N; i++ {
 		unix.ClockGettime(unix.CLOCK_MONOTONIC, &res1)
@@ -45,6 +52,10 @@ func main() {
 		runtimeNano1 = runtimeNano()
 		runtimeNano2 = runtimeNano()
 		sinceRuntimeNano = runtimeNano2 - runtimeNano1
-		fmt.Printf("%d,%d,%d\n", sinceClockGettime, sinceTime, sinceRuntimeNano)
+
+		gotsc1 = gotsc.BenchStart()
+		gotsc2 = gotsc.BenchEnd()
+		sinceGotsc = gotsc2 - gotsc1
+		fmt.Printf("%d,%d,%d,%d\n", sinceClockGettime, sinceTime, sinceRuntimeNano, sinceGotsc)
 	}
 }
