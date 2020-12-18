@@ -52,16 +52,45 @@ measurements = sqldf("SELECT opcode_measured, sample_id, run_id, measure_all_tim
                      ")
 
 head(measurements)
-                     
+```
+
+Let's also adjust for the rough estimate of the overhead of the timer.
+We're subtracting these estimates from all measurements, for more granularity on the fastest instructions.
+
+Our "ball-park" estimates of minimum clock measurement overhead:
+  - blue - `geth` - 21ns ([minimum for `runtimeNano`](https://htmlpreview.github.io/?https://github.com/imapp-pl/gas-cost-estimator/blob/master/src/analysis/exploration_timers.nb.html))
+  - pink - `evmone` - 9ns (wild guess, half of smallest measurement)
+
+```{r fig.width=20}
+rough_estimate_time_overhead_geth = 21
+rough_estimate_time_overhead_evmone = 9
+
+measurements_geth = measurements[which(measurements$env=="geth"), ]
+measurements_evmone = measurements[which(measurements$env=="evmone"), ]
+
+measurements_geth$measure_all_time_ns_raw = measurements_geth$measure_all_time_ns
+measurements_evmone$measure_all_time_ns_raw = measurements_evmone$measure_all_time_ns
+
+measurements_geth$measure_all_time_ns = measurements_geth$measure_all_time_ns_raw - rough_estimate_time_overhead_geth
+measurements_evmone$measure_all_time_ns = measurements_evmone$measure_all_time_ns_raw - rough_estimate_time_overhead_evmone
+measurements = rbind(measurements_geth, measurements_evmone)
+
+check_columns = c("env", "measure_all_time_ns", "measure_all_time_ns_raw")
+head(measurements)
+
+# cleanup
+rm(measurements_geth, measurements_evmone)
 ```
 
 A necessary touch to prepare the data - we want the opcodes factor to be ordered by the natural opcode order.
-For now we'll use the original order from `programs.csv`, which coincides, but this must be improved (**TODO**)
+For now we'll use the original order from `programs.csv`, which coincides, but this must be improved (**TODO**).
+We'll also have `geth` first, and proceed in the order of completing the instrumentations.
 ```{r fig.width=20}
+measurements$env = factor(measurements$env, levels=c("geth", "evmone"))
 measurements$opcode_measured = factor(measurements$opcode_measured, levels=programs$opcode_measured)
 ```
 
-Quick overview of times everything and by env:
+Quick overview of times; everything and by env:
 
 ```{r fig.width=20}
 summary(measurements$measure_all_time_ns)
@@ -71,22 +100,31 @@ tapply(measurements$measure_all_time_ns, measurements$env, summary)
 
 Quick overview of measurements per opcode:
 ```{r fig.width=20}
-print("Geth")
 measurements_geth = measurements[which(measurements$env=="geth"), ]
+measurements_evmone = measurements[which(measurements$env=="evmone"), ]
+
+print("Geth")
 tapply(measurements_geth$measure_all_time_ns, measurements_geth$opcode_measured, summary)
 print("Evmone")
-measurements_evmone = measurements[which(measurements$env=="evmone"), ]
 tapply(measurements_evmone$measure_all_time_ns, measurements_evmone$opcode_measured, summary)
+
+# cleanup
+rm(measurements_geth, measurements_evmone)
 ```
 
 We want to introduce a notion of implementation-relative measurements, where we express them in the multiples of "mean POP duration", as opposed to ns.
-Let's call the selected operation **"pivot operation"**
+Let's call the selected operation **"pivot operation"**:
 ```{r fig.width=20}
+measurements_geth = measurements[which(measurements$env=="geth"), ]
+measurements_evmone = measurements[which(measurements$env=="evmone"), ]
+
 pivot_opcode = "POP"
-pivot_statistics = data.frame(mean_measure_all_time_ns=c(
+means = c(
   mean(measurements_geth[which(measurements_geth$opcode_measured==pivot_opcode), "measure_all_time_ns"]),
   mean(measurements_evmone[which(measurements_geth$opcode_measured==pivot_opcode), "measure_all_time_ns"])
-), row.names=c("geth", "evmone")
+)
+pivot_statistics = data.frame(
+  mean_measure_all_time_ns=means, row.names=c("geth", "evmone")
 )
 head(pivot_statistics)
 measurements_geth$measure_all_time_ns_rel = measurements_geth$measure_all_time_ns / pivot_statistics["geth", "mean_measure_all_time_ns"]
@@ -96,16 +134,25 @@ measurements = rbind(measurements_geth, measurements_evmone)
 check_columns = c("env", "measure_all_time_ns", "measure_all_time_ns_rel")
 head(measurements[which(measurements$opcode_measured==pivot_opcode & measurements$env=="geth"), check_columns])
 head(measurements[which(measurements$opcode_measured==pivot_opcode & measurements$env=="evmone"), check_columns])
+
+# cleanup
+rm(measurements_geth, measurements_evmone)
 ```
 
 Let's compare the implementations in an absolute fashion (note we're not showing outliers for `evmone` because they're very large - **TODO** investigate what happened):
 ```{r fig.width=20}
+measurements_geth = measurements[which(measurements$env=="geth"), ]
+measurements_evmone = measurements[which(measurements$env=="evmone"), ]
+
 geth_color = rgb(0.1,0.1,0.7,0.5)
 evmone_color = rgb(0.8,0.1,0.3,0.6)
 
 par(mfrow=c(2,1), mar = c(6,4,0,2) + 0.1)
 boxplot(measure_all_time_ns ~ opcode_measured, data=measurements_geth, col=geth_color, las=2)
 boxplot(measure_all_time_ns ~ opcode_measured, data=measurements_evmone, col=evmone_color, las=2, outline=FALSE, xaxt="n")
+
+# cleanup
+rm(measurements_geth, measurements_evmone)
 ```
 
 To compare the opcodes on a single boxplot side by side, still absolute times:
@@ -116,6 +163,8 @@ env_colors = c(geth_color, evmone_color)
 boxplot(measure_all_time_ns ~ env:opcode_measured, data=measurements, las=2, col=env_colors, outline=FALSE)
 ```
 
+---
+
 Now let's compare using the relative times, measured in multiples of the duration of `POP`:
 
 ```{r fig.width=20}
@@ -123,6 +172,9 @@ par(mar = c(8,4,1,2) + 0.1)
 boxplot(measure_all_time_ns_rel ~ env:opcode_measured, data=measurements, las=2, col=env_colors, outline=FALSE)
 abline(h=1, col="red", lty=3)
 ```
+The red, dotted line is 1, which coincides with respective mean of `POP` measurement for the different environments.
+
+---
 
 Quick check that `sample_id` shouldn't impact measurements:
 
@@ -133,7 +185,13 @@ boxplot(measure_all_time_ns ~ sample_id, data=measurements, las=2)
 But `run_id` does impact measurements: first several runs have a decreasing trend. **TODO** needs investigation how/if to alleviate:
 
 ```{r fig.width=20}
+measurements_geth = measurements[which(measurements$env=="geth"), ]
+measurements_evmone = measurements[which(measurements$env=="evmone"), ]
+
 par(mfrow=c(2,1))
 boxplot(measure_all_time_ns ~ run_id, data=measurements_geth, las=2)
 boxplot(measure_all_time_ns ~ run_id, data=measurements_evmone, las=2, outline=FALSE)
+
+# cleanup
+rm(measurements_geth, measurements_evmone)
 ```
