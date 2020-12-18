@@ -174,6 +174,33 @@ abline(h=1, col="red", lty=3)
 ```
 The red, dotted line is 1, which coincides with respective mean of `POP` measurement for the different environments.
 
+```{r fig.width=20}
+
+measurements_geth = measurements[which(measurements$env=="geth"), ]
+measurements_evmone = measurements[which(measurements$env=="evmone"), ]
+
+n_programs = nrow(programs)
+n_plot_cols = 6
+par(mfrow=c(n_programs %/% n_plot_cols, n_plot_cols))
+for (opcode in programs$opcode_measured)
+{
+  frequencies = sort(table(measurements_geth[which(measurements_geth$opcode_measured==opcode), "measure_all_time_ns_raw"]), decreasing=TRUE)
+  n = min(10, nrow(frequencies))
+  plot(frequencies[1:n], yaxt="n", ylab="", xlab=c(opcode, " geth"), col=geth_color)
+}
+
+par(mfrow=c(n_programs %/% n_plot_cols, n_plot_cols))
+for (opcode in programs$opcode_measured)
+{
+  frequencies = sort(table(measurements_evmone[which(measurements_evmone$opcode_measured==opcode), "measure_all_time_ns_raw"]), decreasing=TRUE)
+  n = min(10, nrow(frequencies))
+  plot(frequencies[1:n], yaxt="n", ylab="", xlab=c(opcode, " evmone"), col=evmone_color)
+}
+
+# cleanup
+rm(measurements_geth, measurements_evmone)
+```
+
 ---
 
 Quick check that `sample_id` shouldn't impact measurements:
