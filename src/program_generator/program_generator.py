@@ -30,14 +30,17 @@ class ProgramGenerator(object):
     opcodes_file = os.path.join(dir_path, 'data', 'opcodes.csv')
     with open(opcodes_file) as csvfile:
       reader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
-      opcodes = list(reader)
+      opcodes = {i['Value']: i for i in reader}
+
+    # complete the opcodes file with push/dup/swap, which are formatted differently in our source
+    opcodes = self._fill_opcodes_push_dup_swap(opcodes)
 
     selection_file = os.path.join(dir_path, 'data', 'selection.csv')
     with open(selection_file) as csvfile:
       reader = csv.DictReader(csvfile, delimiter=' ', quotechar='"')
-      selection = {i['Opcode']: i['Name'] for i in reader}
+      selection = [i['Opcode'] for i in reader]
 
-    self._operations = [i for i in opcodes if i['Value'] in selection]
+    self._operations = [opcodes[op] for op in selection]
 
   def generate(self, fullCsv=False):
     """
@@ -111,6 +114,92 @@ class ProgramGenerator(object):
     measured_op_position = 1 + program.measured_op_position if should_prepend else program.measured_op_position
 
     return Program(bytecode, measured_op_position)
+
+  def _fill_opcodes_push_dup_swap(self, opcodes):
+    pushes = """
+    0x60 PUSH1
+    0x61 PUSH2
+    0x62 PUSH3
+    0x63 PUSH4
+    0x64 PUSH5
+    0x65 PUSH6
+    0x66 PUSH7
+    0x67 PUSH8
+    0x68 PUSH9
+    0x69 PUSH10
+    0x6a PUSH11
+    0x6b PUSH12
+    0x6c PUSH13
+    0x6d PUSH14
+    0x6e PUSH15
+    0x6f PUSH16
+    0x70 PUSH17
+    0x71 PUSH18
+    0x72 PUSH19
+    0x73 PUSH20
+    0x74 PUSH21
+    0x75 PUSH22
+    0x76 PUSH23
+    0x77 PUSH24
+    0x78 PUSH25
+    0x79 PUSH26
+    0x7a PUSH27
+    0x7b PUSH28
+    0x7c PUSH29
+    0x7d PUSH30
+    0x7e PUSH31
+    0x7f PUSH32
+    """
+    dups = """
+    0x80 DUP1
+    0x81 DUP2
+    0x82 DUP3
+    0x83 DUP4
+    0x84 DUP5
+    0x85 DUP6
+    0x86 DUP7
+    0x87 DUP8
+    0x88 DUP9
+    0x89 DUP10
+    0x8a DUP11
+    0x8b DUP12
+    0x8c DUP13
+    0x8d DUP14
+    0x8e DUP15
+    0x8f DUP16
+    """
+    swaps = """
+    0x90 SWAP1
+    0x91 SWAP2
+    0x92 SWAP3
+    0x93 SWAP4
+    0x94 SWAP5
+    0x95 SWAP6
+    0x96 SWAP7
+    0x97 SWAP8
+    0x98 SWAP9
+    0x99 SWAP10
+    0x9a SWAP11
+    0x9b SWAP12
+    0x9c SWAP13
+    0x9d SWAP14
+    0x9e SWAP15
+    0x9f SWAP16
+    """
+    pushes = self._opcodes_dict_push_dup_swap(pushes, [0] * len(pushes), [1] * len(pushes))
+    opcodes = {**opcodes, **pushes}
+    dups = self._opcodes_dict_push_dup_swap(dups, range(1, len(dups)), range(2, len(dups)+1))
+    opcodes = {**opcodes, **dups}
+    swaps = self._opcodes_dict_push_dup_swap(swaps, range(2, len(swaps)+1), range(2, len(swaps)+1))
+    opcodes = {**opcodes, **swaps}
+    return opcodes
+
+  def _opcodes_dict_push_dup_swap(self, source, removeds, addeds):
+    source_list = source.split()
+    opcodes = source_list[::2]
+    names = source_list[1::2]
+    new_part = {opcode: {'Value': opcode, 'Mnemonic': name, 'Removed from stack': removed, 'Added to stack': added} for opcode, name, removed, added in zip(opcodes, names, removeds, addeds)}
+    return new_part
 
 def main():
   fire.Fire(ProgramGenerator, name='generate')
