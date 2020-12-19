@@ -158,7 +158,7 @@ head(measurements[which(measurements$opcode_measured==pivot_opcode & measurement
 rm(measurements_geth, measurements_evmone)
 ```
 
-Let's compare the implementations in an absolute fashion (note we're not showing outliers for `evmone` because they're very large - **TODO** investigate what happened):
+Let's compare the implementations in an absolute fashion (note we're not showing outliers for `evmone` because they're very large - **TODO** investigate what happened. UPDATE: `geth` has massive outliers too, after adding all the opcodes):
 ```{r fig.width=20}
 measurements_geth = measurements[which(measurements$env=="geth"), ]
 measurements_evmone = measurements[which(measurements$env=="evmone"), ]
@@ -167,7 +167,7 @@ geth_color = rgb(0.1,0.1,0.7,0.5)
 evmone_color = rgb(0.8,0.1,0.3,0.6)
 
 par(mfrow=c(2,1), mar = c(6,4,0,2) + 0.1)
-boxplot(measure_all_time_ns ~ opcode_measured, data=measurements_geth, col=geth_color, las=2)
+boxplot(measure_all_time_ns ~ opcode_measured, data=measurements_geth, col=geth_color, outline=FALSE, las=2)
 boxplot(measure_all_time_ns ~ opcode_measured, data=measurements_evmone, col=evmone_color, las=2, outline=FALSE, xaxt="n")
 
 # cleanup
@@ -179,7 +179,21 @@ To compare the opcodes on a single boxplot side by side, still absolute times:
 ```{r fig.width=20}
 par(mar = c(8,4,1,2) + 0.1)
 env_colors = c(geth_color, evmone_color)
-boxplot(measure_all_time_ns ~ env:opcode_measured, data=measurements, las=2, col=env_colors, outline=FALSE)
+boxplot(measure_all_time_ns ~ env:opcode_measured, data=measurements, las=2, col=env_colors, outline=FALSE, cex.axis=0.5)
+
+# TODO: own labels, still doesn't look good, fix this
+# library(plyr)
+# boxplot(measure_all_time_ns ~ env:opcode_measured, data=measurements, las=2, col=env_colors, outline=FALSE, xaxt="n")
+# axis(side = 1, labels = FALSE)
+# labels = expand.grid(levels(measurements$env), levels(measurements$opcode_measured))
+# labels = mdply(labels, "paste", sep=".")
+# text(x = 1:nrow(measurements),
+#      y = par("usr")[3] - 50.45,
+#      labels = labels$V1,
+#      xpd = NA,
+#      ## Rotate the labels by 35 degrees.
+#      srt = 45,
+#      cex = 0.5)
 ```
 
 ---
@@ -188,18 +202,20 @@ Now let's compare using the relative times, measured in multiples of the duratio
 
 ```{r fig.width=20}
 par(mar = c(8,4,1,2) + 0.1)
-boxplot(measure_all_time_ns_rel ~ env:opcode_measured, data=measurements, las=2, col=env_colors, outline=FALSE)
+boxplot(measure_all_time_ns_rel ~ env:opcode_measured, data=measurements, las=2, col=env_colors, outline=FALSE, cex.axis=0.5)
 abline(h=1, col="red", lty=3)
 ```
 The red, dotted line is 1, which coincides with respective mean of pivot operation (see above) measurement for the different environments.
 
-```{r fig.width=20}
+**TODO** check these again, some look weird.
+
+```{r fig.width=20, fig.height=45}
 
 measurements_geth = measurements[which(measurements$env=="geth"), ]
 measurements_evmone = measurements[which(measurements$env=="evmone"), ]
 
 n_programs = nrow(programs)
-n_plot_cols = 6
+n_plot_cols = 7
 par(mfrow=c(n_programs %/% n_plot_cols, n_plot_cols))
 for (opcode in programs$opcode_measured)
 {
@@ -213,6 +229,7 @@ for (opcode in programs$opcode_measured)
 {
   frequencies = sort(table(measurements_evmone[which(measurements_evmone$opcode_measured==opcode), "measure_all_time_ns_raw"]), decreasing=TRUE)
   n = min(10, nrow(frequencies))
+  if (length(frequencies) == 0) next
   plot(frequencies[1:n], yaxt="n", ylab="", xlab=c(opcode, " evmone"), col=evmone_color)
 }
 
@@ -235,7 +252,7 @@ measurements_geth = measurements[which(measurements$env=="geth"), ]
 measurements_evmone = measurements[which(measurements$env=="evmone"), ]
 
 par(mfrow=c(2,1))
-boxplot(measure_all_time_ns ~ run_id, data=measurements_geth, las=2)
+boxplot(measure_all_time_ns ~ run_id, data=measurements_geth, las=2, outline=FALSE)
 boxplot(measure_all_time_ns ~ run_id, data=measurements_evmone, las=2, outline=FALSE)
 
 # cleanup
