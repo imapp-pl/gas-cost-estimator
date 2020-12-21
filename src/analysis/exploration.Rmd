@@ -117,15 +117,15 @@ rm(measurements_geth, measurements_evmone)
 ```
 
 We want to introduce a notion of implementation-relative measurements, where we express them in the multiples of "mean `COINBASE` duration", as opposed to ns.
-Let's call the selected operation **"pivot operation"**.
+Let's call the selected operation **"pivot OPCODE"**.
 
-We're using `COINBASE` as the pivot operation because it is (**TODO** verify all points, pick a better one):
+We're using `COINBASE` as the pivot OPCODE because it is (**TODO** verify all points, pick a better one):
 
 - relatively slow, so timer measurement overhead and precision have little impact
 - seems to be free of surprises or influences of suboptimal implementation
 - no outliers
 - seem to be a rather typical opcode in terms of timing in both implementations (it allows similar calibration to that using an overall mean)
-- `COINBASE` seems a rather peculiar choice for a pivot operation, but `¯\_(ツ)_/¯`
+- `COINBASE` seems a rather peculiar choice for a pivot OPCODE, but `¯\_(ツ)_/¯`
 - (earlier pick was `POP`, but it is very cheap, close to timer measurement and precision) 
 - (second pick was `EXP(0, 0)`, but it had a bad outlier, we can revisit after the `evmone` outliers are sorted, **TODO**)
 - (third and fourth picks were `MULMOD(0, 0, 0)` and `GT(0, 0)`, but they belong to two groups which time very differently in `geth`/`evmone` - `geth` seems faster in arithmetic and slower in logical and comparison operators (**TODO** explore this more)
@@ -200,14 +200,14 @@ boxplot(measure_all_time_ns ~ env:opcode_measured, data=measurements, las=2, col
 
 ---
 
-Now let's compare using the relative times, measured in multiples of the duration of the pivot operation (see above):
+Now let's compare using the relative times, measured in multiples of the duration of the pivot OPCODE (see above):
 
 ```{r fig.width=20}
 par(mar = c(8,4,1,2) + 0.1)
 boxplot(measure_all_time_ns_rel ~ env:opcode_measured, data=measurements, las=2, col=env_colors, outline=FALSE, cex.axis=0.5)
 abline(h=1, col="red", lty=3)
 ```
-The red, dotted line is 1, which coincides with respective mean of pivot operation (see above) measurement for the different environments.
+The red, dotted line is 1, which coincides with respective mean of pivot OPCODE (see above) measurement for the different environments.
 
 **TODO** check these again, some look weird.
 
