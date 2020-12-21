@@ -96,7 +96,8 @@ class ProgramGenerator(object):
       opcode = operation['Value'][2:4]
       # push some garbage enough times to satisfy stack requirement for operation
       pushes = ["6020"] * removed_from_stack
-      bytecode = ''.join(pushes + [opcode])
+      has_parameter = True if 'Parameter' in operation and operation['Parameter'] else False
+      bytecode = ''.join(pushes + [opcode, operation['Parameter']]) if has_parameter else ''.join(pushes + [opcode])
       return Program(bytecode, removed_from_stack)
     else:
       # designated invalid opcode
@@ -186,7 +187,7 @@ class ProgramGenerator(object):
     0x9e SWAP15
     0x9f SWAP16
     """
-    pushes = self._opcodes_dict_push_dup_swap(pushes, [0] * len(pushes), [1] * len(pushes))
+    pushes = self._opcodes_dict_push_dup_swap(pushes, [0] * len(pushes), [1] * len(pushes), parameter='00')
     opcodes = {**opcodes, **pushes}
     dups = self._opcodes_dict_push_dup_swap(dups, range(1, len(dups)), range(2, len(dups)+1))
     opcodes = {**opcodes, **dups}
@@ -194,11 +195,20 @@ class ProgramGenerator(object):
     opcodes = {**opcodes, **swaps}
     return opcodes
 
-  def _opcodes_dict_push_dup_swap(self, source, removeds, addeds):
+  def _opcodes_dict_push_dup_swap(self, source, removeds, addeds, parameter=None):
     source_list = source.split()
     opcodes = source_list[::2]
     names = source_list[1::2]
-    new_part = {opcode: {'Value': opcode, 'Mnemonic': name, 'Removed from stack': removed, 'Added to stack': added} for opcode, name, removed, added in zip(opcodes, names, removeds, addeds)}
+    new_part = {
+      opcode: {
+        'Value': opcode,
+        'Mnemonic': name,
+        'Removed from stack': removed,
+        'Added to stack': added,
+        'Parameter': parameter
+      } for opcode, name, removed, added in zip(opcodes, names, removeds, addeds)
+    }
+
     return new_part
 
 def main():
