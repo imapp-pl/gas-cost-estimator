@@ -225,6 +225,7 @@ Questions that the analysis stage should strive to answer:
 2. Is the method of measurement adequate?
 3. What is the gas cost estimation for every OPCODE analyzed?
 4. What is the quality of the particular gas cost estimation?
+5. What are the differences of gas cost estimations for various implementations, and how these might be addressed?
 
 In order to explore the behavior of programs, measurements and environments, let's conduct a series of comparisons and analyzes.
 List of tests:
