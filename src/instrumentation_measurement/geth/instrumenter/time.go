@@ -1,4 +1,5 @@
 package instrumenter
+
 // this portion ensures that we have access to the least-overhead timer
 
 import _ "unsafe"

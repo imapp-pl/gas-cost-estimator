@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/vm/runtime"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
@@ -32,6 +34,8 @@ func main() {
 
 	cfg := new(runtime.Config)
 	setDefaults(cfg)
+	// from `github.com/ethereum/go-ethereum/core/vm/runtime/runtime.go:109`
+	cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
 
 	// Warm-up. **NOTE** we're keeping tracing on during warm-up, otherwise measurements are off
 	cfg.EVMConfig.Debug = true

@@ -79,3 +79,5 @@ A simple instrumenter (`instrumenter.go`) (to be further developed and research 
         - `logged = true` if tracing is on
 4. Final `STOP` instruction - where does it come from:
     - most likely `github.com/ethereum/go-ethereum/core/vm/contract.go:163`
+5. (**TODO**) we should, and are able to, measure the impact of calldata input, especially on calldata-specific OPCODEs.
+    `runtime.Execute` allows us to do this via `input`: `func Execute(code, input []byte, cfg *Config)`
