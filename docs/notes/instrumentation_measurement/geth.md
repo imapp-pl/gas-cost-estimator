@@ -67,9 +67,11 @@ A simple instrumenter (`instrumenter.go`) (to be further developed and research 
         - remember to enable `vm.Config.Debug = true` - it looks like it won't impact anything else
     - what is being run except EVM excecution, as measured by `CaptureStart`/`End`:
         - (source: `github.com/ethereum/go-ethereum/core/vm/evm.go:210`, `func (evm *EVM) Call`)
+        - check boolean `isPrecompile`
         - get code from the in-memory StateDB
-        - NewContract
-        - SetCallCode
+        - `if len(code) == 0`
+        - `NewContract` and some assignments
+        - `contract.SetCallCode`
         - some getting and setting of evm.interpreter magic in `run`
         - **TODO** consider moving the `CaptureStart` to a later stage for a tighter measurement
     - what is going on between `CaptureState` (every opcode)
