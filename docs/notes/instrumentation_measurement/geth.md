@@ -65,7 +65,7 @@ A simple instrumenter (`instrumenter.go`) (to be further developed and research 
         - ...and via `vm.NewEVM`
         - ...and that in turn via `runtime.Config` under `EVMConfig`, hooray
         - remember to enable `vm.Config.Debug = true` - it looks like it won't impact anything else
-    - what is being run except EVM excecution, as measured by `CaptureStart`/`End`:
+    - what is being run except EVM excecution, as measured by `CaptureStart`/`End` (everything between `CaptureStart` and beginning of the interpreter main loop, in `master` branch `go-ethereum`):
         - (source: `github.com/ethereum/go-ethereum/core/vm/evm.go:210`, `func (evm *EVM) Call`)
         - check boolean `isPrecompile`
         - get code from the in-memory StateDB
@@ -73,11 +73,26 @@ A simple instrumenter (`instrumenter.go`) (to be further developed and research 
         - `NewContract` and some assignments
         - `contract.SetCallCode`
         - some getting and setting of evm.interpreter magic in `run`
-        - **TODO** consider moving the `CaptureStart` to a later stage for a tighter measurement
+        - minor checks and assignments at the beginning of `func (in *EVMInterpreter) Run`
+        - `mem`, `stack`, `returns`, (`callContext` too?) allocations
+        - **TODO** move the `CaptureStart` to a later stage for a tighter measurement. Question: where to to preserve fairness (see above list)
     - what is going on between `CaptureState` (every opcode)
-        - `if steps%1000 == 0 && atomic.LoadInt32(&in.evm.abort) != 0` probably negligible check, unlikely we'll go above 1000 instructions, but sth to keep in mind
+        - (normal interpreter operation, but "unfair") `if steps%1000 == 0 && atomic.LoadInt32(&in.evm.abort) != 0` (only if we go over 1000 instructions in programs)
         - `logged, pcCopy, gasCopy = false, pc, contract.Gas` if tracing is on
-        - `in.cfg.Tracer.CaptureState(...)` tracing itself, just before `execute` of an opcode
+        - (normal interpreter operations):
+            - `op = contract.GetOp(pc)`
+            - `operation := in.cfg.JumpTable[op]`
+            - `if sLen := stack.len(); sLen < operation.minStack`
+            - `else if sLen > operation.maxStack`
+            - `if in.readOnly && in.evm.chainRules.IsByzantium` (more checks if readOnly is true, **TODO**: make fair)
+            - `if !contract.UseGas(operation.constantGas)` and the inside (static gas cost)
+            - `if operation.memorySize != nil` and inside (memory pre-calculations)
+            - `if operation.dynamicGas != nil` and inside (dynamic gas cost)
+            - `if memorySize > 0` and inside (memory resizing)
+            - `res, err = operation.execute(&pc, in, callContext)`
+            - `if operation.returns` and inside (return value capturing)
+            - `switch {` for final end condition
+        - (moved after `execute` in current fork) `in.cfg.Tracer.CaptureState(...)` tracing itself, just before `execute` of an opcode
         - `logged = true` if tracing is on
 4. Final `STOP` instruction - where does it come from:
     - most likely `github.com/ethereum/go-ethereum/core/vm/contract.go:163`

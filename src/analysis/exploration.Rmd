@@ -147,7 +147,19 @@ rm(measurements_geth, measurements_evmone, measurements_openethereum)
 ```
 **TODO** this looks bad for PUSH1-PUSH8 OPCODEs for `evmone`, the timer overhead measurement is off.
 
-(**TODO** pushes of more than 8 bytes look more expensive, what is special about pushes under 8 bytes for `evmone`?).
+(Pushes of more than 8 bytes look more expensive, what is special about pushes under 8 bytes for `evmone`?
+Mystery solved in `evmone/lib/evmone/opcodes_helpers.h`:
+```c
+#define ANY_SMALL_PUSH \
+    OP_PUSH1:          \
+    case OP_PUSH2:     \
+    case OP_PUSH3:     \
+    case OP_PUSH4:     \
+    case OP_PUSH5:     \
+    case OP_PUSH6:     \
+    case OP_PUSH7:     \
+    case OP_PUSH8
+```)
 
 We want to introduce a notion of implementation-relative measurements, where we express them in the multiples of "mean `COINBASE` duration", as opposed to ns.
 Let's call the selected operation **"pivot operation"**.
