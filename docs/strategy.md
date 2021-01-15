@@ -1,19 +1,24 @@
 # Gas Cost Estimator approach strategy
 
 Here we organize thoughts on different approaches to consider.
-We focus on EVM for simplicity, but this should be substitutable by ewasm (Ethereum flavored WebAssembly) throughout the document.
+We focus on EVM for simplicity, but this should be substitutable by eWASM (Ethereum flavored WebAssembly) interpreters throughout the document.
 
 ### Goal
 
 For the sake of this document, the goal is:
 
-Propose a method of giving an accurate proposition of the EVM gas for every one of the subset of EVM OPCODEs (and define meaning of "accurate").
+Propose a method of giving an accurate proposition of the EVM gas for every one of the subset of EVM OPCODEs (and define "accurate").
 
 The method should be feasible for various implementations/hardware etc. and have "good properties".
 Ideally, the method should become a standard (framework) for profiling EVM implementations in terms of OPCODE gas costs.
 
-**TODO** - define "accurate"
-**TODO** - define "good properties" - what they are and how can we measure them / reason about them?
+Accurate and good properties, in the context of OPCODE gas cost, mean:
+  - it is proportional to its computational cost, or otherwise balanced when compared to other OPCODEs
+  - it explains the variation in computational cost coming from different circumstances and/or parameters
+  - it is adequate for various implementations and environments _OR_
+  - it can be clearly stated when no such value exists because of differences in implementations
+  - ideally, it should be possible to validate the estimated gas costs with at least one another method
+  - it should have the overhead to measure time (or other aspects of computational cost) under control and "fair" for all OPCODEs
 
 ## Program generation
 
@@ -23,30 +28,45 @@ In this section we want to consider possible approaches to sample program genera
 
 When generating our programs we want to ensure the following:
 
-1. **uniform coverage** - we want programs to cover the space of OPCODEs completely, so that all the OPCODEs are modeled appropriately.
-    - in particular all impact of values on stack is captured (at least at the level of variance per OPCODE)
+1. **uniform coverage** - we want programs to cover the space of OPCODEs completely, so that all the OPCODEs are modeled appropriately and "fairly".
+    - impact of values on stack is captured (at least at the level of variation per OPCODE)
+    - impact of circumstances where the instructions appear and their "surroundings" is captured
 2. **little measurement noise** - we want programs to be such that noise is limited.
     - in particular we want to be able to tell, if factors external to the OPCODE traits can impact the measurement
-    - i.e. we want to separate "good variance" from "bad variance.". The former means variance that captures intrinsic differences in the resource that instructions consume. The latter means variance introduced by inadequate measurement and external factors.
+    - i.e. we want to separate "good variance" from "bad variance." The former means variance that captures intrinsic differences in the resource that instructions consume. The latter means variance introduced by inadequate measurement and external factors.
 3. **feasibility of measurement** - we want programs to be easily supplied to various EVM implementations and measurement harnesses we devise
 
-### Questions
+The final approach to generate programs will be devised in Stage II in an iterative manner, so as to arrive at the simplest solution which gives good results.
 
-Q: how do you build the programs so that you can supply input values (arguments, stack, memory) to the OPCODEs measured?
+To start the design iterations, we have the following possible alternatives:
 
-Q: how does the measurement method impact the requirements for program generation? Can we decouple those?
+#### Simplest valid program
 
-Q: will manual, "best guess" generation of sample programs do, or should it be a result of some feedback loop (see also _Instrumentation and measurement_)
-    - probably, if we find the "measure one" approach to give good results, manual will be good. Similar with "measure all", since it still measures instructions individually.
-    - if we find that instructions cannot be reliably measured individually, and we have to revert to "measure total", it is likely that some algorithmic way of generating the sample program set is necessary.
+**NOTE** This has already been implemented.
 
-### Additional ideas
+This set of programs will have one program per OPCODE and it will be a smallest and simplest program which successfully executes the instructions and stops.
 
-1. ["Broken metre" paper](https://arxiv.org/pdf/1909.07220.pdf) does a genetic algorithm minimizing the gas throughput (gas/second).
-Could we modify this idea to run a genetic algorithm maximizing our desired properties, i.e.:
-    - maximize variance (information) captured in the measurement of a particular OPCODE
-    - minimize variance (noise) coming from different environments
-    - maximize uniformity
+#### Looped execution with stack balancing
+
+See https://notes.ethereum.org/@chfast/benchmarking-evm-instructions
+
+#### Completely randomized with stack balancing
+
+**TODO**
+
+#### Automated, adaptive generation
+
+This is somewhat similar to the approach from the ["Broken metre" paper](https://arxiv.org/pdf/1909.07220.pdf), which describes a genetic algorithm minimizing the gas throughput (gas/second).
+
+We could modify this idea to run a genetic algorithm (or any other adaptive method with an objective function) maximizing our desired properties, i.e.:
+  - maximize variance (information) captured in the measurement of a particular OPCODE, in particular circumstances (particular `program`, particular location)
+  - minimize variance (noise) coming from different environments
+  - maximize uniformity
+
+This could also be useful do discover the impact of circumstances ("surrounding"), where a particular OPCODE can exhibit much different computational burden, depending on where it is located in the program.
+
+One challenge is how to model OPCODEs with variable parameters (i.e. sha3): they would have unbounded values and also unbounded variance, if not modeled correctly.
+  - could model as `t = c + a*x`, `c` constant, `x` size, `a` coefficient to model. Then, instead of most variance/information about `t`, we want most information on `c` and `a`.
 
 ## Instrumentation and measurement
 
@@ -69,25 +89,87 @@ In case this is not significant impact, that's good news, but we must have a con
 
 When we speak of measurements, we have the following values in mind (to be decided):
 1. **time** - wall clock time (the most universal and likely one)
-2. **TODO**
+2. **cycles** - CPU cycles using TSC (`RDTSC`, `gotsc` etc.)
+
+### Individual measurement vs entire program execution measurement
+
+The main question regarding the measurement of (CPU-bound) computational cost of instructions is, whether it is the individual instruction execution to be measured or an entire program execution, consisting of multiple instructions.
+
+**Pros - individual instructions**
+
+[See here](https://htmlpreview.github.io/?https://github.com/imapp-pl/gas-cost-estimator/blob/master/src/analysis/exploration.nb.html) for preliminary results.
+
+Here we measure the computational cost of each iteration of the inner loop of the EVM interpreter.
+- measurement is more granular and allows us to analyze the measurements without worrying about statistical errors
+- in particular, it allows for granular discrimination between cost of OPCODEs located in various circumstances ("surroundings")
+
+**Cons**
+
+- need to be careful about timer precision and overhead (preliminary results try to account for it)
+
+**Pros - entire program measurement**
+
+[See for example here](See https://notes.ethereum.org/@chfast/benchmarking-evm-instructions)
+
+- impact of timer precision and overhead on the measurements is much less problematic
+- program execution more resembling the production environment, no tracing/debug calls
+
+**Cons**
+
+- couples the intrinsic effect of instruction circumstances with their statistical impact on the estimator outcome
+- must be more careful about program generation, to not have a dataset with adverse statistical properties (e.g. we'd need a very homogenous and random program generator, which is hard given the need to balance the stack)
+- @chfast: for long running programs where "full" stack balancing is needed instructions are measured in groups which are difficult to split. I.e. every instruction increasing stack height must be countered by an instruction reducing the stack height. E.g. it is easy to measure the time of `DUP1 + POP` and `PUSH1 + POP` and you can also get time different of `PUSH1` and `DUP1`. But I don't see a way to get the time of `POP` from these or any other instruction pairs configurations.
+
+**Proposition**
+
+Use individual instructions as the estimator and the entire program measurement as validation.
+Our goal metric can be how closely does the estimate coming from individual measurements can model the cost of an entire program
+
+### Timer overhead adjustment
+
+It is natural, that the reading of a timer has itself an overhead. In a sequence:
+
+```
+t0 = timer.now()
+measured_code...
+t1 = timer.now()
+```
+what is really measured is both the `measured_code` and `timer.now()`.
+Since in our case for **individual instructions** measurements, `measured_code` sometimes executes within a few nanoseconds, it is necessary to account for the timer overhead.
+
+We initially do that within our [preliminary results](https://htmlpreview.github.io/?https://github.com/imapp-pl/gas-cost-estimator/blob/master/src/analysis/exploration.nb.html) by subtracting a rough estimate of the overhead for both environments.
+
+The [estimation of timer overhead is done in these preliminary results](https://htmlpreview.github.io/?https://github.com/imapp-pl/gas-cost-estimator/blob/master/src/analysis/exploration_timers.nb.html) (for now `geth`-only, but should be expanded for other environments).
+The rough estimate is the mean duration between two `timer.now()`s, one immediately after the other.
+
+For `evmone` we have temporarily used a guesstimate leveraging [these results](https://notes.ethereum.org/@chfast/benchmarking-evm-instructions), see the preliminary analysis for details.
+
+Moving forward, we are planning to continue adjusting for the timer overhead with the remarks in [the preliminary exploration of timers](/home/user/sources/imapp/gas-cost-estimator/src/analysis/exploration_timers.Rmd) left at the end.
+
+We should also separately conduct a statistical test that for every OPCODE, a measurement of the timer overhead is significantly smaller, or prepare a similar argument.
 
 ### Repetition
 
 We should repeat the execution, regardless of the instrumentation enabled.
 We call a single repetition of the program's execution, under the same harness and within the same instance/process etc. a **run**.
 
-Q: should some measurements for some runs be discarded (e.g. cache warm up etc.)? or is it more "accurate" to keep them?
+#### Discarding warm-up
 
-Possibly, it is reasonable to keep all the measurements for all runs as a series, and decide on discarding/retention at the Analysis stage.
+Some initial measurements have been detected to be larger, and they might either be discarded or kept.
+
+It should be explored, whether normal node operation exhibits such "initial conditions" regularly or not. (**TODO**)
+Regardless, all OPCODEs should receive fair treatment in this aspect.
+
+Practically, we keep all the measurements for all runs as a series, and decide on discarding/keeping at the Analysis stage.
 
 ### Example of measurement data
 
 First draft, just to visualize the scope of data collected
 
-|program_id|sample_id|run_id|instruction_id|measure_all_time_ns|measure_one_time_ns|
-|----------|---------|------|--------------|-------------------|-------------------|
-|          |         | 34   |   58         |1234               |1204               |
-|          |         | 34   |   59         |1231               |1200               |
+|program_id|sample_id|run_id|instruction_id|measure_all_time_ns|measure_one_time_ns|timer_overhead_time_ns|
+|----------|---------|------|--------------|-------------------|-------------------|----------------------|
+|          |         | 34   |   58         |1234               |1204               | 300                  |
+|          |         | 34   |   59         |1231               |1200               | 432                  |
 
 - **program_id**
 - **sample_id** - some form of identification of the entire sequence of runs
@@ -95,6 +177,7 @@ First draft, just to visualize the scope of data collected
 - **instruction_id** - sequence number of the instruction, necessary to correlate with OPCODE list
 - **measure_all_time_ns** - if the measurement was a "measure all" - time it took to execute the instruction
 - **measure_one_time_ns** - as above, if the measurement was a "measure one"
+- **timer_overhead_time_ns** - **TODO new** an accompanying measurement of timer overhead done just after the timer capture for the instruction
 
 On top of that, we also collect a per-run information:
 
@@ -143,6 +226,7 @@ Questions that the analysis stage should strive to answer:
 2. Is the method of measurement adequate?
 3. What is the gas cost estimation for every OPCODE analyzed?
 4. What is the quality of the particular gas cost estimation?
+5. What are the differences of gas cost estimations for various implementations, and how these might be addressed?
 
 In order to explore the behavior of programs, measurements and environments, let's conduct a series of comparisons and analyzes.
 List of tests:
@@ -157,4 +241,17 @@ List of tests:
 5. Assume a set of example gas cost estimators and compare their results, should they be applied. Compare with todays gas costs for OPCODEs
     - Use blockchain history results to compare various gas cost estimators with resources usage (see above).
 
-**TODO** make these "compare" and "analyze" statements concrete.
+### Implementation-relative measurements
+
+When comparing measurements coming from different implementations (or hardware environments) it is useful to compare using measurements expressed in multiples of mean duration of a selected "pivot OPCODE" (or mean across all OPCODEs, but this is probably less reliable). See [preliminary analysis here](https://htmlpreview.github.io/?https://github.com/imapp-pl/gas-cost-estimator/blob/master/src/analysis/exploration.nb.html) for the initial pick of the pivot OPCODE.
+
+### Detailed validation techniques
+
+Here we outline the current options for validations to do to the obtained measurements.
+
+1. **compare individual instruction vs entire program execution** - see how good the former is in predicting the latter (see [Individual measurement vs entire program execution measurement](#Individual-measurement-vs-entire-program-execution-measurement))
+2. **analyze individual OPCODEs dynamics** - generate a multitude of programs whereby the OPCODE is ran in varying circumstances. See if the measurement error is random and we're accounting for all the dynamics of computational cost of the OPCODE.
+3. **cross-environment OPCODE validation** - check OPCODEs which have drastically different relative estimates in different implementations/hardwares, decide whether the reason is intrinsic to the implementation/hardware or is measurement error
+3. **historical validation** - check against blockchain history under normal conditions where the node is ran (see [Instrumenting and measuring the computations from blockchain history](#Instrumenting-and-measuring-the-computations-from-blockchain-history))
+4. **cross-timer validation** - capture all results using an alternative CPU cost proxy (e.g. instead of `runtimeNano` use `gotsc` CPU cycles), see how they compare.
+5. **validate distribution of measurements for individual OPCODEs** - they look weird, but this is probably due to the way we plot them now, this should be explained.
