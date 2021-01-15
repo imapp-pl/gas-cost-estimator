@@ -16,7 +16,7 @@ Accurate and good properties, in the context of OPCODE gas cost, mean:
   - it is proportional to its computational cost, or otherwise balanced when compared to other OPCODEs
   - it captures the variance in computational cost coming from different circumstances and/or parameters
   - it is adequate for various implementations and environments _OR_
-  - it can be clearly stated, that no such value exists because of differences in implementations
+  - it can be clearly stated when no such value exists because of differences in implementations
   - ideally, it should be possible to validate the estimated gas costs with at least one another method
   - it should have the overhead to measure time (or other aspects of computational cost) under control and "fair" for all OPCODEs
 
@@ -118,6 +118,7 @@ Here we measure the computational cost of each iteration of the inner loop of th
 
 - couples the intrinsic effect of instruction circumstances with their statistical impact on the estimator outcome
 - must be more careful about program generation, to not have a dataset with adverse statistical properties (e.g. we'd need a very homogenous and random program generator, which is hard given the need to balance the stack)
+- @chfast: for long running programs where "full" stack balancing is needed instructions are measured in groups which are difficult to split. I.e. every instruction increasing stack height must be countered by an instruction reducing the stack height. E.g. it is easy to measure the time of `DUP1 + POP` and `PUSH1 + POP` and you can also get time different of `PUSH1` and `DUP1`. But I don't see a way to get the time of `POP` from these or any other instruction pairs configurations.
 
 **Proposition**
 
