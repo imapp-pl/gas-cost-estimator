@@ -82,7 +82,6 @@ In case this is not significant impact, that's good news, but we must have a con
 2. **measure all** - produces a list of measurements per instruction, in order of execution, _for all instructions in the program_.
 3. **measure one** - produce a single measurement for a chosen instruction, i.e. "measure Nth instruction from start of program"
 4. **measure total** - produce a single overarching measurement for the entire program execution
-    - for a single instruction we can then have a **measure pro-rated** value, whereby we "split" the measurement total into contributions proportional to the count of each OPCODE instructions (**NOTE** this way of counting might be controversial and requires a special approach to the sample program set)
     - for a single instruction we can then have a **measure inferred** value, whereby we deduct the _a priori_ known measurements of other instructions from the total. E.g. we have a value for `PUSH1` and for a `PUSH1, PUSH1, ADD` program we can infer a measurement of `ADD`.
 
 When we speak of measurements, we have the following values in mind (to be decided):
@@ -232,7 +231,7 @@ List of tests:
 1. Compare mean, variance, distribution for a single OPCODE with various forms of instrumentation enabled:
     - "measure all"
     - "measure one"
-    - "measure pro-rated" or "measure inferred" only, so no instrumentation
+    - (optionally) "measure inferred" only, so no instrumentation
 2. Compare mean, variance, distribution for a single (simple) OPCODE, coming from different sample programs (or possibly from different `run_id` or `instruction_id`, i.e. how the OPCODE behaves in different circumstances in terms of the program it is a part of)
 3. Compare mean, variance, distribution for various OPCODEs in the same manner, see if there's a pattern?
 4. Analyze measurement overheads by comparing sums of individual instruction measurements with total measurements.
