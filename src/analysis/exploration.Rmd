@@ -82,16 +82,19 @@ We're subtracting these estimates from all measurements, for more granularity on
 
 Our "ball-park" estimates of minimum clock measurement overhead:
 
-- blue - `geth` - `30ns` ([median for `runtimeNano`](https://htmlpreview.github.io/?https://github.com/imapp-pl/gas-cost-estimator/blob/master/src/analysis/exploration_timers.nb.html))
-- pink - `evmone` - `28.32ns` (2nd wild guess, this makes our results calibrate with ones inferred from [`chfast`'s benchmarks](https://notes.ethereum.org/@chfast/benchmarking-evm-instructions). We try here to have `NOT` opcode match the time from there, which is `881us/256/2048 = 1.68ns`. Our median measurement without adjustment was `30`, so `30 - 1.68 = 28.32ns`)
+- blue - `geth` - `17ns` ([minimum for `runtimeNano`](https://htmlpreview.github.io/?https://github.com/imapp-pl/gas-cost-estimator/blob/master/src/analysis/exploration_timers.nb.html))
+  - (earlier try: `30ns` median for `runtimeNano` from a different measurement)
+- pink - `evmone` - `16ns` (minimum, see link as above)
   - (earlier try: `9ns` wild guess, half of smallest measurement)
-  - (2nd earlier try: `29.32ns` with earlier set of result data)
-- green - `openethereum` - `30ns` (wild guess, just the same as above, **TODO** update)
+  - (2nd earlier try: `29.32ns` as below with earlier set of result data)
+  - (3rd earlier try: `28.32ns` (2nd wild guess, this makes our results calibrate with ones inferred from [`chfast`'s benchmarks](https://notes.ethereum.org/@chfast/benchmarking-evm-instructions). We try here to have `NOT` opcode match the time from there, which is `881us/256/2048 = 1.68ns`. Our median measurement without adjustment was `30`, so `30 - 1.68 = 28.32ns`)
+- green - `openethereum` - `17ns` (minimum, see link as above)
+  - (earlier try: `30ns` just the same as `geth` above)
 
 ```{r fig.width=20}
-rough_estimate_time_overhead_geth = 30
-rough_estimate_time_overhead_evmone = 28.32
-rough_estimate_time_overhead_openethereum = 30
+rough_estimate_time_overhead_geth = 17
+rough_estimate_time_overhead_evmone = 16
+rough_estimate_time_overhead_openethereum = 17
 
 measurements_geth = measurements[which(measurements$env=="geth"), ]
 measurements_evmone = measurements[which(measurements$env=="evmone"), ]
@@ -145,7 +148,7 @@ tapply(measurements_openethereum$measure_all_time_ns, measurements_openethereum$
 # cleanup
 rm(measurements_geth, measurements_evmone, measurements_openethereum)
 ```
-**TODO** this looks bad for PUSH1-PUSH8 OPCODEs for `evmone`, the timer overhead measurement is off.
+`PUSH1`-`PUSH8` OPCODEs for `evmone` are extremely cheap, they're additionally optimized there.
 
 (**TODO** pushes of more than 8 bytes look more expensive, what is special about pushes under 8 bytes for `evmone`?).
 
@@ -269,6 +272,8 @@ abline(h=1, col="red", lty=3)
 
 The red, dotted line is 1, which coincides with respective mean of pivot OPCODE (see above) measurement for the different environments.
 
+---
+
 **TODO** check these again, some look weird.
 
 ```{r fig.width=20}
@@ -277,12 +282,12 @@ measurements_evmone = measurements[which(measurements$env=="evmone"), ]
 measurements_openethereum = measurements[which(measurements$env=="openethereum"), ]
 
 n_programs = nrow(programs)
-n_plot_cols = 14
+n_plot_cols = 17
 n_plot_rows = n_programs %/% n_plot_cols + 1
 ```
 
 <div class="superbigimage">
-```{r fig.width=40, fig.height=15}
+```{r fig.width=40, fig.height=10}
 par(mfrow=c(n_plot_rows, n_plot_cols))
 for (opcode in programs$opcode_measured)
 {
@@ -294,7 +299,7 @@ for (opcode in programs$opcode_measured)
 </div>
 
 <div class="superbigimage">
-```{r fig.width=40, fig.height=15}
+```{r fig.width=40, fig.height=10}
 par(mfrow=c(n_plot_rows, n_plot_cols))
 for (opcode in programs$opcode_measured)
 {
@@ -307,7 +312,7 @@ for (opcode in programs$opcode_measured)
 </div>
 
 <div class="superbigimage">
-```{r fig.width=40, fig.height=15}
+```{r fig.width=40, fig.height=10}
 par(mfrow=c(n_plot_rows, n_plot_cols))
 for (opcode in programs$opcode_measured)
 {
@@ -332,7 +337,8 @@ Quick check that `sample_id` shouldn't impact measurements:
 boxplot(measure_all_time_ns ~ sample_id:env, data=measurements, las=2)
 ```
 
-But `run_id` does impact measurements: first several runs have a decreasing trend. **TODO** needs investigation how/if to alleviate:
+But `run_id` does impact measurements: first several runs have a decreasing trend. **TODO** needs investigation how/if to alleviate 
+(**TODO** we probably should undo the warm-up for `geth`, other's don't do this and it shows here. Discard warm-up on analysis stage):
 
 ```{r fig.width=20}
 measurements_geth = measurements[which(measurements$env=="geth"), ]

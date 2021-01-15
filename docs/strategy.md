@@ -50,9 +50,7 @@ This set of programs will have one program per OPCODE and it will be a smallest 
 
 See https://notes.ethereum.org/@chfast/benchmarking-evm-instructions
 
-#### Completely randomized with stack balancing
-
-**TODO**
+#### Completely randomized with stack balancing **TODO**
 
 #### Automated, adaptive generation
 
