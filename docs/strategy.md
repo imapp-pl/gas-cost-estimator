@@ -1,7 +1,7 @@
 # Gas Cost Estimator approach strategy
 
 Here we organize thoughts on different approaches to consider.
-We focus on EVM for simplicity, but this should be substitutable by ewasm (Ethereum flavored WebAssembly) throughout the document.
+We focus on EVM for simplicity, but this should be substitutable by eWASM (Ethereum flavored WebAssembly) interpreters throughout the document.
 
 ### Goal
 
@@ -14,9 +14,9 @@ Ideally, the method should become a standard (framework) for profiling EVM imple
 
 Accurate and good properties, in the context of OPCODE gas cost, mean:
   - it is proportional to its computational cost, or otherwise balanced when compared to other OPCODEs
-  - it captures the variance in computational cost coming from different circumstances and/or parameters
+  - it explains the variation in computational cost coming from different circumstances and/or parameters
   - it is adequate for various implementations and environments _OR_
-  - it can be clearly stated, that no such value exists because of differences in implementations
+  - it can be clearly stated when no such value exists because of differences in implementations
   - ideally, it should be possible to validate the estimated gas costs with at least one another method
   - it should have the overhead to measure time (or other aspects of computational cost) under control and "fair" for all OPCODEs
 
@@ -29,11 +29,11 @@ In this section we want to consider possible approaches to sample program genera
 When generating our programs we want to ensure the following:
 
 1. **uniform coverage** - we want programs to cover the space of OPCODEs completely, so that all the OPCODEs are modeled appropriately and "fairly".
-    - all impact of values on stack is captured (at least at the level of variance per OPCODE)
-    - all impact of circumstances where the instructions appear and their "surroundings" is captured
+    - impact of values on stack is captured (at least at the level of variation per OPCODE)
+    - impact of circumstances where the instructions appear and their "surroundings" is captured
 2. **little measurement noise** - we want programs to be such that noise is limited.
     - in particular we want to be able to tell, if factors external to the OPCODE traits can impact the measurement
-    - i.e. we want to separate "good variance" from "bad variance.". The former means variance that captures intrinsic differences in the resource that instructions consume. The latter means variance introduced by inadequate measurement and external factors.
+    - i.e. we want to separate "good variance" from "bad variance." The former means variance that captures intrinsic differences in the resource that instructions consume. The latter means variance introduced by inadequate measurement and external factors.
 3. **feasibility of measurement** - we want programs to be easily supplied to various EVM implementations and measurement harnesses we devise
 
 The final approach to generate programs will be devised in Stage II in an iterative manner, so as to arrive at the simplest solution which gives good results.
@@ -118,6 +118,7 @@ Here we measure the computational cost of each iteration of the inner loop of th
 
 - couples the intrinsic effect of instruction circumstances with their statistical impact on the estimator outcome
 - must be more careful about program generation, to not have a dataset with adverse statistical properties (e.g. we'd need a very homogenous and random program generator, which is hard given the need to balance the stack)
+- @chfast: for long running programs where "full" stack balancing is needed instructions are measured in groups which are difficult to split. I.e. every instruction increasing stack height must be countered by an instruction reducing the stack height. E.g. it is easy to measure the time of `DUP1 + POP` and `PUSH1 + POP` and you can also get time different of `PUSH1` and `DUP1`. But I don't see a way to get the time of `POP` from these or any other instruction pairs configurations.
 
 **Proposition**
 
@@ -139,7 +140,7 @@ Since in our case for **individual instructions** measurements, `measured_code` 
 We initially do that within our [preliminary results](https://htmlpreview.github.io/?https://github.com/imapp-pl/gas-cost-estimator/blob/master/src/analysis/exploration.nb.html) by subtracting a rough estimate of the overhead for both environments.
 
 The [estimation of timer overhead is done in these preliminary results](https://htmlpreview.github.io/?https://github.com/imapp-pl/gas-cost-estimator/blob/master/src/analysis/exploration_timers.nb.html) (for now `geth`-only, but should be expanded for other environments).
-The rough estimate is the mean duration captured when invoking two `timer.now()`s one immediately after the other.
+The rough estimate is the mean duration between two `timer.now()`s, one immediately after the other.
 
 For `evmone` we have temporarily used a guesstimate leveraging [these results](https://notes.ethereum.org/@chfast/benchmarking-evm-instructions), see the preliminary analysis for details.
 
