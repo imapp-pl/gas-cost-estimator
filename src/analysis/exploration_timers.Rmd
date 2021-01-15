@@ -3,12 +3,17 @@ title: "R Notebook: exploration of various timers"
 output: html_notebook
 ---
 
-Read in the output of `go run ./src/instrumentation_measurement/clock_resolution_go/main.go`
+Read in the output of `go run ./src/instrumentation_measurement/clock_resolution_go/main.go` (and other routines for overhead measurements):
 
 ```{r fig.width=20}
 setwd("~/sources/imapp/gas-cost-estimator/src")
-time_all = read.csv("../../time.csv")
-N = 50000
+time_geth = read.csv("../../time_geth.csv")
+time_evmone = read.csv("../../time_evmone.csv", header = FALSE)
+time_openethereum = read.csv("../../time_openethereum.csv", header = FALSE)
+time_all = time_geth[1:200000, ]
+time_all$time_evmone = time_evmone[, 1]
+time_all$time_openethereum = time_openethereum[, 1]
+N = 200000
 time = head(time_all, N)
 head(time)
 ```
@@ -18,10 +23,17 @@ The temporal dynamics of all timers must be accounted for. They all seem to warm
 
 ```{r fig.width=20}
 plot(NULL, xlim=c(1, N), ylim=c(0, 3000))
+
+geth_color = rgb(0.1,0.1,0.7,0.5)
+evmone_color = rgb(0.8,0.1,0.3,0.6)
+openethereum_color = rgb(0.1,0.7,0.1,0.5)
+
 lines(time$clock_gettime, type = "l", col = "red")
 lines(time$time, type = "l", col = "blue")
-lines(time$runtime_nano, type = "l", col = "green")
+lines(time$runtime_nano, type = "l", col = geth_color)
 lines(time$gotsc, type = "l", col = "purple")
+lines(time$time_evmone, type = "l", col = evmone_color)
+lines(time$time_openethereum, type = "l", col = openethereum_color)
 ```
 
 ```{r fig.width=20}
@@ -29,8 +41,31 @@ plot(NULL, xlim=c(1, N), ylim=c(1, 3.5))
 par(ylog=TRUE)
 lines(time$clock_gettime, type = "l", col = "red")
 lines(time$time, type = "l", col = "blue")
-lines(time$runtime_nano, type = "l", col = "green")
+lines(time$runtime_nano, type = "l", col = geth_color)
 lines(time$gotsc, type = "l", col = "purple")
+lines(time$time_evmone, type = "l", col = evmone_color)
+lines(time$time_openethereum, type = "l", col = openethereum_color)
+```
+A closer look at the same, only relevant wallclock measurements:
+
+```{r fig.width=20}
+plot(NULL, xlim=c(1, 500), ylim=c(15, 25.5))
+lines(time$runtime_nano, type = "l", col = geth_color)
+lines(time$time_evmone, type = "l", col = evmone_color)
+lines(time$time_openethereum, type = "l", col = openethereum_color)
+```
+And over the entire period, smoothed out:
+
+```{r fig.width=20}
+min = 16
+max = 70
+# moving average; from https://stackoverflow.com/questions/743812/calculating-moving-average
+ma <- function(x, n = 1000){stats::filter(x, rep(1 / n, n), sides = 2)}
+
+plot(NULL, xlim=c(1, N), ylim=c((min), (max)))
+lines(ma(time$runtime_nano), col = geth_color)
+lines(ma(time$time_evmone), col = evmone_color)
+lines(ma(time$time_openethereum), col = openethereum_color)
 ```
 
 It seems `runtimeNano` is the most accurate and stable one. We could perhaps subtract the `Min.` of this from all the measurements
@@ -52,14 +87,23 @@ cor(time_sample)
 # cleanup
 rm(time_sample)
 ```
-Deeper analysis of the two best clocs: `runtimeNano` and `gotsc`:
+Deeper analysis of the two best clocks: `runtimeNano` and `gotsc`, plus the `evmone` and `openethereum` wall clocks:
 
 ```{r fig.width=20}
-par(mfrow=c(2,1))
+par(mfrow=c(4,1))
 frequencies = sort(table(time$runtime_nano), decreasing=TRUE)
-plot(frequencies[1:50], col="green")
+# take all frequencies minus the most outlying ones
+n = length(frequencies)/2
+plot(frequencies[1:n], col=geth_color)
 frequencies = sort(table(time$gotsc), decreasing=TRUE)
-plot(frequencies[1:50], col="purple")
+n = length(frequencies)/2
+plot(frequencies[1:n], col="purple")
+frequencies = sort(table(time$time_evmone), decreasing=TRUE)
+n = length(frequencies)/2
+plot(frequencies[1:n], col=evmone_color)
+frequencies = sort(table(time$time_openethereum), decreasing=TRUE)
+n = length(frequencies)/2
+plot(frequencies[1:n], col=openethereum_color)
 
 # cleanup
 rm(frequencies)
@@ -68,11 +112,13 @@ rm(frequencies)
 ```{r fig.width=20}
 quantile(time$runtime_nano, probs=c(0.85, 0.9, 0.95, 0.99, 0.999, 0.9999, 0.99999))
 quantile(time$gotsc, probs=c(0.85, 0.9, 0.95, 0.99, 0.999, 0.9999, 0.99999))
+quantile(time$time_evmone, probs=c(0.85, 0.9, 0.95, 0.99, 0.999, 0.9999, 0.99999))
+quantile(time$time_openethereum, probs=c(0.85, 0.9, 0.95, 0.99, 0.999, 0.9999, 0.99999))
 ```
 
 Summary:
 
-1. We should discard about 5000 first observations (**TODO**)
+1. ~We should discard about 5000 first observations~ EDIT: with our current clocks, and fresh measurements from @magdasta, there doesn't seem to be a need. This was machine specific most likely.
 2. It is probably a good idea to monitor and register the timer overhead during the opcode measurements (**TODO**).
 2. Due to periods of increased overhead, sometimes the measurements might be over-timed for several consecutive measurements. Should we discard all measurements where "just time" measurement is above a threshold? (**TODO**)
 3. `runtimeNano` is clearly the winner, but it still has high values quite often, and is subject to large overhead during warm-up and during the "temporary increase periods"
@@ -83,4 +129,4 @@ Summary:
 6. Alternatively, we could do more in-depth analysis of the behaviors observed and try to normalize the timer readings more (**TODO** optional)
 
 **TODO** also another timer, another one tried by `chfast` for evmone https://godoc.org/github.com/lanl/go-papi
-**TODO** explore C++ and Rust timers similarly
+**TODO** explore C++ and Rust timers similarly (we have `runtimeNano` counterparts, do others)
