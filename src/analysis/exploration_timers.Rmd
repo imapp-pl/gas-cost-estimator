@@ -77,7 +77,7 @@ Summary:
 2. Due to periods of increased overhead, sometimes the measurements might be over-timed for several consecutive measurements. Should we discard all measurements where "just time" measurement is above a threshold? (**TODO**)
 3. `runtimeNano` is clearly the winner, but it still has high values quite often, and is subject to large overhead during warm-up and during the "temporary increase periods"
     - **UPDATE** - it is a winner in wall-clock category, but probably CPU cycles using `gotsc` (based on TSC and in-sync with what `evmone` measurements use - RDTSC) is even better
-4. We can also subtract the minimum observed timer overhead (I've seen 21ns) of `runtimeNano` from all the measurements (**TODO**)
+4. We can also subtract the minimum (or mean/median) observed timer overhead of `runtimeNano` from all the measurements
     - **UPDATE** - if we go for CPU cycles it's 35. Interestingly though, the `gotsc` library tells us "TSC Overhead: 31"
 5. Next step would be to consider subtracting more, considering it's a justified move (**TODO**)
 6. Alternatively, we could do more in-depth analysis of the behaviors observed and try to normalize the timer readings more (**TODO** optional)
