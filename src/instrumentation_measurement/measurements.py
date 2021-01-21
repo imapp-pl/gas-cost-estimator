@@ -74,6 +74,7 @@ class Measurements(object):
     invocation = golang_main + args + bytecode_arg
     result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
     assert result.returncode == 0
+    # strip the final newline
     instrumenter_result = result.stdout.split('\n')[:-1]
 
     return instrumenter_result
@@ -85,6 +86,7 @@ class Measurements(object):
     invocation = evmone_main + args + [program.bytecode]
     result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
     assert result.returncode == 0
+    # strip additional output information added by evmone
     instrumenter_result = result.stdout.split('\n')[2:-5]
 
     return instrumenter_result
