@@ -156,8 +156,17 @@ This means that, given these results are accurate, which is to be further confir
 #### Q2: is measuring of individual instructions feasible?
 
 The obtained results led us to the conclusion that measuring of individual instructions can be feasible.
+However, care must be taken to perform validations of the assumption that the lack of timer precision or its overhead, nor the inclusion of timer function calls itself, don't introduce "unfairness" to the measurements collected.
+Refer to the validation techniques planned for Stage II analysis in **TODO ref section approach etc** for ideas on tackling this.
 
-#### Q3: how can we explore the entire program space to capture all sources of variability of OPCODEs computational cost
+#### Q3: How can we explore the entire program space to capture all sources of variability of OPCODEs computational cost
+
+The main intention of the research presented here is to obtain relative comparison of costs of OPCODEs, accounting for the sources of variability that are currently represented by the gas cost schedule.
+An example of such variability is that the gas cost of a `SHA3` OPCODE is a function of the size of its arguments, which in turn naturally impacts the computational cost of the operation.
+
+It is tempting to search for sources of variability unaccounted for in the current gas schedule.
+A hypothetical example of such situation would be one where, for example, `PUSH1` operation became more expensive after having been repeated multiple times in the program.
+fi
 ## 5. Approach and plan for Stage II
 
 **TODO** iterative

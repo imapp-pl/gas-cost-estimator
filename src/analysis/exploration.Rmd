@@ -66,9 +66,9 @@ Combine the two tables to see only times of the measured opcodes.
 ```{r fig.width=20}
 measurements = sqldf("SELECT opcode_measured, sample_id, run_id, measure_all_time_ns, env
                      FROM results
-                     INNER JOIN 
+                     INNER JOIN
                        programs ON(results.program_id = programs.program_id)
-                     WHERE 
+                     WHERE
                        (results.instruction_id = programs.measured_op_position AND results.env = 'geth') OR
                        (results.instruction_id = programs.measured_op_position_evmone AND results.env = 'evmone') OR
                        (results.instruction_id = programs.measured_op_position AND results.env = 'openethereum')
@@ -163,7 +163,8 @@ Mystery solved in `evmone/lib/evmone/opcodes_helpers.h`:
     case OP_PUSH6:     \
     case OP_PUSH7:     \
     case OP_PUSH8
-```)
+```
+)
 
 We want to introduce a notion of implementation-relative measurements, where we express them in the multiples of "mean `COINBASE` duration", as opposed to ns.
 Let's call the selected operation **"pivot OPCODE"**.
@@ -175,7 +176,7 @@ We're using `COINBASE` as the pivot OPCODE because it is (**TODO** verify all po
 - no outliers
 - seem to be a rather typical opcode in terms of timing in both implementations (it allows similar calibration to that using an overall mean)
 - `COINBASE` seems a rather peculiar choice for a pivot OPCODE, but `¯\_(ツ)_/¯`
-- (earlier pick was `POP`, but it is very cheap, close to timer measurement and precision) 
+- (earlier pick was `POP`, but it is very cheap, close to timer measurement and precision)
 - (second pick was `EXP(0, 0)`, but it had a bad outlier, we can revisit after the `evmone` outliers are sorted, **TODO**)
 - (third and fourth picks were `MULMOD(0, 0, 0)` and `GT(0, 0)`, but they belong to two groups which time very differently in `geth`/`evmone` - `geth` seems faster in arithmetic and slower in logical and comparison operators (**TODO** explore this more)
 
@@ -350,7 +351,7 @@ Quick check that `sample_id` shouldn't impact measurements:
 boxplot(measure_all_time_ns ~ sample_id:env, data=measurements, las=2)
 ```
 
-But `run_id` does impact measurements: first several runs have a decreasing trend. **TODO** needs investigation how/if to alleviate 
+But `run_id` does impact measurements: first several runs have a decreasing trend. **TODO** needs investigation how/if to alleviate
 (**TODO** we probably should undo the warm-up for `geth`, other's don't do this and it shows here. Discard warm-up on analysis stage):
 
 ```{r fig.width=20}
