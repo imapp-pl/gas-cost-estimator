@@ -1,18 +1,4 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// based on `StructLogger` from `github.com/ethereum/go-ethereum/core/vm/logger.go:123`
 
 package instrumenter
 
@@ -24,19 +10,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/params"
 )
 
-// LogConfig are the configuration options for structured logger the vm.EVM
 type LogConfig struct {
-	DisableMemory     bool // disable memory capture
-	DisableStack      bool // disable stack capture
-	DisableStorage    bool // disable storage capture
-	DisableReturnData bool // disable return data capture
-	Debug             bool // print output during capture end
-	Limit             int  // maximum length of output, but zero means unlimited
-	// Chain overrides, can be used to execute a trace using future fork rules
-	Overrides *params.ChainConfig `json:"overrides,omitempty"`
 }
 
 //go:generate gencodec -type InstrumenterLog -field-override structLogMarshaling -out gen_structlog.go
@@ -49,16 +25,7 @@ type InstrumenterLog struct {
 	TimeNs int64     `json:"timeNs"`
 }
 
-// OpName formats the operand name in a human-readable format.
-func (s *InstrumenterLog) OpName() string {
-	return s.Op.String()
-}
-
 // InstrumenterLogger is an vm.EVM state logger and implements Tracer.
-//
-// InstrumenterLogger can capture state based on the given Log configuration and also keeps
-// a track record of modified storage which is used in reporting snapshots of the
-// contract their storage.
 type InstrumenterLogger struct {
 	cfg LogConfig
 

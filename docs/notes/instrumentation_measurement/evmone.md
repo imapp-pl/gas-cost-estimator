@@ -13,8 +13,7 @@
 
 ### Rough notes
 
-1. Probably not a good fit to meausure, only instrumentation
-    - TODO: compare instrumentation with one used with the Broken Metre (aleth fork) implementation
+1. ~Probably not a good fit to meausure, only instrumentation~ EDIT: we'll measure it
 2. EVMC API - these are tools that go with the EVMONE VM implementation.
     1. under `/build/evmc/bin/evmc run --help` one finds help about how to run bytecode
     2. trying `evmc/bin/evmc run 0x60` - this is `PUSH1`, check out https://www.ethervm.io/#60
@@ -27,4 +26,13 @@
         7. PUSH F0 (offset)
         8. RETURN
         9. `evmc/bin/evmc run --vm ./lib/libevmone.so 602060070260F053600160F0F3`, nice
-    
+
+
+
+### Notes on execution
+
+1. `auto analysis = analyze(rev, code, code_size);` before execution does some preallocations and preprocessing based on static code information, like assembling information about code blocks - I think it's still "fair", but might definitely cause uneven "gas dynamics" if compared to simple interpreters
+    - **BUT** - some operations are done per-block, e.g. _static_ gas operations and checks etc. This isn't very fair, it will fatten the perceived cost of 
+2. The `JUMPDEST` which appears at the beginning of each program is an intrinsic opcode `BEGINBLOCK`, `evmone` specific
+    - "These intrinsic instructions may be injected to the code in the analysis phase"
+    - "This instruction is defined as alias for JUMPDEST and replaces all JUMPDEST instructions"
