@@ -20,10 +20,6 @@ For now, we focus on the individual OPCODE measurements, which we used in prelim
     - look into whether preprocessing or similar optimizations don't "move effort" from one instruction to another, like `evmone` does
 3. `evmone` does a preprocessing step `analysis.cpp`, which slightly skews measurements - some of the effort to do some OPCODEs will be "put" under "intrinsic OPCODE `BEGINBLOCK`" executing at the end of each code block. `geth` and `OpenEthereum` don't have this.
     - `BEGINBLOCK` (manifesting as `JUMPDEST` in OPCODE tracing) needs special attention in larger programs. We must come up with a way to handle it, since other implementations will not have this "intrinsic instruction". **TODO**
-4. `evmone` perceivably measures _only_ the execution of the OPCODE (as opposed to `geth`), but this is not the case. In `evmone` all logic done in the main interpreter loop in `geth` is done deeper down the call stack. The only thing "excluded" from measurement is the `while` loop condition:
-    ```
-    while (instr != nullptr)
-    ```
-
-    Proposed fix for this is [here](https://github.com/imapp-pl/evmone/pull/2). `OpenEthereum` requires a similar fix [see here](./instrumentation_measurement/openethereum.md)
-5. `geth` measurements are written to a pre-allocated array on every instruction, while `evmone` and `OpenEthereum` write the CSV data straight to `stdout`, this might be slightly unfair **TODO** even out the measurement implementations
+4. `evmone` perceivably measures _only_ the execution of the OPCODE (as opposed to `geth`), but this is not the case. In `evmone` all logic done in the main interpreter loop in `geth` is done deeper down the call stack.
+5. `OpenEthereum` excludes the `while` loop condition used in the interpreter loop (`geth` and `evmone` include it). Similar fix for this for `evmone` has been done [here](https://github.com/imapp-pl/evmone/pull/2). [See also here](./instrumentation_measurement/openethereum.md)
+5. `geth` and `evmone` measurements are written to a pre-allocated array on every instruction, while `OpenEthereum` write the CSV data straight to `stdout`, this might be slightly unfair **TODO** even out the measurement implementations
