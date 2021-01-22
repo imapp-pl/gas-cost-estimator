@@ -185,6 +185,9 @@ It may only require the measuring of a single OPCODE in various contexts, allowi
 
 ## 5. Approach and plan for Stage II
 
+**NOTE** We plan to proceed with the research in Stage II in a highly iterative fashion.
+If the findings gathered invalidate the assumptions, the approach and plan will be adjusted.
+
 
 
 **TODO** iterative
