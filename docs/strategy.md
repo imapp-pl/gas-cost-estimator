@@ -1,5 +1,11 @@
 # Gas Cost Estimator approach strategy
 
+----
+
+**NOTE: parts of this doc have been moved to the Stage I report. This may be a bit too speculative and obsolete** 
+
+----
+
 Here we organize thoughts on different approaches to consider.
 We focus on EVM for simplicity, but this should be substitutable by eWASM (Ethereum flavored WebAssembly) interpreters throughout the document.
 
