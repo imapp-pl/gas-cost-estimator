@@ -13,12 +13,12 @@ Due to Turing completeness of their instruction sets, and the necessity to guara
 The halting mechanism is provided thanks to gas, which is an Ethereum specific measure of computational cost incurred by the executing environment (Ethereum node connected to the network).
 Gas is priced in Ether (the intrinsic value token of the Ethereum blockchain), each transaction has an allowance of gas prepaid by the transaction sender.
 Every step of computation (as of writing, this corresponds to every bytecode instruction interpreted by EVM/eWASM) costs a small amount of gas, and if gas allowance is depleted, the computation is halted and its effects are reverted, except for the consumption of the entire gas allowance.
-The gas consumed by computations performed is paid out as transaction fee (in Ether) to the miner, or its Eth2.0 counterpart, processing the transaction.
+The gas consumed by computations performed is paid out as transaction fee (in Ether) to the miner, or their Eth2.0 counterpart, including the transaction.
 The unused remainder of the prepaid gas allowance is returned back to the transaction sender.
 
 The challenge with this mechanism is to determine adequate gas costs of bytecode instructions.
-Currently, this is done on a per-OPCODE bases, that is, every OPCODE interpreted by the EVM/eWASM has a predetermined gas cost (or its gas cost is expressed as a function of instruction's arguments).
-This report and the "Gas Cost Estimator" research project aims at devising a method to estimate these adequate gas costs, by estimating and analyzing the relative computational cost of OPCODEs.
+Currently, this is done on a per-OPCODE basis, that is, every OPCODE interpreted by the EVM/eWASM has a predetermined gas cost (or its gas cost is expressed as a function of instruction's arguments).
+This report and the "Gas Cost Estimator" research project aims at devising a method to estimate adequate values for these OPCODE gas costs, by estimating and analyzing the relative computational cost of OPCODEs.
 
 ### Motivation
 
@@ -35,9 +35,9 @@ If pricing of computations was inadequate, it would mean that there are operatio
 This would in turn mean that adversarial actors could craft the transactions in a way which puts significant load on the network, at the same time paying disproportionately low transaction fees.
 This situation opens the door to DoS attacks, which have happened and were given as main motivation for gas cost revisions in **TODO find ref**.
 
-To add to this, there is the decentralization factor of adequate gas costs.
+To add to this, there is the decentralization factor of having adequate gas costs.
 The computations by EVM/eWASM components in Ethereum network nodes are performed by all nodes in the network, regardless of whether they are mining and earning transaction fees or not.
-In the situation described above, the effect of the DoS attack extends to all participants of the network, with most severely impacting less performant systems running on consumer hardware.
+In the situation described above, the effect of the DoS attack extends to all participants of the network, most severely impacting less performant systems running on consumer hardware.
 The ability of users running nodes on consumer hardware to keep up with the execution of transactions on the blockchain is very important for preserving the decentralized nature of Ethereum.
 Such arguments are present in **TODO find ref**.
 
@@ -50,9 +50,9 @@ This in turn could incentivize parties who include transactions in blocks (miner
 This could lead to a less predictable behavior of the fee market, from the network users' perspective.
 Assuming that transactions can in fact be efficiently categorized in terms of which smart contracts they execute on, which is a non-trivial task, one should accept the possibility of such scenario.
 
-This report and the entire "Gas Cost Estimator" undertaking are focusing on a subset of EVM/eWASM OPCODEs.
+This report and the entire "Gas Cost Estimator" proejct are focusing on a subset of EVM/eWASM OPCODEs.
 The OPCODEs in this subset (see [Appendix B: OPCODEs subset](#appendix-b-opcodes-subset) have in common that they do not include any instructions which access the Ethereum storage (e.g. `SSTORE`, `SLOAD` etc.).
-On one hand, the focus on only purely computational instructions is intended and desirable, as seen from the point of view whereby the importance of on-chain computations will increase, while the extensive use of Ethereum storage will diminish.
+On one hand, the focus on only purely computational instructions is intended and desirable, as seen from the point of view whereby the importance of on-chain computations will increase, while the extensive use of Ethereum storage will diminish and become more relatively more expensive.
 This is driven by the current influx of L2-scalability solutions, which only store the minimum amount of bytes, putting the burden of providing data on the transaction senders and the burden of validating it on the smart contract.
 **TODO find ref**.
 On the other hand, we intend to consider extending the method devised here to storage-bound instructions in the future as well.
@@ -68,7 +68,7 @@ By environments in this context we mean:
 
 Since the inclusive nature of Ethereum, we are required to examine and include in the analysis the entire spectrum of these environments and determine how much does the environment impact the estimated gas costs.
 
-It would be desirable, and is intended to be considered in the Stage II of the project, if the method devised here was reasonably easily applicable in those varying environments.
+It is desirable, and is intended to be considered in the Stage II of the project, that the method devised here is reasonably easily applicable in those varying environments.
 To this end, the approach must be well documented and reproducible by the community.
 
 ### Anticipation of Stage II
@@ -82,26 +82,26 @@ Given that, we focus on setting forth a plan and strategy for conducting the fut
 
 Important notice to this section: all results obtained at the Stage I of this research are still not intended to be seen as final.
 There are many caveats and detail work to be done, which will impact the final results.
-As a consequence, we phrasing our preliminary findings as questions that need to be considered in Stage II.
+As a consequence, we are phrasing our preliminary findings as questions that need to be considered in Stage II.
 
 ### Preliminary method
 
 During the execution of Stage I, preliminary experiments and analysis were performed in order to explore the dynamics of computational effort which OPCODEs of EVM/eWASM exhibit.
 The intention of this exploration was to propose a method for gas cost estimation, which would be further advanced and validated in Stage II.
 
-The method consists of three separate areas of interest:
+The method consists of three separate domains:
 1. **Program generation** - entails generation of EVM/eWASM bytecode programs which will be executed in order to gather measurements
 2. **Instrumentation and measurement** - entails the process of running the generated programs in a controlled environment and performing various measurements
-3. **Analysis** - entails the process of statistical analysis of the obtained measurement data
+3. **Analysis** - entails the process of statistical analysis and validation of the obtained measurement data
 
-In the following subsections, the preliminary implementation of these three areas will be briefly described.
+In the following subsections, the preliminary implementation of these three domains will be briefly described.
 Refer to the next section for the planned approach to complete these implementations in Stage II.
 
 #### Preliminary program generation
 
 For Stage I we used the "Simplest valid program" approach.
 This set of programs will have one program per OPCODE and it will be a smallest and simplest program which successfully executes the instructions and stops.
-Additionally to this, we exclude several OPCODEs which treatment should be polished out (`JUMP`, `JUMPI`, `RETURNDATACOPY`).
+Additionally to this, we exclude several OPCODEs which treatment should be polished out in Stage II (`JUMP`, `JUMPI`, `RETURNDATACOPY`).
 We also fully neglect the breadth of arguments which can be supplied to the OPCODEs execution (e.g. `EXP`), which has substantial impact on the computational cost.
 
 The source code for preliminary program generation employed can be seen **TODO reference**.
@@ -149,14 +149,9 @@ Instead, will present the questions that will be especially interesting to answe
 
 When visually comparing the implementation-relative measurements (see **TODO reference** above), we suspect that at the current state of EVM/eWASM implementations, it might be very challenging to propose gas costs to OPCODEs, which would apply equally well to all.
 
-E.g., from the preliminary measurement data we saw that for `evmone` and `openethereum` several arithmetic OPCODEs (range from `DIV` to `MULMOD`) are consequently more expensive to execute than the pivot OPCODE.
+E.g., from the preliminary measurement data we saw that, for `evmone` and `openethereum`, several arithmetic OPCODEs (range from `DIV` to `MULMOD`) are consequently more expensive to execute than the pivot OPCODE.
 This is however not the case for `geth`.
-This means that, given these results are accurate, which is to be further confirmed in Stage II, we might not expect a single good set of gas costs for all the OPCODEs in question.
-
-**TODO** speak to the standardization effort part and different nodes implementations
-  - we'll need to suggest balancing out of the implementations (but how and is it feasible)
-  - question: what if there's no one-size-fits-all solution
-  - reflect on the implementationrelativemeasurements
+This means that, given these results are accurate, which is to be further confirmed in Stage II, we might not expect a single good set of gas costs for all the OPCODEs in question, unless there is a parallel effort made to optimize the costly OPCODEs in selected implementations.
 
 #### Q2: is measuring of individual instructions feasible?
 
