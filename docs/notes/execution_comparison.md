@@ -3,7 +3,7 @@
 This document will analyze and compare the exact flow of execution of the interpreter loop, and how is its computational cost measured.
 
 The goal is to know, whether the measurements, as compared between various EVM implementations and various OPCODEs, are collected in a "fair" fashion.
-"Fair" in this context mean not only (or not as much as) fairness between implementations, but rather _relatively fair treatment_ of all OPCODEs in all implementations.
+"Fair" in this context mean not only (or not as much as) fairness between implementations, but rather _fair relative treatment_ of all OPCODEs in all implementations.
 
 For now, we focus on the individual OPCODE measurements, which we used in preliminary exploration.
 **TODO (optional)** repeat this for whole-program measurements, if we do them.

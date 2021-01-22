@@ -166,8 +166,26 @@ An example of such variability is that the gas cost of a `SHA3` OPCODE is a func
 
 It is tempting to search for sources of variability unaccounted for in the current gas schedule.
 A hypothetical example of such situation would be one where, for example, `PUSH1` operation became more expensive after having been repeated multiple times in the program.
-fi
+
+#### Q4: How should warm-up be treated?
+
+Preliminary results indicate that first OPCODEs to execute in the program, as well as first OPCODEs to execute in the context of an OS process, have a noticeable penalty in terms of execution duration.
+This is a natural phenomenon usually referred to as warm-up in program benchmarking, and the usual treatment is discarding of the first batch of measurement samples.
+
+We need to answer, what is the appropriate amount of warm-up executions which we want to discard, for the measurements to remain "fair" from the point of view of our goals.
+A limiting factor here is that the timer code to collect duration measurements itself seems to exhibit a warm-up phase.
+
+In any case, the treatment of warm-up will be such that measurements mimic normal operation of the EVM/eWASM modules within Ethereum nodes.
+
+#### Q5: How to fairly treat EVM/eWASM implementations with JIT capabilities?
+
+`evmone` optimizes its operation by performing a preprocessing step and offloading some computations to be done per code block, rather than per instruction.
+As long as it is still functioning as an interpreter, and every instruction is executed separately, this isn't an obstacle.
+It may only require the measuring of a single OPCODE in various contexts, allowing us to observe the variability of the OPCODEs cost (see Q3).
+
 ## 5. Approach and plan for Stage II
+
+
 
 **TODO** iterative
 **TODO** copy a lot from strategy.md
