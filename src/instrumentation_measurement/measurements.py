@@ -42,7 +42,7 @@ class Measurements(object):
 
     Parameters:
     sampleSize (integer): size of a sample to pass into the EVM measuring executable
-    evm (string): which evm use. Default: geth. Allowed: geth, openethereum
+    evm (string): which evm use. Default: geth. Allowed: geth, openethereum, evmone
     nSamples (integer): number of samples (individual starts of the EVM measuring executable) to do
     """
     header = "program_id,sample_id,run_id,instruction_id,measure_all_time_ns,measure_one_time_ns"
@@ -50,10 +50,11 @@ class Measurements(object):
 
     geth = "geth"
     openethereum = "openethereum"
+    evmone = "evmone"
 
-    if evm not in {geth, openethereum}:
-      print("Wrong evm parameter. Allowed are: {}, {}".format(geth, openethereum))
-      return
+    if evm not in {geth, openethereum, evmone}:
+      print("Wrong evm parameter. Allowed are: {}, {}".format(geth, openethereum, evmone))
+
 
     for program in self._programs:
       for sample_id in range(nSamples):
@@ -62,6 +63,9 @@ class Measurements(object):
           instrumenter_result = self.run_geth(program, sampleSize)
         elif evm == openethereum:
           instrumenter_result = self.run_openethereum(program, sampleSize)
+        elif evm == evmone:
+          instrumenter_result = self.run_evmone(program, sampleSize)
+
         result_row = self.csv_row_append_info(instrumenter_result, program, sample_id)
 
         csv_chunk = '\n'.join(result_row)
@@ -74,6 +78,7 @@ class Measurements(object):
     invocation = golang_main + args + bytecode_arg
     result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
     assert result.returncode == 0
+    # strip the final newline
     instrumenter_result = result.stdout.split('\n')[:-1]
 
     return instrumenter_result
@@ -87,6 +92,17 @@ class Measurements(object):
     assert result.returncode == 0
     # strip the output normally printed by openethereum ("output", gas used, time info)
     instrumenter_result = result.stdout.split('\n')[:-4]
+    return instrumenter_result
+
+  def run_evmone(self, program, sampleSize):
+    evmone_build_path = './instrumentation_measurement/evmone/build/'
+    evmone_main = [evmone_build_path + 'evmc/bin/evmc', 'run']
+    args = ['--vm', evmone_build_path + '/lib/libevmone.so', '--measure-all', '--repeat', '{}'.format(sampleSize)]
+    invocation = evmone_main + args + [program.bytecode]
+    result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
+    assert result.returncode == 0
+    # strip additional output information added by evmone
+    instrumenter_result = result.stdout.split('\n')[2:-5]
 
     return instrumenter_result
 
