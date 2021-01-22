@@ -3,7 +3,7 @@
 
 ### Installation and running
 
-1. To build, run in the `evmbin` directory of openethereum repository 
+1. To build, run in the `evmbin` directory of openethereum repository (submodule), at branch `wallclock` 
     ```
     cargo build --release
     ```
