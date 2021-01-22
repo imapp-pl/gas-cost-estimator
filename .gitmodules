@@ -1,0 +1,3 @@
+[submodule "src/instrumentation_measurement/evmone"]
+	path = src/instrumentation_measurement/evmone
+	url = git@github.com:imapp-pl/evmone.git

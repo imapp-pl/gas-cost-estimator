@@ -34,7 +34,7 @@ class Measurements(object):
     reader = csv.DictReader(sys.stdin, delimiter=',', quotechar='"')
     self._programs = [Program(i['program_id'], i['bytecode'], int(i['measured_op_position'])) for i in reader]
 
-  def measure(self, sampleSize, nSamples=1):
+  def measure(self, sampleSize, evm="geth", nSamples=1):
     """
     Main entrypoint of the CLI tool.
 
@@ -42,18 +42,30 @@ class Measurements(object):
 
     Parameters:
     sampleSize (integer): size of a sample to pass into the EVM measuring executable
+    evm (string): which evm use. Default: geth. Allowed: geth, evmone
     nSamples (integer): number of samples (individual starts of the EVM measuring executable) to do
     """
     header = "program_id,sample_id,run_id,instruction_id,measure_all_time_ns,measure_one_time_ns"
     print(header)
 
-    for program in self._programs:
-        for sample_id in range(nSamples):
-          instrumenter_result = self.run_geth(program, sampleSize)
-          result_row = self.csv_row_append_info(instrumenter_result, program, sample_id)
+    geth = "geth"
+    evmone = "evmone"
 
-          csv_chunk = '\n'.join(result_row)
-          print(csv_chunk)
+    if evm not in {geth, evmone}:
+      print("Wrong evm parameter. Allowed are: {}, {}".format(geth, evmone))
+      return
+
+    for program in self._programs:
+      for sample_id in range(nSamples):
+        instrumenter_result = None
+        if evm == geth:
+          instrumenter_result = self.run_geth(program, sampleSize)
+        elif evm == evmone:
+          instrumenter_result = self.run_evmone(program, sampleSize)
+        result_row = self.csv_row_append_info(instrumenter_result, program, sample_id)
+
+        csv_chunk = '\n'.join(result_row)
+        print(csv_chunk)
 
   def run_geth(self, program, sampleSize):
     golang_main = ['go', 'run', './instrumentation_measurement/geth/main.go']
@@ -62,7 +74,20 @@ class Measurements(object):
     invocation = golang_main + args + bytecode_arg
     result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
     assert result.returncode == 0
+    # strip the final newline
     instrumenter_result = result.stdout.split('\n')[:-1]
+
+    return instrumenter_result
+
+  def run_evmone(self, program, sampleSize):
+    evmone_build_path = './instrumentation_measurement/evmone/build/'
+    evmone_main = [evmone_build_path + 'evmc/bin/evmc', 'run']
+    args = ['--vm', evmone_build_path + '/lib/libevmone.so', '--measure-all', '--repeat', '{}'.format(sampleSize)]
+    invocation = evmone_main + args + [program.bytecode]
+    result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
+    assert result.returncode == 0
+    # strip additional output information added by evmone
+    instrumenter_result = result.stdout.split('\n')[2:-5]
 
     return instrumenter_result
 
