@@ -2,7 +2,7 @@
 
 ----
 
-**NOTE: parts of this doc have been moved to the Stage I report. This may be a bit too speculative and obsolete** 
+**NOTE: parts of this doc have been moved to the Stage I report. This may be a bit too speculative and obsolete/incomplete. Refer to the Stage I report first**
 
 ----
 
@@ -56,7 +56,7 @@ This set of programs will have one program per OPCODE and it will be a smallest 
 
 See https://notes.ethereum.org/@chfast/benchmarking-evm-instructions
 
-#### Completely randomized with stack balancing **TODO**
+#### Completely randomized with stack balancing
 
 #### Automated, adaptive generation
 
