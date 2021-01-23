@@ -224,7 +224,7 @@ When generating our programs we want to ensure the following:
     - i.e. we want to separate "good variance" from "bad variance." The former means variance that represents variability in computational cost inherent to the OPCODE execution. The latter means noise introduced by inadequate measurement and external factors.
 3. **feasibility of measurement** - we want programs to be easily supplied to various EVM/eWASM implementations and measurement harnesses we devise.
 
-At Stage II, we plan to compile a detailed rundown of the specifics of each OPCODE, to be taken into account when using in program generation and then instrumentation, since some OPCODEs have special traits which should be kept in mind (e.g. `CALLDATASIZE` reads from the calldata input to EVM/eWASM execution).
+At Stage II, we plan to compile a detailed rundown of the specifics of each OPCODE, to be taken into account when using in program generation and then instrumentation, since some OPCODEs have special traits which should be kept in mind (e.g. `CALLDATASIZE` reads from the calldata input to EVM/eWASM execution, `BALANCE` might depend on the balance of the account checked).
 
 The final approach to generate programs will be devised in an iterative manner, so as to arrive at the simplest solution which gives good results.
 
@@ -239,6 +239,16 @@ This set of programs will have one program per OPCODE and it will be a smallest 
 #### Simplest valid program with customizable stack/arguments
 
 This is an extension of the "Simplest valid program" approach, where we'll allow to generate programs which execute their OPCODEs with different arguments, so that we can enact their behavior to cover the scope of variability that the current gas schedule allows for (e.g. various sizes of the input for the `SHA3` OPCODE).
+
+#### Simplest valid program with simple surroundings
+
+Before a full-fledged support for exploring various surroundings and their impact on the execution of a given OPCODE, we can provide a simplified probe of the topic.
+
+In this approach, we will generate programs same as in "Simplest valid program" approach, but:
+  - prepend and/or append a sequence of fixed arbitrary bytecodes, to put the analyzed OPCODE in the "middle" of the program, and/or
+  - multiply the OPCODE with its stack management companions.
+
+Such programs can then be used for initial exploration of the impact of surroundings.
 
 #### Looped execution with stack balancing
 
@@ -420,6 +430,7 @@ Refer to the other sections for details on the tasks.
 1. Program generation tasks
     1. Compile a detailed rundown of the specifics of each OPCODE
     2. Allow to customize stack/arguments
+    4. Generate programs with simple surroundings added to a single OPCODE
     3. Generate programs with looped execution with stack balancing
     4. (opt) Generate random programs with stack balancing
     5. (opt) Generate programs via automated, adaptive generation
@@ -440,16 +451,22 @@ Refer to the other sections for details on the tasks.
     11. Analyze warm-up conditions versus normal EVM/eWASM operation within an Ethereum node
     12. Support gathering of timer overhead measuremnts during OPCODE measurements
     13. Support for instrumentation in at least one another eWASM implementation
+    14. Rethink the approach to garbage collection for environments that have one
 3. Analysis tasks
     1. Tidy and improve structure of the existing analysis code in R, allow for its extensibility
+    1. Improve the visualization method to check distributions of measurements per OPCODE and environment (frequency plots used in Stage I are not useful)
     1. Revisit the choice of the pivot OPCODE for implementation-relative measurements, describe criteria for this choice
+    1. Allow analysis of OPCODE measurements coming from programs in which their execution has been parametrized (via arguments, context, surroundings)
     2. Explore validation methods proposed
-    3. Implement automated scripts for the validation methods
+    3. Implement automated scripts for the chosen validation methods
     4. (opt) Implement (or adapt an existing implementation or existing data sets, if they exist) validation via blockchain history
     5. Give recommendations for any gas cost adjustments which could be safely done at current stage (i.e. ones which are reasonable consistently between all environments measured)
-    6. Answer "Q1: Can we devise a one-size-fits-all set of OPCODE gas costs?"
     6. Identify OPCODEs which will not have a gas cost suitable for all environments and try to find the cause and recommend optimizations
+    6. Answer "Q1: Can we devise a one-size-fits-all set of OPCODE gas costs?"
+    7. Provide a quantitative argument (e.g. a statistical test) that for every OPCODE, measurement of the timer overhead is significantly smaller
     7. Answer "Q2: is measuring of individual instructions feasible?"
+    8. (opt) Devise scoring functions which can be used to adaptively generate programs
+    8. (opt) Provide a performant implementations of the scoring functions which can be reasonably plugged into an search algorithm for adaptive program generation
     8. (opt) Answer "Q3: How can we explore the entire program space to capture all sources of variability of OPCODEs computational cost"
     9. Answer "Q4: How should warm-up be treated?"
     10. (opt) Answer "Q5: How to fairly treat EVM/eWASM implementations with JIT capabilities?"
