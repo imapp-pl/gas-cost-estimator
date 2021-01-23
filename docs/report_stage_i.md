@@ -74,11 +74,9 @@ To this end, the approach must be well documented and reproducible by the commun
 This report anticipates the completion of Stage II of the project.
 Given that, we focus on setting forth a plan and strategy for conducting the future measurements and analysis, rather than providing answers or recommendations for gas cost adjustments straight away.
 
-## 2. Related work (**TODO include now or at Stage II?**)
-
 ## 4. Preliminary work and findings of Stage I
 
-None of the results obtained at Stage I of this research are final.
+None of the quantitative results obtained at Stage I of this research are final nor should be quoted.
 There are many caveats and detail work yet to be done, which will impact the final results and conclusions.
 As a consequence, we are phrasing our preliminary findings as questions that need to be considered in Stage II.
 
@@ -182,7 +180,7 @@ In any case, the treatment of warm-up will be such that measurements mimic norma
 As long as it is still functioning as an interpreter, and every instruction is executed separately, this isn't an obstacle.
 It may only require the measuring of a single OPCODE in various contexts, allowing us to observe the variability of the OPCODEs cost (see Q3).
 
-#### Q6: How to standardize the gas cost estimation procedure
+#### Q6: How to standardize the gas cost estimation procedure?
 
 As noted earlier, we envision that an added feature of the research could be a standard procedure to estimate gas costs in other environments.
 Similar attempts have been made in **TODO reference**.
@@ -206,7 +204,6 @@ Accurate and with good properties, in the context of an estimate of OPCODE gas c
   - it is modeled to explain the variation in computational cost coming from different circumstances and/or parameters,
   - it is adequate for various implementations and environments _OR_,
   - it can be clearly stated, when no such value exists because of differences in implementations,
-  - ideally, it should be possible to validate the estimated gas costs with at least one another method,
   - it should have the measurement overhead and noise under control and "fair" for all OPCODEs.
 
 ### Program generation
@@ -278,7 +275,7 @@ In this section we describe the approach to instrumentation and measurement of s
 
 We will execute an EVM/eWASM program, with one chosen form of instrumentation and measurement enabled:
 
-1. **instrument** - produces a list of OPCODEs for all instructions executed in a program, along with their relevant arguments (stack, memory). This will be used to know what were the instructions executed during a single run of a program.
+1. **trace OPCODEs and arguments** - produces a list of OPCODEs for all instructions executed in a program, along with their relevant arguments (stack, memory). This will be used to know what were the instructions executed during a single run of a program.
 2. **measure all** - (individual instruction measurement) produces a list of measurements per instruction, in order of execution, _for all instructions in the program_.
 3. **measure one** - (individual instruction measurement, optional) produce a single measurement for a chosen instruction, i.e. "measure Nth instruction from start of the program".
 4. **measure total** - (whole-program measurement) produce a single overarching measurement for the entire program execution.
@@ -415,10 +412,60 @@ The standardization effort will be done in the three domains:
 
 ## Appendix A: detailed task list
 
-## Appendix B: OPCODEs subset
+In here, we collect a tentative list of various tasks and todos to complete in Stage II, which were identified during the completion of Stage I.
+This list _is not_ an exhaustive work breakdown structure for Stage II, as well as some of these tasks might be deemed unnecessary or optional (denoted "(opt)") during the execution of Stage II.
+
+Refer to the other sections for details on the tasks.
+
+1. Program generation tasks
+    1. Compile a detailed rundown of the specifics of each OPCODE
+    2. Allow to customize stack/arguments
+    3. Generate programs with looped execution with stack balancing
+    4. (opt) Generate random programs with stack balancing
+    5. (opt) Generate programs via automated, adaptive generation
+    6. Redesign input/output data structures, document and standardize
+    7. Make program generation easily pluggable into the rest of the stack, standardize and document
+2. Instrumentation and measurement tasks
+    1. Allow to trace OPCODEs and arguments via instrumentation
+    3. Improve and make "fair" and ensure full coverage of execution for the "measure all" instrumentation
+    2. (opt) Allow to do "measure one" instrumentation for instruction by index
+    4. Allow to do "measure total" instrumentation fairly and with full coverage of execution
+    5. (opt) Allow to do "measure batch" instrumentation
+    5. (opt) Possibly adjust the instrumentation to doing the modelling of duration via the binomial model
+    6. (opt) Try and compare alternative wallclock timers (e.g. PAPI)
+    7. (opt) Provide full support for CPU cycles using TSC libraries
+    8. Write down the instrumentation and measurement standard ruleset
+    9. (opt) Try further lowering the overhead of wallclock timers
+    10. Provide consistent treatment of warm-up
+    11. Analyze warm-up conditions versus normal EVM/eWASM operation within an Ethereum node
+    12. Support gathering of timer overhead measuremnts during OPCODE measurements
+    13. Support for instrumentation in at least one another eWASM implementation
+3. Analysis tasks
+    1. Tidy and improve structure of the existing analysis code in R, allow for its extensibility
+    1. Revisit the choice of the pivot OPCODE for implementation-relative measurements, describe criteria for this choice
+    2. Explore validation methods proposed
+    3. Implement automated scripts for the validation methods
+    4. (opt) Implement (or adapt an existing implementation or existing data sets, if they exist) validation via blockchain history
+    5. Give recommendations for any gas cost adjustments which could be safely done at current stage (i.e. ones which are reasonable consistently between all environments measured)
+    6. Answer "Q1: Can we devise a one-size-fits-all set of OPCODE gas costs?"
+    6. Identify OPCODEs which will not have a gas cost suitable for all environments and try to find the cause and recommend optimizations
+    7. Answer "Q2: is measuring of individual instructions feasible?"
+    8. (opt) Answer "Q3: How can we explore the entire program space to capture all sources of variability of OPCODEs computational cost"
+    9. Answer "Q4: How should warm-up be treated?"
+    10. (opt) Answer "Q5: How to fairly treat EVM/eWASM implementations with JIT capabilities?"
+    11. (opt) Answer "Q6: How to standardize the gas cost estimation procedure?"
+4. Hardware and environment diversity tasks
+    1. Provision and run measurements on a machine in the cloud
+    2. Provision and run measurements on representative consumer-grade machines of various kinds
+5. Standardization tasks
+    5. Ensure easy application of the automated scripts for validation methods, document
+6. Documentation tasks
+    1. Write full section on Related Work, from sources gathered in Stage I and Stage II
+
+## Appendix B: OPCODEs subset (**TODO**)
 
 ## Acknowledgements (**TODO**)
 
-## References
+## References (**TODO**)
 
 [1] [https://etherscan.io/block/11660498](https://etherscan.io/block/11660498)
