@@ -423,8 +423,14 @@ Here we outline the choice of options for validations to do on the obtained meas
 
 For an additional validation of the gas cost estimates, we consider instrumenting and measuring a fragment of the blockchain.
 
-The problem arises from the fact that our gas cost estimator is prepared only for a subset of instructions (in particular, no IO/storage instructions).
+A problem arises from the fact that our gas cost estimator is prepared only for a subset of instructions (in particular, no IO/storage instructions), so we don't estimate for IO/storage instructions at all.
+If we want to validate using the execution of contracts historical transactions, this involves IO/storage.
+We need a way to relate our gas cost estimations (for a subset of OPCODEs), with the rest.
+
 We will consider calibrating these together by picking a "pivot OPCODE", whose gas cost would remain unchanged, and adjusting gas cost for all other OPCODE from the analyzed subset to match relative difference in cost to the pivot OPCODE.
+For example, if we pick `COINBASE` as pivot, all other OPCODEs costs from our subset are expressed as multiples of `COINBASE`'s cost.
+Since currently `COINBASE` costs 2 gas, we derive new gas cost values for our subset of OPCODEs.
+The remainder of OPCODEs (IO/storage etc.) remains unadjusted.
 
 Next we could:
 1. Calculate the gas cost for a sequence of real blocks, using such adjusted gas costs.
