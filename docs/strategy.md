@@ -2,7 +2,7 @@
 
 ----
 
-**NOTE: parts of this doc have been moved to the Stage I report. This may be a bit too speculative and obsolete/incomplete. Refer to the Stage I report first**
+**NOTE: parts of this doc have been moved to the Stage I report. `strategy.md` may be a bit too speculative and obsolete/incomplete. Refer to the Stage I report first**
 
 ----
 
