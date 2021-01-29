@@ -26,7 +26,7 @@ The importance of adequate gas costs arises from the nature of computations done
 
 It is intuitive that the parties participating in the network, who are responsible for validation of blockchain transactions and maintaining the state of the blockchain (miners in Eth1.0), are interested in fair pricing for the service they provide.
 This is emphasized in **TODO find ref**.
-Given however, that the transaction fee still is the minor part of PoW miner reward [1], the importance of this argument might be disputed.
+Given however, that the transaction fee still is the lesser part of the block reward, as compared to PoW mining reward [1], the importance of this argument might be disputed.
 It can also be stated, that it is the computational cost of PoW mining itself, which constitutes the major part of computational burden on the miner.
 
 However, adequate gas cost of computation is paramount from the perspective of network security.
