@@ -478,6 +478,7 @@ Refer to the other sections for details on the tasks.
     8. (opt) Devise scoring functions which can be used to adaptively generate programs
     8. (opt) Provide a performant implementations of the scoring functions which can be reasonably plugged into an search algorithm for adaptive program generation
     8. (opt) Answer "Q3: How can we explore the entire program space to capture all sources of variability of OPCODEs computational cost"
+    9. Discuss instrumentation warm-up vs actual contract startup overhead
     9. Answer "Q4: How should warm-up be treated?"
     10. (opt) Answer "Q5: How to fairly treat EVM/eWASM implementations with JIT capabilities?"
     11. (opt) Answer "Q6: How to standardize the gas cost estimation procedure?"
