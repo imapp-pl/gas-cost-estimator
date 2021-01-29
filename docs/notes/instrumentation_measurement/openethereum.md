@@ -22,8 +22,6 @@
     If `--measure-overhead` is passed, bytecode will not be executed. If `--print-opcodes` is passed, only one repetition will be executed (no matter what `--repeat` value is).   
 
 
-## OpenEthereum
-
 ### Notes on execution
 
 1. only `let result = self.step(ext);` is included under the measurement. To capture most of "the EVM normally does when executing" we should also capture **TODO**:

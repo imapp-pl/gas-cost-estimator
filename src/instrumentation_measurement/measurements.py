@@ -53,7 +53,7 @@ class Measurements(object):
     evmone = "evmone"
 
     if evm not in {geth, openethereum, evmone}:
-      print("Wrong evm parameter. Allowed are: {}, {}".format(geth, openethereum, evmone))
+      print("Wrong evm parameter. Allowed are: {}, {}, {}".format(geth, openethereum, evmone))
 
 
     for program in self._programs:
