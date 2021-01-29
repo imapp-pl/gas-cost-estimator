@@ -163,7 +163,8 @@ There, we will also list possible fallback plans in case there is evidence that 
 #### Q3: How can we explore the entire program space to capture all sources of variability of OPCODEs computational cost
 
 The main intention of the research presented here is to obtain relative comparison of costs of OPCODEs, accounting for the sources of variability that are already represented by the current gas cost schedule.
-An example of such variability is that the gas cost of a `SHA3` OPCODE is a function of the size of its arguments, which naturally impact the computational cost of the operation.
+An example of such variability is that the gas cost of a `SHA3` OPCODE is a function of the size of its arguments, `g = 30 + 6*x`, where `x` is the count of words (rounded up) for input data to the `SHA3` operation **TODO ref yellow paper**.
+Size of this OPCODE's arguments naturally impact its computational cost.
 
 It is tempting to search for sources of variability unaccounted for in the current gas schedule.
 A hypothetical example of such situation would be one, where, for example, `PUSH1` operation became more expensive, after having been repeated multiple times in the program.
@@ -279,7 +280,7 @@ We could modify this idea to run a genetic algorithm (or any other adaptive meth
 
 This could also be useful to discover the impact of circumstances ("surrounding") (**TODO unify language circumstances, surrounding, context**), where a particular OPCODE can exhibit much different computational burden, depending on where it is located in the program.
 
-One challenge is how to model OPCODEs with variable size of parameters (i.e. `SHA3`): they would have unbounded values and also unbounded variance, if not modeled correctly.
+One challenge is how to model OPCODEs with variable size of parameters (e.g. `SHA3`): they would have unbounded values and also unbounded variance, if not modeled correctly.
 We could model as `t = c + a*x`, `c` constant, `x` size, `a` coefficient to model.
 Then, instead of most variance/information about `t`, we want most information on `c` and `a`.
 
