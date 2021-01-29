@@ -179,6 +179,15 @@ A limiting factor here is that the timer code to collect duration measurements i
 
 In any case, the treatment of warm-up will be such that measurements mimic normal operation of the EVM/eWASM modules within Ethereum nodes.
 
+#### Q4a: How should cache and locality be treated?
+
+We suspect that using the simplest program generation routine, we might not model the cache behavior and locality adequately.
+Real-life smart contract EVM programs seldom execute only a single instruction or a single instruction repeatedly.
+
+It must be assessed and estimated, how do cache and locality impact the computations.
+We will analyze adjustments to the program generator, where the generated programs will represent typical smart contract execution circumstances.
+Alternatively, we will explore the space of generated programs so that programs enacting different behavior of cache and data locality are included.
+
 #### Q5: How to fairly treat EVM/eWASM implementations with JIT capabilities?
 
 `evmone` optimizes its operation by performing a preprocessing step and offloading some computations to be done per code block, rather than per instruction.
@@ -440,6 +449,7 @@ Refer to the other sections for details on the tasks.
     1. Compile a detailed rundown of the specifics of each OPCODE
     2. Allow to customize stack/arguments
     4. Generate programs with simple surroundings added to a single OPCODE
+    4. Generate programs so that they can enact different behavior of cache and data locality
     3. Generate programs with looped execution with stack balancing
     4. (opt) Generate random programs with stack balancing
     5. (opt) Generate programs via automated, adaptive generation
@@ -480,6 +490,8 @@ Refer to the other sections for details on the tasks.
     8. (opt) Answer "Q3: How can we explore the entire program space to capture all sources of variability of OPCODEs computational cost"
     9. Discuss instrumentation warm-up vs actual contract startup overhead
     9. Answer "Q4: How should warm-up be treated?"
+    10. Analyze impact of programs with various behavior of cache and data locality
+    10. Answer "Q4a: How should cache and locality be treated?"
     10. (opt) Answer "Q5: How to fairly treat EVM/eWASM implementations with JIT capabilities?"
     11. (opt) Answer "Q6: How to standardize the gas cost estimation procedure?"
 4. Hardware and environment diversity tasks
