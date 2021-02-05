@@ -2,6 +2,9 @@ import os
 import csv
 import fire
 import sys
+import subprocess
+import tempfile
+import binascii
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -27,7 +30,9 @@ class ProgramGenerator(object):
   """
 
   def __init__(self, ewasm=False):
-    if ewasm:
+    self._ewasm = ewasm
+
+    if self._ewasm:
       opcodes_file = os.path.join(dir_path, 'data', 'opcodes_ewasm.csv')
     else:
       opcodes_file = os.path.join(dir_path, 'data', 'opcodes.csv')
@@ -37,13 +42,14 @@ class ProgramGenerator(object):
       opcodes = {i['Value']: i for i in reader}
 
     # complete the opcodes file with push/dup/swap, which are formatted differently in our source
-    opcodes = self._fill_opcodes_push_dup_swap(opcodes)
+    if not self._ewasm:
+      opcodes = self._fill_opcodes_push_dup_swap(opcodes)
 
-    if ewasm:
+    if self._ewasm:
       selection_file = os.path.join(dir_path, 'data', 'selection_ewasm.csv')
     else:
       selection_file = os.path.join(dir_path, 'data', 'selection.csv')
-      
+
     with open(selection_file) as csvfile:
       reader = csv.DictReader(csvfile, delimiter=' ', quotechar='"')
       selection = [i['Opcode'] for i in reader]
@@ -85,31 +91,110 @@ class ProgramGenerator(object):
     """
     Generates programs simple enough to run successfully and have the measured operation as last one
 
-    (`0xfe` is an invalid opcode so in that case error is expected)
+    (EVM `0xfe` is an invalid opcode so in that case error is expected)
     """
 
     programs = [self._prepend_simplest_stack_prepare(operation) for operation in self._operations]
+    programs = [self._maybe_prepend_ewasm(program) for program in programs]
     programs = [self._maybe_prepend_something(program) for program in programs]
+    programs = [self._maybe_append_ewasm(program, opcode) for program, opcode in zip(programs, self._operations)]
+    programs = [self._maybe_wat2wasm(program) for program in programs]
     return programs
 
   def _prepend_simplest_stack_prepare(self, operation):
     """
-    Prepends simples pushes to meet the stack requirements for `operation`
+    Prepends simples pushes to meet the stack requirements for `operation`.
     """
 
-    if operation['Value'] != '0xfe':
+    if self._ewasm:
       # valid opcodes
       removed_from_stack = int(operation['Removed from stack'])
-      # i.e. 23 from 0x23
-      opcode = operation['Value'][2:4]
+      opcode = "    " + operation['Mnemonic']
       # push some garbage enough times to satisfy stack requirement for operation
-      pushes = ["6020"] * removed_from_stack
+      pushes = ["    i32.const 32\n"] * removed_from_stack
       has_parameter = True if 'Parameter' in operation and operation['Parameter'] else False
       bytecode = ''.join(pushes + [opcode, operation['Parameter']]) if has_parameter else ''.join(pushes + [opcode])
       return Program(bytecode, removed_from_stack)
     else:
-      # designated invalid opcode
-      return Program('fe', 0)
+      if operation['Value'] != '0xfe':
+        # valid opcodes
+        removed_from_stack = int(operation['Removed from stack'])
+        # i.e. 23 from 0x23
+        opcode = operation['Value'][2:4]
+        # push some garbage enough times to satisfy stack requirement for operation
+        pushes = ["6020"] * removed_from_stack
+        has_parameter = True if 'Parameter' in operation and operation['Parameter'] else False
+        bytecode = ''.join(pushes + [opcode, operation['Parameter']]) if has_parameter else ''.join(pushes + [opcode])
+        return Program(bytecode, removed_from_stack)
+      else:
+        # designated invalid opcode
+        return Program('fe', 0)
+
+  def _maybe_prepend_ewasm(self, program):
+    """
+    Prepends the same thing for every operation, just to get a valid ewasm program start
+    """
+    if self._ewasm:
+      to_prepend = """
+(module
+  (func (export "call") (local $x i32)
+"""
+      new_code = to_prepend + program.bytecode
+      program.bytecode = new_code
+      return program
+    else:
+      return program
+
+  def _maybe_append_ewasm(self, program, opcode):
+    """
+    Appends the same thing for every operation, just to get a valid ewasm program start
+    """
+    if self._ewasm:
+      to_append = """
+))
+      """
+      new_code = program.bytecode + to_append
+      program.bytecode = new_code
+      return program
+    else:
+      return program
+
+  def _maybe_wat2wasm(self, program):
+    """
+    Runs the compilation to wasm for ewasm using WABT
+    """
+
+    print(program.bytecode)
+
+    if self._ewasm:
+      wat2wasm = ['wat2wasm']
+      tempdir = tempfile.TemporaryDirectory()
+
+      try:
+
+        input_file_path = os.path.join(tempdir.name, "input.wat")
+        with open(input_file_path, 'w') as file:
+          file.write(program.bytecode)
+
+        output_file_path = os.path.join(tempdir.name, "output.wasm")
+
+        args = ['-o', output_file_path, input_file_path]
+        invocation = wat2wasm + args
+        result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
+        assert result.returncode == 0
+
+        with open(output_file_path, 'rb') as file:
+          wasm_result_bin = file.read()
+
+        wasm_result = binascii.hexlify(wasm_result_bin).decode('ascii')
+        print(wasm_result)
+
+      finally:
+        tempdir.cleanup()
+
+      return wasm_result
+    else:
+      return program
 
   def _maybe_prepend_something(self, program):
     """
@@ -118,11 +203,15 @@ class ProgramGenerator(object):
 
     TODO: remove when not necessary anymore
     """
-    should_prepend = program.measured_op_position == 0
-    bytecode = '6000' + program.bytecode if should_prepend else program.bytecode
-    measured_op_position = 1 + program.measured_op_position if should_prepend else program.measured_op_position
 
-    return Program(bytecode, measured_op_position)
+    if self._ewasm:
+      return program
+    else:
+      should_prepend = program.measured_op_position == 0
+      bytecode = '6000' + program.bytecode if should_prepend else program.bytecode
+      measured_op_position = 1 + program.measured_op_position if should_prepend else program.measured_op_position
+
+      return Program(bytecode, measured_op_position)
 
   def _fill_opcodes_push_dup_swap(self, opcodes):
     pushes = """
