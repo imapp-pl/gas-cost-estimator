@@ -3,13 +3,40 @@
 
 ### Installation and running
 
-1. I got compile errors because of old gcc not supporting C++17
+1. Building
+    ```
+    mkdir build
+    git submodule update --init
+    cd build
+    cmake .. -DEVMONE_TESTING=ON
+    cmake --build . -- -j
+    ```
+    Changes related to the Gas Cost Estimator are in branch `wallclock` in both `evmone` and `evmc` git submodules.
+   
+    I got compile errors because of old gcc not supporting C++17
     1. https://askubuntu.com/questions/466651/how-do-i-use-the-latest-gcc-on-ubuntu/1163021#1163021
     2. then:
     ```
     sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 10
     sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 10
     ```
+2. Running
+
+    From the `build` directory:
+    ```
+    evmc/bin/evmc run --vm ./lib/libevmone.so [--print-opcodes] [--measure-all] [--measure-total] [--measure-one <instruction number>] [--repeat <number of repetitions>] <bytecode> 
+    ```
+    for example:
+    ```
+    evmc/bin/evmc run --vm ./lib/libevmone.so --print-opcodes --measure-all --measure-one 3 --repeat 2 602060070260F053600160F0F3
+    ```
+    To measure timer overheads:
+    ```
+    evmc/bin/evmc measure-overheads
+    ```
+### Comments
+* evmone adds `5B` (`JUMPDEST`) instruction in the beginning if there is none
+
 
 ### Rough notes
 
