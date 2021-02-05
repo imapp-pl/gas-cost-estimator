@@ -26,8 +26,12 @@ class ProgramGenerator(object):
   ```
   """
 
-  def __init__(self):
-    opcodes_file = os.path.join(dir_path, 'data', 'opcodes.csv')
+  def __init__(self, ewasm=False):
+    if ewasm:
+      opcodes_file = os.path.join(dir_path, 'data', 'opcodes_ewasm.csv')
+    else:
+      opcodes_file = os.path.join(dir_path, 'data', 'opcodes.csv')
+
     with open(opcodes_file) as csvfile:
       reader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
       opcodes = {i['Value']: i for i in reader}
@@ -35,7 +39,11 @@ class ProgramGenerator(object):
     # complete the opcodes file with push/dup/swap, which are formatted differently in our source
     opcodes = self._fill_opcodes_push_dup_swap(opcodes)
 
-    selection_file = os.path.join(dir_path, 'data', 'selection.csv')
+    if ewasm:
+      selection_file = os.path.join(dir_path, 'data', 'selection_ewasm.csv')
+    else:
+      selection_file = os.path.join(dir_path, 'data', 'selection.csv')
+      
     with open(selection_file) as csvfile:
       reader = csv.DictReader(csvfile, delimiter=' ', quotechar='"')
       selection = [i['Opcode'] for i in reader]
