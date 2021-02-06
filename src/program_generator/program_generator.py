@@ -101,8 +101,8 @@ class ProgramGenerator(object):
     """
 
     programs = [self._prepend_simplest_stack_prepare(operation) for operation in self._operations]
-    programs = [self._maybe_prepend_ewasm(program) for program in programs]
     programs = [self._maybe_prepend_something(program) for program in programs]
+    programs = [self._maybe_prepend_ewasm(program) for program in programs]
     programs = [self._maybe_append_ewasm(program, opcode) for program, opcode in zip(programs, self._operations)]
     programs = [self._maybe_wat2wasm(program) for program in programs]
     return programs
@@ -202,15 +202,22 @@ class ProgramGenerator(object):
 
     TODO: remove when not necessary anymore
     """
+    should_prepend = program.measured_op_position == 0
 
     if self._ewasm:
-      return program
+      prependable = constants.EWASM_SOMETHING
+      prependable_length = constants.EWASM_SOMETHING_LENGTH
     else:
-      should_prepend = program.measured_op_position == 0
-      bytecode = '6000' + program.bytecode if should_prepend else program.bytecode
-      measured_op_position = 1 + program.measured_op_position if should_prepend else program.measured_op_position
+      prependable = constants.EVM_SOMETHING
+      prependable_length = constants.EVM_SOMETHING_LENGTH
+
+    if should_prepend:
+      bytecode = prependable + program.bytecode
+      measured_op_position = prependable_length + program.measured_op_position
 
       return Program(bytecode, measured_op_position)
+    else:
+      return program
 
   def _fill_opcodes_push_dup_swap(self, opcodes):
     pushes = constants.EVM_PUSHES
