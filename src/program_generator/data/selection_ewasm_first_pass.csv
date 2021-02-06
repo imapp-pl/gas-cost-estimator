@@ -35,5 +35,3 @@ Opcode Name
 0x76 i32.shr_u
 0x77 i32.rotl
 0x78 i32.rotr
-0xC0 i32.extend8_s
-0xC1 i32.extend16_s
