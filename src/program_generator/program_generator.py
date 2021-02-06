@@ -6,6 +6,8 @@ import subprocess
 import tempfile
 import binascii
 
+import constants
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
@@ -21,7 +23,7 @@ class Program(object):
 
 class ProgramGenerator(object):
   """
-  Sample program generator for EVM instrumentation
+  Sample program generator for EVM/Ewasm instrumentation
 
   If used with `--fullCsv`, will print out a CSV in the following format:
   ```
@@ -107,7 +109,7 @@ class ProgramGenerator(object):
 
   def _prepend_simplest_stack_prepare(self, operation):
     """
-    Prepends simples pushes to meet the stack requirements for `operation`.
+    Prepends simples pushes (`i32.const` for Ewasm) to meet the stack requirements for `operation`.
     """
 
     if self._ewasm:
@@ -115,6 +117,7 @@ class ProgramGenerator(object):
       removed_from_stack = int(operation['Removed from stack'])
       opcode = "    " + operation['Mnemonic']
       # push some garbage enough times to satisfy stack requirement for operation
+      # TODO: our data should allow to customize for `i64` instructions and push using that here
       pushes = ["    i32.const 32\n"] * removed_from_stack
       has_parameter = True if 'Parameter' in operation and operation['Parameter'] else False
       bytecode = ''.join(pushes + [opcode, operation['Parameter']]) if has_parameter else ''.join(pushes + [opcode])
@@ -139,10 +142,7 @@ class ProgramGenerator(object):
     Prepends the same thing for every operation, just to get a valid ewasm program start
     """
     if self._ewasm:
-      to_prepend = """
-(module
-  (func (export "call") (local $x i32)
-"""
+      to_prepend = constants.EWASM_PREAMBLE
       new_code = to_prepend + program.bytecode
       program.bytecode = new_code
       return program
@@ -155,12 +155,10 @@ class ProgramGenerator(object):
     """
     if self._ewasm:
       added_to_stack = int(opcode['Added to stack'])
-      droppings = """
-    drop
-""" * added_to_stack
-      parenthesis = """
-))
-      """
+      droppings = constants.EWASM_DROP * added_to_stack
+
+      parenthesis = constants.EWASM_CLOSING_PARENTHESIS
+
       to_append = droppings + parenthesis
       new_code = program.bytecode + to_append
       program.bytecode = new_code
@@ -175,29 +173,23 @@ class ProgramGenerator(object):
 
     if self._ewasm:
       wat2wasm = ['wat2wasm']
-      tempdir = tempfile.TemporaryDirectory()
 
-      try:
+      with tempfile.TemporaryDirectory() as tempdir:
+        input_file_path = os.path.join(tempdir, "input.wat")
+        output_file_path = os.path.join(tempdir, "output.wasm")
+        args = ['-o', output_file_path, input_file_path]
+        invocation = wat2wasm + args
 
-        input_file_path = os.path.join(tempdir.name, "input.wat")
         with open(input_file_path, 'w') as file:
           file.write(program.bytecode)
 
-        output_file_path = os.path.join(tempdir.name, "output.wasm")
-
-        args = ['-o', output_file_path, input_file_path]
-        invocation = wat2wasm + args
         result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
         assert result.returncode == 0
 
         with open(output_file_path, 'rb') as file:
           wasm_result_bin = file.read()
 
-        wasm_result = binascii.hexlify(wasm_result_bin).decode('ascii')
-
-      finally:
-        tempdir.cleanup()
-
+      wasm_result = binascii.hexlify(wasm_result_bin).decode('ascii')
       program.bytecode = wasm_result
       return program
     else:
@@ -221,76 +213,10 @@ class ProgramGenerator(object):
       return Program(bytecode, measured_op_position)
 
   def _fill_opcodes_push_dup_swap(self, opcodes):
-    pushes = """
-    0x60 PUSH1
-    0x61 PUSH2
-    0x62 PUSH3
-    0x63 PUSH4
-    0x64 PUSH5
-    0x65 PUSH6
-    0x66 PUSH7
-    0x67 PUSH8
-    0x68 PUSH9
-    0x69 PUSH10
-    0x6a PUSH11
-    0x6b PUSH12
-    0x6c PUSH13
-    0x6d PUSH14
-    0x6e PUSH15
-    0x6f PUSH16
-    0x70 PUSH17
-    0x71 PUSH18
-    0x72 PUSH19
-    0x73 PUSH20
-    0x74 PUSH21
-    0x75 PUSH22
-    0x76 PUSH23
-    0x77 PUSH24
-    0x78 PUSH25
-    0x79 PUSH26
-    0x7a PUSH27
-    0x7b PUSH28
-    0x7c PUSH29
-    0x7d PUSH30
-    0x7e PUSH31
-    0x7f PUSH32
-    """
-    dups = """
-    0x80 DUP1
-    0x81 DUP2
-    0x82 DUP3
-    0x83 DUP4
-    0x84 DUP5
-    0x85 DUP6
-    0x86 DUP7
-    0x87 DUP8
-    0x88 DUP9
-    0x89 DUP10
-    0x8a DUP11
-    0x8b DUP12
-    0x8c DUP13
-    0x8d DUP14
-    0x8e DUP15
-    0x8f DUP16
-    """
-    swaps = """
-    0x90 SWAP1
-    0x91 SWAP2
-    0x92 SWAP3
-    0x93 SWAP4
-    0x94 SWAP5
-    0x95 SWAP6
-    0x96 SWAP7
-    0x97 SWAP8
-    0x98 SWAP9
-    0x99 SWAP10
-    0x9a SWAP11
-    0x9b SWAP12
-    0x9c SWAP13
-    0x9d SWAP14
-    0x9e SWAP15
-    0x9f SWAP16
-    """
+    pushes = constants.EVM_PUSHES
+    dups = constants.EVM_DUPS
+    swaps = constants.EVM_SWAPS
+
     pushes = self._opcodes_dict_push_dup_swap(pushes, [0] * len(pushes), [1] * len(pushes), parameter='00')
     opcodes = {**opcodes, **pushes}
     dups = self._opcodes_dict_push_dup_swap(dups, range(1, len(dups)), range(2, len(dups)+1))

@@ -31,7 +31,7 @@ From `src`
 ```
 # ensure `wabt` binaries are in PATH
 # ensure `parity-evm` binaries are in PATH
-python3 program_generator/program_generator.py generate --ewasm |       xargs -L1        parity-evm           --gas 5000           --chain ../../openethereum/ethcore/res/instant_seal.json --code
+python3 program_generator/program_generator.py generate --ewasm | xargs -L1 parity-evm --gas 5000 --chain ../../openethereum/ethcore/res/instant_seal.json --code
 ```
 
 #### Use together with `measurements.py`
