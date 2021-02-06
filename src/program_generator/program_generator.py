@@ -27,6 +27,10 @@ class ProgramGenerator(object):
   ```
   | program_id | opcode_measured | measured_op_position | bytecode |
   ```
+
+  NOTE: `measured_op_position` doesn't take into account the specific instructions fired before the
+  generated part starts executing. It is relative to the first instruction of the _generated_ part
+  of the program. E.g.: `evmone` prepends `JUMPDESTI`, `openethereum_ewasm` prepends many instructions
   """
 
   def __init__(self, ewasm=False):
@@ -46,7 +50,7 @@ class ProgramGenerator(object):
       opcodes = self._fill_opcodes_push_dup_swap(opcodes)
 
     if self._ewasm:
-      selection_file = os.path.join(dir_path, 'data', 'selection_ewasm.csv')
+      selection_file = os.path.join(dir_path, 'data', 'selection_ewasm_first_pass.csv')
     else:
       selection_file = os.path.join(dir_path, 'data', 'selection.csv')
 
@@ -150,9 +154,14 @@ class ProgramGenerator(object):
     Appends the same thing for every operation, just to get a valid ewasm program start
     """
     if self._ewasm:
-      to_append = """
+      added_to_stack = int(opcode['Added to stack'])
+      droppings = """
+    drop
+""" * added_to_stack
+      parenthesis = """
 ))
       """
+      to_append = droppings + parenthesis
       new_code = program.bytecode + to_append
       program.bytecode = new_code
       return program
@@ -163,8 +172,6 @@ class ProgramGenerator(object):
     """
     Runs the compilation to wasm for ewasm using WABT
     """
-
-    print(program.bytecode)
 
     if self._ewasm:
       wat2wasm = ['wat2wasm']
@@ -187,12 +194,12 @@ class ProgramGenerator(object):
           wasm_result_bin = file.read()
 
         wasm_result = binascii.hexlify(wasm_result_bin).decode('ascii')
-        print(wasm_result)
 
       finally:
         tempdir.cleanup()
 
-      return wasm_result
+      program.bytecode = wasm_result
+      return program
     else:
       return program
 
