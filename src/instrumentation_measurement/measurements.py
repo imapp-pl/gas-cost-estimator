@@ -2,6 +2,7 @@ import csv
 import fire
 import sys
 import subprocess
+import os.path
 
 class Program(object):
   """
@@ -50,9 +51,10 @@ class Measurements(object):
 
     geth = "geth"
     openethereum = "openethereum"
+    openethereum_wasm = "openethereum-wasm"
     evmone = "evmone"
 
-    if evm not in {geth, openethereum, evmone}:
+    if evm not in {geth, openethereum, evmone, openethereum_wasm}:
       print("Wrong evm parameter. Allowed are: {}, {}, {}".format(geth, openethereum, evmone))
 
 
@@ -63,6 +65,8 @@ class Measurements(object):
           instrumenter_result = self.run_geth(program, sampleSize)
         elif evm == openethereum:
           instrumenter_result = self.run_openethereum(program, sampleSize)
+        elif evm == openethereum_wasm:
+          instrumenter_result = self.run_openethereum_wasm(program, sampleSize)
         elif evm == evmone:
           instrumenter_result = self.run_evmone(program, sampleSize)
 
@@ -92,6 +96,19 @@ class Measurements(object):
     assert result.returncode == 0
     # strip the output normally printed by openethereum ("output", gas used, time info)
     instrumenter_result = result.stdout.split('\n')[:-4]
+    return instrumenter_result
+
+  def run_openethereum_wasm(self, program, sampleSize):
+    openethereum_path = './instrumentation_measurement/openethereum'
+    openethereum_build_path = os.path.join(openethereum_path, 'target/release/')
+    openethereum_main = [openethereum_build_path + 'openethereum-evm']
+    chain = os.path.join(openethereum_path, 'ethcore/res/instant_seal.json')
+    args = ['--code', program.bytecode, "--repeat", "{}".format(sampleSize), "--chain", chain, "--gas", "5000"]
+    invocation = openethereum_main + args
+    result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
+    assert result.returncode == 0
+    # strip the output normally printed by openethereum ("output", gas used, time info)
+    instrumenter_result = result.stdout.split('\n')[38:-4]
     return instrumenter_result
 
   def run_evmone(self, program, sampleSize):
