@@ -8,7 +8,7 @@
 ----
 
 `opcodes_ewasm.csv` from specs of  "EVM Gas Cost Estimator.pdf" with corrections (dropping a stray `f64` instruction).
-  - stack requirements taken from [webassenbly.github.io page](https://webassembly.github.io/spec/core/appendix/index-instructions.html)
+  - stack requirements taken from [webassembly.github.io page](https://webassembly.github.io/spec/core/appendix/index-instructions.html)
   - parameters added
 
 `selection_ewasm_from_spec.csv` from specs of "EVM Gas Cost Estimator.pdf"
