@@ -102,6 +102,9 @@ This set of programs will have one program per OPCODE and it will be a smallest 
 Additionally to this, we excluded several OPCODEs, which treatment should be polished out in Stage II (`JUMP`, `JUMPI`, `RETURNDATACOPY`).
 We also neglected the entire dimension of arguments supplied to the OPCODEs execution (e.g. `SHA3`), which have substantial impact on the computational cost.
 
+For Ewasm, multiple OPCODEs were excluded at first iteration.
+This includes instructions which were either 64-bit, control-flow, memory access, global variable, all requiring more laborious program generation methods.
+
 The source code for preliminary program generation employed can be seen **TODO reference**.
 
 #### Preliminary instrumentation and measurement
@@ -119,6 +122,7 @@ The instrumentation and measurement were performed for three environments:
 1. `geth` **TODO reference** **TODO version etc**
 2. `envmone` **TODO reference** **TODO version etc**
 3. `openethereum` **TODO reference** **TODO version etc**
+4. `openethereum_ewasm`
 
 all running on the same but unspecified hardware (to be rectified in Stage II).
 
@@ -461,6 +465,7 @@ Refer to the other sections for details on the tasks.
     5. (opt) Generate programs via automated, adaptive generation
     6. Redesign input/output data structures, document and standardize
     7. Make program generation easily pluggable into the rest of the stack, standardize and document
+    8. Design and complete program generation for other included Ewasm OPCODEs
 2. Instrumentation and measurement tasks
     1. Allow to trace OPCODEs and arguments via instrumentation
     3. Improve, make "fair" and ensure full coverage of execution for the "measure all" instrumentation
