@@ -51,7 +51,7 @@ class Measurements(object):
 
     geth = "geth"
     openethereum = "openethereum"
-    openethereum_ewasm = "openethereum-ewasm"
+    openethereum_ewasm = "openethereum_ewasm"
     evmone = "evmone"
 
     if evm not in {geth, openethereum, evmone, openethereum_ewasm}:
