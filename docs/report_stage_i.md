@@ -2,22 +2,22 @@
 
 **Abstract**
 
-We summarize the findings of the first stage of the "Gas Cost Estimator" research project. This research project aims to propose a method of estimating gas costs of EVM/eWASM OPCODEs (a subset of). In the Stage I Report we give a brief overview of state of research on the topic, explain the motivation of conducting this research and present some early conclusions from the preliminary exploration. Next, we elaborate on the next steps to perform in the Stage II of this research project. We argue that measuring of individual OPCODE execution duration is feasible and gives ample opportunity of analyzing the differences of computational cost of different OPCODEs and different EVM/eWASM implementations.
+We summarize the findings of the first stage of the "Gas Cost Estimator" research project. This research project aims to propose a method of estimating gas costs of EVM/Ewasm OPCODEs (a subset of). In the Stage I Report we give a brief overview of state of research on the topic, explain the motivation of conducting this research and present some early conclusions from the preliminary exploration. Next, we elaborate on the next steps to perform in the Stage II of this research project. We argue that measuring of individual OPCODE execution duration is feasible and gives ample opportunity of analyzing the differences of computational cost of different OPCODEs and different EVM/Ewasm implementations.
 
 ## 1. Introduction
 
-EVM (Ethereum Virtual Machine) and eWASM (Ethereum flavored WebAssembly) are instrumental to the functioning of the Ethereum blockchain.
+EVM (Ethereum Virtual Machine) and Ewasm (Ethereum flavored WebAssembly) are instrumental to the functioning of the Ethereum blockchain.
 These components are responsible for carrying out the computations associated with transactions on the Ethereum blockchain, namely those related to the functioning of smart contracts.
 Due to Turing completeness of their instruction sets, and the necessity to guarantee that computations can be securely performed in an open, distributed network, a halting mechanism must be provided.
 
 The halting mechanism is provided thanks to gas, which is an Ethereum specific measure of computational cost incurred by the executing environment (Ethereum node connected to the network).
 Gas is priced in Ether (the intrinsic value token of the Ethereum blockchain), each transaction has an allowance of gas prepaid by the transaction sender.
-Every step of computation (as of writing, this corresponds to every bytecode instruction interpreted by EVM/eWASM) costs a small amount of gas, and if gas allowance is depleted, the computation is halted and its effects are reverted, except for the consumption of the entire gas allowance.
+Every step of computation (as of writing, this corresponds to every bytecode instruction interpreted by EVM/Ewasm) costs a small amount of gas, and if gas allowance is depleted, the computation is halted and its effects are reverted, except for the consumption of the entire gas allowance.
 The gas consumed by computations performed is paid out as transaction fee (in Ether) to the miner, or their Eth2.0 counterpart, including the transaction.
 The unused remainder of the prepaid gas allowance is returned back to the transaction sender.
 
 The challenge with this mechanism is to determine adequate gas costs of bytecode instructions.
-Currently, gas cost is determined on a per-OPCODE basis, that is, every OPCODE interpreted by the EVM/eWASM has a predetermined gas cost (or its gas cost is expressed as a function of instruction's arguments).
+Currently, gas cost is determined on a per-OPCODE basis, that is, every OPCODE interpreted by the EVM/Ewasm has a predetermined gas cost (or its gas cost is expressed as a function of instruction's arguments).
 This report and the "Gas Cost Estimator" research project aims at devising a method to estimate adequate values for these OPCODE gas costs, by estimating and analyzing the relative computational cost of OPCODEs.
 
 ### Motivation
@@ -31,12 +31,12 @@ It can also be stated, that it is the computational cost of PoW mining itself, w
 
 However, adequate gas cost of computation is paramount from the perspective of network security.
 Gas cost is a natural deterrent from abusing the networks capacity.
-If pricing of computations was inadequate, it would mean that there are operations in EVM/eWASM which are relatively underpriced, when compared to others.
+If pricing of computations was inadequate, it would mean that there are operations in EVM/Ewasm which are relatively underpriced, when compared to others.
 This would in turn mean that adversarial actors could craft the transactions in a way which puts significant load on the network, at the same time paying disproportionately low transaction fees.
 This situation opens the door to DoS attacks, which have happened and were given as main motivation for gas cost revisions in **TODO find ref**.
 
 To add to this, there is the decentralization factor of having adequate gas costs.
-The computations by EVM/eWASM components in Ethereum network nodes are performed by all nodes in the network, regardless of whether they are mining and earning transaction fees or not.
+The computations by EVM/Ewasm components in Ethereum network nodes are performed by all nodes in the network, regardless of whether they are mining and earning transaction fees or not.
 In the situation described above, the effect of the DoS attack extends to all participants of the network, most severely impacting less performant systems running on consumer hardware.
 The ability of users running nodes on consumer hardware to keep up with the execution of transactions on the blockchain is very important for preserving the decentralized nature of Ethereum.
 Such arguments are present in **TODO find ref**.
@@ -50,7 +50,7 @@ This in turn could incentivize parties who include transactions in blocks (miner
 This could lead to a less predictable behavior of the fee market, from the network users' perspective.
 Assuming that transactions can in fact be efficiently categorized in terms of which smart contracts they execute on, which is a non-trivial task, one should accept the possibility of such scenario.
 
-This report and the entire "Gas Cost Estimator" project are focusing on a subset of EVM/eWASM OPCODEs.
+This report and the entire "Gas Cost Estimator" project are focusing on a subset of EVM/Ewasm OPCODEs.
 The OPCODEs in this subset (see [Appendix B: OPCODEs subset](#appendix-b-opcodes-subset) have in common that they do not include any instructions which access the Ethereum storage (e.g. `SSTORE`, `SLOAD` etc.).
 On one hand, the focus on only purely computational instructions is intended and desirable, as seen from the point of view whereby the importance of on-chain computations will increase, while the extensive use of Ethereum storage will diminish.
 This is driven by the current influx of L2-scalability solutions, which only store the minimum amount of data, putting the burden of providing data on the transaction senders and the burden of validating it on the smart contract.
@@ -62,7 +62,7 @@ On the other hand, we intend to consider extending the method devised here to st
 One of the factors that contribute to the challenge which gas cost estimation presents is the inherent multitude of environments involved.
 
 By environments in this context we mean:
-  - different implementations of the Ethereum node (and EVM/eWASM in consequence), done in different programming languages and with different mindsets.
+  - different implementations of the Ethereum node (and EVM/Ewasm in consequence), done in different programming languages and with different mindsets.
   - different hardware on which this software is ran; this is exacerbated by the requirement towards the software to run reliably on both server-grade hardware and consumer-grade desktops alike
   - different operating systems.
 
@@ -84,11 +84,11 @@ At Stage I a survey of existing literature and related work was done. We defer w
 
 ### Preliminary method
 
-During the execution of Stage I, preliminary experiments and analysis were performed in order to explore the dynamics of computational effort which OPCODEs of EVM/eWASM exhibit.
+During the execution of Stage I, preliminary experiments and analysis were performed in order to explore the dynamics of computational effort which OPCODEs of EVM/Ewasm exhibit.
 The intention of this exploration was to propose a method for gas cost estimation, which would be further advanced and validated in Stage II.
 
 The method consists of three separate domains:
-1. **Program generation** - entails generation of EVM/eWASM bytecode programs which will be executed in order to gather measurements
+1. **Program generation** - entails generation of EVM/Ewasm bytecode programs which will be executed in order to gather measurements
 2. **Instrumentation and measurement** - entails the process of running the generated programs in a controlled environment and performing various measurements
 3. **Analysis** - entails the process of statistical analysis and validation of the obtained measurement data
 
@@ -106,13 +106,13 @@ The source code for preliminary program generation employed can be seen **TODO r
 
 #### Preliminary instrumentation and measurement
 
-For Stage I we used the "measure all" approach for individual EVM/eWASM instructions.
+For Stage I we used the "measure all" approach for individual EVM/Ewasm instructions.
 We measured the entire iteration of the interpreter main loop for every instruction in terms of wall clock (nanosecond precision, monotonic) duration.
-We took care to provide "fair" measurements for all OPCODEs and all EVM/eWASM implementations involved, to minimize factors that would be exogenous to the OPCODE execution, and could impact its measurement.
+We took care to provide "fair" measurements for all OPCODEs and all EVM/Ewasm implementations involved, to minimize factors that would be exogenous to the OPCODE execution, and could impact its measurement.
 This in particular will require additional polishing out in Stage II, as per [notes left here](https://github.com/imapp-pl/gas-cost-estimator/blob/master/docs/notes/execution_comparison.md), [here](https://github.com/imapp-pl/gas-cost-estimator/blob/master/docs/notes/instrumentation_measurement/evmone.md), [here](https://github.com/imapp-pl/gas-cost-estimator/blob/master/docs/notes/instrumentation_measurement/geth.md) and [here](https://github.com/imapp-pl/gas-cost-estimator/blob/master/docs/notes/instrumentation_measurement/openethereum.md).
 
 Additional to measuring the OPCODE execution time we measure the duration of the capture of time itself.
-This is motivated by the fact that (especially for the highly performant EVM/eWASM implementations) the execution of a single instruction of the interpreter takes an very small amount of time.
+This is motivated by the fact that (especially for the highly performant EVM/Ewasm implementations) the execution of a single instruction of the interpreter takes an very small amount of time.
 To preserve the realistic proportion between the cost of "cheap" and "expensive" OPCODEs, we need to account for the overhead of the time measurement itself.
 
 The instrumentation and measurement were performed for three environments:
@@ -147,7 +147,7 @@ Instead, we will present the questions that will be especially interesting to an
 
 #### Q1: Can we devise a one-size-fits-all set of OPCODE gas costs?
 
-After visually comparing the implementation-relative measurements (see **TODO reference** above), we suspect that at the current state of EVM/eWASM implementations, it might be challenging to propose gas costs to OPCODEs, which would apply equally well to all.
+After visually comparing the implementation-relative measurements (see **TODO reference** above), we suspect that at the current state of EVM/Ewasm implementations, it might be challenging to propose gas costs to OPCODEs, which would apply equally well to all.
 
 E.g., from the preliminary measurement data we saw that, for `evmone` and `openethereum`, several arithmetic OPCODEs (range from `DIV` to `MULMOD`) are consequently more expensive to execute than the pivot OPCODE.
 This is however not the case for `geth`.
@@ -177,7 +177,7 @@ This is a natural phenomenon usually referred to as warm-up in program benchmark
 We need to answer, what is the appropriate amount of warm-up executions which we want to discard, for the measurements to remain "fair" from the point of view of our goals.
 A limiting factor here is that the timer code to collect duration measurements itself seems to exhibit a warm-up phase.
 
-In any case, the treatment of warm-up will be such that measurements mimic normal operation of the EVM/eWASM modules within Ethereum nodes.
+In any case, the treatment of warm-up will be such that measurements mimic normal operation of the EVM/Ewasm modules within Ethereum nodes.
 
 #### Q4a: How should cache and locality be treated?
 
@@ -188,7 +188,7 @@ It must be assessed and estimated, how do cache and locality impact the computat
 We will analyze adjustments to the program generator, where the generated programs will represent typical smart contract execution circumstances.
 Alternatively, we will explore the space of generated programs so that programs enacting different behavior of cache and data locality are included.
 
-#### Q5: How to fairly treat EVM/eWASM implementations with JIT capabilities?
+#### Q5: How to fairly treat EVM/Ewasm implementations with JIT capabilities?
 
 `evmone` optimizes its operation by performing a preprocessing step and offloading some computations to be done per code block, rather than per instruction.
 As long as it is still functioning as an interpreter, and every instruction is executed separately, this isn't an obstacle.
@@ -208,7 +208,7 @@ If the findings gathered invalidate the assumptions, the approach and plan will 
 
 ### Goal of Stage II
 
-Propose a method of giving an accurate proposition of the EVM/eWASM gas costs for every one of the subset of EVM OPCODEs, as well as define what "accurate" means and how to assess it.
+Propose a method of giving an accurate proposition of the EVM/Ewasm gas costs for every one of the subset of EVM OPCODEs, as well as define what "accurate" means and how to assess it.
 
 The method should be feasible for various implementations/hardware etc. and have "good properties".
 Ideally, the method should become a standard (framework) for profiling EVM implementations in terms of OPCODE gas costs.
@@ -222,9 +222,9 @@ Accurate and with good properties, in the context of an estimate of OPCODE gas c
 
 ### Program generation
 
-In this section we describe the approach to sample EVM/eWASM program generation.
+In this section we describe the approach to sample EVM/Ewasm program generation.
 
-Programs will be generated directly as bytecode to be supplied to the EVM/eWASM for execution.
+Programs will be generated directly as bytecode to be supplied to the EVM/Ewasm for execution.
 
 #### Properties of program generation
 
@@ -236,9 +236,9 @@ When generating our programs we want to ensure the following:
 2. **little measurement noise** - we want programs to be such that noise is limited.
     - in particular we want to be able to tell, if factors external to the OPCODE execution impact the measurement,
     - i.e. we want to separate "good variance" from "bad variance." The former means variance that represents variability in computational cost inherent to the OPCODE execution. The latter means noise introduced by inadequate measurement and external factors.
-3. **feasibility of measurement** - we want programs to be easily supplied to various EVM/eWASM implementations and measurement harnesses we devise.
+3. **feasibility of measurement** - we want programs to be easily supplied to various EVM/Ewasm implementations and measurement harnesses we devise.
 
-At Stage II, we plan to compile a detailed rundown of the specifics of each OPCODE, to be taken into account when using in program generation and then instrumentation, since some OPCODEs have special traits which should be kept in mind (e.g. `CALLDATASIZE` reads from the calldata input to EVM/eWASM execution, `BALANCE` might depend on the balance of the account checked).
+At Stage II, we plan to compile a detailed rundown of the specifics of each OPCODE, to be taken into account when using in program generation and then instrumentation, since some OPCODEs have special traits which should be kept in mind (e.g. `CALLDATASIZE` reads from the calldata input to EVM/Ewasm execution, `BALANCE` might depend on the balance of the account checked).
 
 The final approach to generate programs will be devised in an iterative manner, so as to arrive at the simplest solution which gives good results.
 
@@ -297,7 +297,7 @@ Then, instead of most variance/information about `t`, we want most information o
 
 In this section we describe the approach to instrumentation and measurement of sample program execution.
 
-We will execute an EVM/eWASM program, with one chosen form of instrumentation and measurement enabled:
+We will execute an EVM/Ewasm program, with one chosen form of instrumentation and measurement enabled:
 
 1. **trace OPCODEs and arguments** - produces a list of OPCODEs for all instructions executed in a program, along with their relevant arguments (stack, memory). This will be used to know what were the instructions executed during a single run of a program.
 2. **measure all** - (individual instruction measurement) produces a list of measurements per instruction, in order of execution, _for all instructions in the program_.
@@ -310,11 +310,11 @@ Measurements of CPU cycles using TSC (`RDTSC`, `gotsc` etc.) might be used for v
 
 #### Measurement "fairness" and coverage
 
-As already started in Stage I effort, we will further polish out the "fairness" of measurements for all OPCODEs and all EVM/eWASM implementations involved, to minimize factors that would be exogenous to the OPCODE execution, and could impact its measurement.
+As already started in Stage I effort, we will further polish out the "fairness" of measurements for all OPCODEs and all EVM/Ewasm implementations involved, to minimize factors that would be exogenous to the OPCODE execution, and could impact its measurement.
 
 In particular, but not limited to, we will take care that in each environment and for each OPCODE, the scope of measured execution is as similar as possible, so that the results are comparable.
 
-We will also make sure, and elaborate on, to represent as closely as possible the scope of execution to that which is proper to the EVM/eWASM functioning within an operating Ethereum node.
+We will also make sure, and elaborate on, to represent as closely as possible the scope of execution to that which is proper to the EVM/Ewasm functioning within an operating Ethereum node.
 
 A particular facet of this is the approach to garbage collection.
 We can continue to turn the garbage collector off and trigger manually outside of measured scope, as we did in Stage I, in case it is established, that this approach is "fair" for all OPCODEs, that is we miss out the impact of OPCODEs on garbage collection and impact of garbage collection on OPCODE computations evenly.
@@ -324,7 +324,7 @@ Alternatively we can leave the garbage collection on by default and factor its i
 
 The main question regarding the measurement of (CPU-bound) computational cost of instructions is, whether it is the individual instruction execution to be measured or an entire program execution, consisting of multiple instructions.
 
-In the former, we measure each iteration of the inner loop of the EVM/eWASM interpreter.
+In the former, we measure each iteration of the inner loop of the EVM/Ewasm interpreter.
 [See Stage I preliminary results](https://htmlpreview.github.io/?https://github.com/imapp-pl/gas-cost-estimator/blob/master/src/analysis/exploration.nb.html) for an example application of this approach.
 
 **Pros**
@@ -336,7 +336,7 @@ In the former, we measure each iteration of the inner loop of the EVM/eWASM inte
 
 - need to be careful about timer precision and overhead (preliminary results try to account for it).
 
-In the latter approach we measure the entire execution of the EVM/eWASM interpreter loop, [see for example here](https://notes.ethereum.org/@chfast/benchmarking-evm-instructions).
+In the latter approach we measure the entire execution of the EVM/Ewasm interpreter loop, [see for example here](https://notes.ethereum.org/@chfast/benchmarking-evm-instructions).
 
 **Pros**
 
@@ -381,7 +381,7 @@ Moving forward, we are planning to continue adjusting for the timer overhead, wi
 
 #### Repetition and accounting for warm-up
 
-We will repeat the execution a number of times, within the same instance of the EVM/eWASM environment (e.g. OS process etc.).
+We will repeat the execution a number of times, within the same instance of the EVM/Ewasm environment (e.g. OS process etc.).
 Every such repetition will be called a **run**.
 
 Measurements for initial runs have been detected to be larger, and they might either be discarded or kept.
@@ -473,9 +473,9 @@ Refer to the other sections for details on the tasks.
     8. Write down the instrumentation and measurement standard ruleset
     9. (opt) Try further lowering the overhead of wallclock timers
     10. Provide consistent treatment of warm-up
-    11. Analyze warm-up conditions versus normal EVM/eWASM operation within an Ethereum node
+    11. Analyze warm-up conditions versus normal EVM/Ewasm operation within an Ethereum node
     12. Support gathering of timer overhead measuremnts during OPCODE measurements
-    13. Support for instrumentation in at least one another eWASM implementation
+    13. Support for instrumentation in at least one another Ewasm implementation
     14. Rethink the approach to garbage collection for environments that have one
 3. Analysis tasks
     1. Tidy and improve structure of the existing analysis code in R, allow for its extensibility
@@ -498,7 +498,7 @@ Refer to the other sections for details on the tasks.
     9. Answer "Q4: How should warm-up be treated?"
     10. Analyze impact of programs with various behavior of cache and data locality
     10. Answer "Q4a: How should cache and locality be treated?"
-    10. (opt) Answer "Q5: How to fairly treat EVM/eWASM implementations with JIT capabilities?"
+    10. (opt) Answer "Q5: How to fairly treat EVM/Ewasm implementations with JIT capabilities?"
     11. (opt) Answer "Q6: How to standardize the gas cost estimation procedure?"
 4. Hardware and environment diversity tasks
     1. Provision and run measurements on a machine in the cloud

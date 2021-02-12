@@ -7,7 +7,7 @@
 ----
 
 Here we organize thoughts on different approaches to consider.
-We focus on EVM for simplicity, but this should be substitutable by eWASM (Ethereum flavored WebAssembly) interpreters throughout the document.
+We focus on EVM for simplicity, but this should be substitutable by Ewasm (Ethereum flavored WebAssembly) interpreters throughout the document.
 
 ### Goal
 
