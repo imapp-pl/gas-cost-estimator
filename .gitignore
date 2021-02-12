@@ -2,3 +2,5 @@
 src/.RData
 
 src/.Rhistory
+
+__pycache__
