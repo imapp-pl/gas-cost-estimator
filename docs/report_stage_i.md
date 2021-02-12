@@ -4,7 +4,7 @@
 
 We summarize the findings of the first stage of the "Gas Cost Estimator" research project. This research project aims to propose a method of estimating gas costs of EVM/Ewasm OPCODEs (a subset of). In the Stage I Report we give a brief overview of state of research on the topic, explain the motivation of conducting this research and present some early conclusions from the preliminary exploration. Next, we elaborate on the next steps to perform in the Stage II of this research project. We argue that measuring of individual OPCODE execution duration is feasible and gives ample opportunity of analyzing the differences of computational cost of different OPCODEs and different EVM/Ewasm implementations.
 
-## 1. Introduction
+## Introduction
 
 EVM (Ethereum Virtual Machine) and Ewasm (Ethereum flavored WebAssembly) are instrumental to the functioning of the Ethereum blockchain.
 These components are responsible for carrying out the computations associated with transactions on the Ethereum blockchain, namely those related to the functioning of smart contracts.
@@ -74,7 +74,7 @@ To this end, the approach must be well documented and reproducible by the commun
 This report anticipates the completion of Stage II of the project.
 Given that, we focus on setting forth a plan and strategy for conducting the future measurements and analysis, rather than providing answers or recommendations for gas cost adjustments straight away.
 
-## 4. Preliminary work and findings of Stage I
+## Preliminary work and findings of Stage I
 
 None of the quantitative results obtained at Stage I of this research are final nor should be quoted.
 There are many caveats and detail work yet to be done, which will impact the final results and conclusions.
@@ -93,7 +93,7 @@ The method consists of three separate domains:
 3. **Analysis** - entails the process of statistical analysis and validation of the obtained measurement data
 
 In the following subsections, the preliminary implementation of these three domains will be briefly described.
-Refer to the section (**TODO ref**) for the planned approach to complete these implementations in Stage II.
+Refer to the [section Approach and plan for Stage II](#Approach-and-plan-for-Stage-II) for the planned approach to complete these implementations in Stage II.
 
 #### Preliminary program generation
 
@@ -105,7 +105,7 @@ We also neglected the entire dimension of arguments supplied to the OPCODEs exec
 For Ewasm, multiple OPCODEs were excluded at first iteration.
 This includes instructions which were either 64-bit, control-flow, memory access, global variable, all requiring more laborious program generation methods.
 
-The source code for preliminary program generation employed can be seen **TODO reference**.
+The source code for preliminary program generation employed can be seen in the [`src/program_generation` dir](https://github.com/imapp-pl/gas-cost-estimator/tree/master/src/program_generator).
 
 #### Preliminary instrumentation and measurement
 
@@ -119,10 +119,10 @@ This is motivated by the fact that (especially for the highly performant EVM/Ewa
 To preserve the realistic proportion between the cost of "cheap" and "expensive" OPCODEs, we need to account for the overhead of the time measurement itself.
 
 The instrumentation and measurement were performed for three environments:
-1. `geth` **TODO reference** **TODO version etc**
-2. `envmone` **TODO reference** **TODO version etc**
-3. `openethereum` **TODO reference** **TODO version etc**
-4. `openethereum_ewasm`
+1. `geth` - [ethereum/go-ethereum](https://github.com/ethereum/go-ethereum) at [`1.9.12-stable-b6f1c8dc`](https://github.com/ethereum/go-ethereum/releases/tag/v1.9.12)
+2. `evmone` - [ethereum/evmone](https://github.com/ethereum/evmone) at [`b1e79b8`](https://github.com/ethereum/evmone/commit/b1e79b870fb20ffcb67ebe3c9b409246dea9f947) with [additional changes implementing the instrumentation](https://github.com/imapp-pl/evmone/commit/2c46241644f07561123f52aa7e69478e0d962010)
+3. `openethereum` - [openethereum/openethereum](https://github.com/openethereum/openethereum/) at [`5e3e55b`](https://github.com/openethereum/openethereum/commit/5e3e55bb338c425146c52f75c95912e5385f4790) with [additional changes implementing the instrumentation](https://github.com/imapp-pl/openethereum/commit/ff7835112ab1cbf0834159e5de7811856b36f3d3)
+4. `openethereum_ewasm`- [openethereum/openethereum](https://github.com/openethereum/openethereum/) at [`ca3a82f`](https://github.com/openethereum/openethereum/commit/ca3a82f3c417aa6e54b41f888198822ab15c004c) with [additoinal changes implementing the instrumentation](https://github.com/imapp-pl/openethereum/commit/10590bcdb1f9ebdb6663ccacb7038d2464acbbf0)
 
 all running on the same but unspecified hardware (to be rectified in Stage II).
 
@@ -130,7 +130,7 @@ Each measurement was performed in a sequence of N (`sampleSize`) runs within the
 
 For the environment which has garbage collection (`Go/geth`), the automatic garbage collection was turned off and manually triggered before each program run.
 
-The implementation of the preliminary instrumentation and measurement can be seen **TODO reference**
+The implementation of the preliminary instrumentation and measurement can be seen in the [`src/instrumentation_measurement` dir](https://github.com/imapp-pl/gas-cost-estimator/tree/master/src/instrumentation_measurement)
 
 #### Preliminary analysis
 
@@ -151,7 +151,7 @@ Instead, we will present the questions that will be especially interesting to an
 
 #### Q1: Can we devise a one-size-fits-all set of OPCODE gas costs?
 
-After visually comparing the implementation-relative measurements (see **TODO reference** above), we suspect that at the current state of EVM/Ewasm implementations, it might be challenging to propose gas costs to OPCODEs, which would apply equally well to all.
+After visually comparing the implementation-relative measurements (see [section Implementation-relative measurements](#Implementation-relative-measurements)), we suspect that at the current state of EVM/Ewasm implementations, it might be challenging to propose gas costs to OPCODEs, which would apply equally well to all.
 
 E.g., from the preliminary measurement data we saw that, for `evmone` and `openethereum`, several arithmetic OPCODEs (range from `DIV` to `MULMOD`) are consequently more expensive to execute than the pivot OPCODE.
 This is however not the case for `geth`.
@@ -161,13 +161,13 @@ This means that, given these results are accurate, which is to be further confir
 
 The obtained results led us to the conclusion that measuring of individual instructions can be feasible.
 However, care must be taken to perform validations of the assumption that the lack of timer precision or its overhead, nor the inclusion of timer function calls itself, don't introduce "unfairness" to the measurements collected.
-Refer to the validation techniques planned for Stage II analysis in **TODO ref section approach etc** for ideas on tackling this.
+Refer to the validation techniques planned for Stage II analysis in [section Approach and plan for Stage II](#Approach-and-plan-for-Stage-II) for ideas on tackling this.
 There, we will also list possible fallback plans in case there is evidence that the noise and overhead present in this method of measurement is unacceptable.
 
 #### Q3: How can we explore the entire program space to capture all sources of variability of OPCODEs computational cost
 
 The main intention of the research presented here is to obtain relative comparison of costs of OPCODEs, accounting for the sources of variability that are already represented by the current gas cost schedule.
-An example of such variability is that the gas cost of a `SHA3` OPCODE is a function of the size of its arguments, `g = 30 + 6*x`, where `x` is the count of words (rounded up) for input data to the `SHA3` operation **TODO ref yellow paper**.
+An example of such variability is that the gas cost of a `SHA3` OPCODE is a function of the size of its arguments, `g = 30 + 6*x`, where `x` is the count of words (rounded up) for input data to the `SHA3` operation [2].
 Size of this OPCODE's arguments naturally impact its computational cost.
 
 It is tempting to search for sources of variability unaccounted for in the current gas schedule.
@@ -203,9 +203,9 @@ It may only require the measuring of a single OPCODE in various contexts, allowi
 As noted earlier, we envision that an added feature of the research could be a standard procedure to estimate gas costs in other environments.
 Similar attempts have been made in **TODO reference**.
 
-See section (**TODO ref approach and plan**) for the plan how to facilitate standardization.
+See [section Approach and plan for Stage II](#Approach-and-plan-for-Stage-II)) for the plan how to facilitate standardization.
 
-## 5. Approach and plan for Stage II
+## Approach and plan for Stage II
 
 We will proceed with the research in Stage II in a highly iterative fashion.
 If the findings gathered invalidate the assumptions, the approach and plan will be adjusted.
@@ -270,7 +270,7 @@ Such programs can then be used for initial exploration of the impact of surround
 
 #### Looped execution with stack balancing
 
-See [Benchmarking EVM Instructions by @chfast](https://notes.ethereum.org/@chfast/benchmarking-evm-instructions) (**TODO ref**).
+See [3].
 
 This approach will be very useful to validate the individual instruction measurements with whole-program measurements.
 
@@ -283,7 +283,7 @@ Also it will be applicable as the first step towards exploring the sources of va
 
 #### Automated, adaptive generation
 
-This is somewhat similar to the approach from the ["Broken metre" paper](https://arxiv.org/pdf/1909.07220.pdf) (**TODO make ref**), which describes a genetic algorithm minimizing the gas throughput (gas/second).
+This is somewhat similar to the approach from [4], which describes a genetic algorithm minimizing the gas throughput (gas/second).
 Pursuing this possibility is an optional expansion to the scope of the research, which will be considered at Stage II.
 
 We could modify this idea to run a genetic algorithm (or any other adaptive method with an objective function) maximizing our desired properties, i.e.:
@@ -351,14 +351,14 @@ In the latter approach we measure the entire execution of the EVM/Ewasm interpre
 
 - couples the intrinsic effect of instruction circumstances with their statistical impact on the estimator outcome,
 - must be more careful about program generation, to not have a dataset with adverse statistical properties (e.g. we'd need a very homogenous set of generated programs, which is hard given the need to balance the stack),
-- the need to do stack balancing, which consists in injecting `PUSH...` (`DUP...`) and `POP` instructions will interfere with the estimator values. (**TODO ref to gh convo with `chfast`**)
+- the need to do stack balancing, which consists in injecting `PUSH...` (`DUP...`) and `POP` instructions will interfere with the estimator values, following a GitHub thread [5]
 
 **Plan for Stage II:** Use individual instructions as the estimator and the entire program measurement as validation.
 Our goal metric can be, how closely does the estimate coming from individual measurements can model the cost of an entire program.
 
 In case individual measurements method is deemed unacceptable, following fallback plans are possible:
   - for very cheap OPCODEs, substitute individual instruction occurrences (e.g. `ISZERO`) with sequences of many instructions with pre-balanced stack (e.g. `DUP1 x 99, ISZERO x 100`) and use the "measure batch" instrumentation,
-  - use a binomial or similar model to extract the duration of an event shorter than the timer resolution (**TODO ref to paper Platform Independent Timing of Java Virtual Machine Bytecode Instructions**),
+  - use a binomial or similar model to extract the duration of an event shorter than the timer resolution [6],
   - use CPU cycles as a proxy of computational cost, instead of wallclock duration.
 
 #### Timer overhead adjustment
@@ -381,7 +381,7 @@ As the timer overhead estimate we use the minimum observed duration between two 
 
 Moving forward, we are planning to continue adjusting for the timer overhead, with the following improvements:
 - we'll monitor and register the timer overhead during the OPCODE measurements. This is motivated by the observation from the preliminary results, that the timer overhead measured exhibits periodic bumps. We will consider filtering out the measurements where the measure timer overhead was above a given threshold,
-- we should also separately conduct a statistical test that for every OPCODE, a measurement of the timer overhead is significantly smaller than the timer overhead, or prepare a similar argument **TODO ref validation section**.
+- we should also separately conduct a statistical test that for every OPCODE, a measurement of the timer overhead is significantly smaller than the timer overhead, or prepare a similar argument see [section Estimation validation and exploration](#Estimation-validation-and-exploration).
 
 #### Repetition and accounting for warm-up
 
@@ -513,10 +513,254 @@ Refer to the other sections for details on the tasks.
 6. Documentation tasks
     1. Write full section on Related Work, from sources gathered in Stage I and Stage II
 
-## Appendix B: OPCODEs subset (**TODO**)
+## Appendix B: OPCODEs subset
+
+Refer to [`src/program_generator/data`](https://github.com/imapp-pl/gas-cost-estimator/tree/master/src/program_generator/data) for detailed notes on OPCODEs rejected in the program generation phase.
+Refer to the [`exploration notebook`](https://htmlpreview.github.io/?https://github.com/imapp-pl/gas-cost-estimator/blob/master/src/analysis/exploration.nb.html) for notes on OPCODEs rejected in the analysis phase.
+
+### EVM OPCODEs
+
+```
+0x00 STOP
+0x01 ADD
+0x02 MUL
+0x03 SUB
+0x04 DIV
+0x05 SDIV
+0x06 MOD
+0x07 SMOD
+0x08 ADDMOD
+0x09 MULMOD
+0x0a EXP
+0x0b SIGNEXTEND
+0x10 LT
+0x11 GT
+0x12 SLT
+0x13 SGT
+0x14 EQ
+0x15 ISZERO
+0x16 AND
+0x17 OR
+0x18 XOR
+0x19 NOT
+0x1a BYTE
+0x30 ADDRESS
+0x32 ORIGIN
+0x33 CALLER
+0x34 CALLVALUE
+0x35 CALLDATALOAD
+0x36 CALLDATASIZE
+0x37 CALLDATACOPY
+0x38 CODESIZE
+0x39 CODECOPY
+0x3a GASPRICE
+0x3d RETURNDATASIZE
+0x3e RETURNDATACOPY
+0x41 COINBASE
+0x42 TIMESTAMP
+0x43 NUMBER
+0x44 DIFFICULTY
+0x45 GASLIMIT
+0x50 POP
+0x51 MLOAD
+0x52 MSTORE
+0x53 MSTORE8
+0x56 JUMP
+0x57 JUMPI
+0x58 PC
+0x59 MSIZE
+0x5a GAS
+0x5b JUMPDEST
+0x60 PUSH1
+0x61 PUSH2
+0x62 PUSH3
+0x63 PUSH4
+0x64 PUSH5
+0x65 PUSH6
+0x66 PUSH7
+0x67 PUSH8
+0x68 PUSH9
+0x69 PUSH10
+0x6a PUSH11
+0x6b PUSH12
+0x6c PUSH13
+0x6d PUSH14
+0x6e PUSH15
+0x6f PUSH16
+0x70 PUSH17
+0x71 PUSH18
+0x72 PUSH19
+0x73 PUSH20
+0x74 PUSH21
+0x75 PUSH22
+0x76 PUSH23
+0x77 PUSH24
+0x78 PUSH25
+0x79 PUSH26
+0x7a PUSH27
+0x7b PUSH28
+0x7c PUSH29
+0x7d PUSH30
+0x7e PUSH31
+0x7f PUSH32
+0x80 DUP1
+0x81 DUP2
+0x82 DUP3
+0x83 DUP4
+0x84 DUP5
+0x85 DUP6
+0x86 DUP7
+0x87 DUP8
+0x88 DUP9
+0x89 DUP10
+0x8a DUP11
+0x8b DUP12
+0x8c DUP13
+0x8d DUP14
+0x8e DUP15
+0x8f DUP16
+0x90 SWAP1
+0x91 SWAP2
+0x92 SWAP3
+0x93 SWAP4
+0x94 SWAP5
+0x95 SWAP6
+0x96 SWAP7
+0x97 SWAP8
+0x98 SWAP9
+0x99 SWAP10
+0x9a SWAP11
+0x9b SWAP12
+0x9c SWAP13
+0x9d SWAP14
+0x9e SWAP15
+0x9f SWAP16
+0xf3 RETURN
+0xfd REVERT
+0xfe INVALID
+```
+
+### Ewasm OPCODES
+
+```
+0x00 unreachable
+0x01 nop
+0x02 block
+0x03 loop
+0x04 if
+0x05 else
+0x0B end
+0x0C br
+0x0D br_if
+0x0E br_table
+0x0F return
+0x10 call
+0x11 call_indirect
+0x1A drop
+0x1B select
+0x20 local.get
+0x21 local.set
+0x22 local.tee
+0x23 global.get
+0x24 global.set
+0x28 i32.load
+0x29 i64.load
+0x2C i32.load8_s
+0x2D i32.load8_u
+0x2E i32.load16_s
+0x2F i32.load16_u
+0x30 i64.load8_s
+0x31 i64.load8_u
+0x32 i64.load16_s
+0x33 i64.load16_u
+0x34 i64.load32_s
+0x35 i64.load32_u
+0x36 i32.store
+0x37 i64.store
+0x3A i32.store8
+0x3B i32.store16
+0x3C i64.store8
+0x3D 64.store16
+0x3E i64.store32
+0x3F memory.size
+0x40 memory.grow
+0x41 i32.const
+0x42 i64.const
+0x45 i32.eqz
+0x46 i32.eq
+0x47 i32.ne
+0x48 i32.lt_s
+0x49 i32.lt_u
+0x4A i32.gt_s
+0x4B i32.gt_u
+0x4C i32.le_s
+0x4D i32.le_u
+0x4E i32.ge_s
+0x4F i32.ge_u
+0x50 i64.eqz
+0x51 i64.eq
+0x52 i64.ne
+0x53 i64.lt_s
+0x54 i64.lt_u
+0x55 i64.gt_s
+0x56 i64.gt_u
+0x57 i64.le_s
+0x58 i64.le_u
+0x59 i64.ge_s
+0x5A i64.ge_u
+0x67 i32.clz
+0x68 i32.ctz
+0x69 i32.popcnt
+0x6A i32.add
+0x6B i32.sub
+0x6C i32.mul
+0x6D i32.div_s
+0x6E i32.div_u
+0x6F i32.rem_s
+0x70 i32.rem_u
+0x71 i32.and
+0x72 i32.or
+0x73 i32.xor
+0x74 i32.shl
+0x75 i32.shr_s
+0x76 i32.shr_u
+0x77 i32.rotl
+0x78 i32.rotr
+0x79 i64.clz
+0x7A i64.ctz
+0x7B i64.popcnt
+0x7C i64.add
+0x7D i64.sub
+0x7E i64.mul
+0x7F i64.div_s
+0x80 i64.div_u
+0x81 i64.rem_s
+0x82 i64.rem_u
+0x83 i64.and
+0x84 i64.or
+0x85 i64.xor
+0x86 i64.shl
+0x87 i64.shr_s
+0x88 i64.shr_u
+0x89 i64.rotl
+0x8A i64.rotr
+0xA7 i32.wrap_i64
+0xAC i64.extend_i32_s
+0xAD i64.extend_i32_u
+0xC0 i32.extend8_s
+0xC1 i32.extend16_s
+0xC2 i64.extend8_s
+0xC3 i64.extend16_s
+0xC4 i64.extend32_s
+```
 
 ## Acknowledgements (**TODO**)
 
 ## References (**TODO**)
 
 [1] [https://etherscan.io/block/11660498](https://etherscan.io/block/11660498)
+[2] [ETHEREUM: A SECURE DECENTRALISED GENERALISED TRANSACTION LEDGER PETERSBURG VERSION 6424f7d – 2020-12-28DR. GAVIN WOODFOUNDER, ETHEREUM & PARITYGAVIN@PARITY.IO](https://ethereum.github.io/yellowpaper/paper.pdf)
+[3] [Benchmarking EVM Instructions. Paweł Bylica @chfast](https://notes.ethereum.org/@chfast/benchmarking-evm-instructions)
+[4] [Broken Metre: Attacking Resource Metering in EVM. Daniel Perez, Benjamin Livshits](https://arxiv.org/pdf/1909.07220.pdf)
+[5] [https://github.com/imapp-pl/gas-cost-estimator/pull/19#discussion_r554907184](https://github.com/imapp-pl/gas-cost-estimator/pull/19#discussion_r554907184)
+[6] [Platform Independent Timing of Java Virtual Machine Bytecode Instructions. Jonathan M. Lambert1and, James F.Power](http://mural.maynoothuniversity.ie/6382/2/JP-Platform.pdf)

@@ -61,7 +61,7 @@ What is being run except EVM excecution, as measured by `CaptureStart`/`End` (ev
 - some getting and setting of evm.interpreter magic in `run`
 - minor checks and assignments at the beginning of `func (in *EVMInterpreter) Run`
 - `mem`, `stack`, `returns`, (`callContext` too?) allocations
-- **TODO** move the `CaptureStart` to a later stage for a tighter measurement. Question: where to to preserve fairness (see above list)
+- if we want the first instruction to have a precise measurement (not necessary with current program generation), `CaptureStart` must be [moved](https://github.com/imapp-pl/go-ethereum/tree/wallclock)
 
 What is going on between `CaptureState`s (every opcode):
 - (normal interpreter operation, but "unfair") `if steps%1000 == 0 && atomic.LoadInt32(&in.evm.abort) != 0` (only if we go over 1000 instructions in programs)
