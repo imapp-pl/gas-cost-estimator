@@ -1,5 +1,7 @@
 # Gas Cost Estimator - Stage I Report
 
+[Piotr Dobaczewski](https://github.com/pdobacz), [Magdalena Stasiewicz](https://github.com/magdasta)
+
 **Abstract**
 
 We summarize the findings of the first stage of the "Gas Cost Estimator" research project. This research project aims to propose a method of estimating gas costs of EVM/Ewasm OPCODEs (a subset of). In the Stage I Report we give a brief overview of state of research on the topic, explain the motivation of conducting this research and present some early conclusions from the preliminary exploration. Next, we elaborate on the next steps to perform in the Stage II of this research project. We argue that measuring of individual OPCODE execution duration is feasible and gives ample opportunity of analyzing the differences of computational cost of different OPCODEs and different EVM/Ewasm implementations.
@@ -754,9 +756,11 @@ Refer to the [`exploration notebook`](https://htmlpreview.github.io/?https://git
 0xC4 i64.extend32_s
 ```
 
-## Acknowledgements (**TODO**)
+## Acknowledgements
 
-## References (**TODO**)
+[Paweł Bylica](https://github.com/chfast), [Marcin Benke](https://github.com/mbenke), [Radosław Zagórowicz](https://github.com/rodiazet) for invaluable help and contributions throughout the entire project.
+
+## References
 
 [1] [https://etherscan.io/block/11660498](https://etherscan.io/block/11660498)
 [2] [ETHEREUM: A SECURE DECENTRALISED GENERALISED TRANSACTION LEDGER PETERSBURG VERSION 6424f7d – 2020-12-28DR. GAVIN WOODFOUNDER, ETHEREUM & PARITYGAVIN@PARITY.IO](https://ethereum.github.io/yellowpaper/paper.pdf)
