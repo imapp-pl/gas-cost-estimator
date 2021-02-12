@@ -51,11 +51,11 @@ class Measurements(object):
 
     geth = "geth"
     openethereum = "openethereum"
-    openethereum_wasm = "openethereum-wasm"
+    openethereum_ewasm = "openethereum-ewasm"
     evmone = "evmone"
 
-    if evm not in {geth, openethereum, evmone, openethereum_wasm}:
-      print("Wrong evm parameter. Allowed are: {}, {}, {}".format(geth, openethereum, evmone))
+    if evm not in {geth, openethereum, evmone, openethereum_ewasm}:
+      print("Wrong evm parameter. Allowed are: {}, {}, {}, {}".format(geth, openethereum, evmone, openethereum_ewasm))
 
 
     for program in self._programs:
@@ -65,7 +65,7 @@ class Measurements(object):
           instrumenter_result = self.run_geth(program, sampleSize)
         elif evm == openethereum:
           instrumenter_result = self.run_openethereum(program, sampleSize)
-        elif evm == openethereum_wasm:
+        elif evm == openethereum_ewasm:
           instrumenter_result = self.run_openethereum_wasm(program, sampleSize)
         elif evm == evmone:
           instrumenter_result = self.run_evmone(program, sampleSize)
@@ -108,6 +108,7 @@ class Measurements(object):
     result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
     assert result.returncode == 0
     # strip the output normally printed by openethereum ("output", gas used, time info)
+    # also, when executing ewasm bytecode, OpenEthereum first runs some EVM code (38 instructions)
     instrumenter_result = result.stdout.split('\n')[38:-4]
     return instrumenter_result
 
