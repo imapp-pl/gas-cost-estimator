@@ -201,7 +201,7 @@ Alternatively, we will explore the space of generated programs so that programs 
 
 `evmone` optimizes its operation by performing a preprocessing step and offloading some computations to be done per code block, rather than per instruction.
 As long as it is still functioning as an interpreter, and every instruction is executed separately, this isn't an obstacle.
-It may only require the measuring of a single OPCODE in various contexts, allowing us to observe the variability of the OPCODEs cost (see Q3).
+It may only require the measuring of a single OPCODE in various circumstances, allowing us to observe the variability of the OPCODEs cost (see Q3).
 
 #### Q6: How to standardize the gas cost estimation procedure?
 
@@ -241,7 +241,7 @@ When generating our programs we want to ensure the following:
 
 1. **uniform coverage** - we want programs to cover the space of OPCODEs completely, so that all the OPCODEs are modeled appropriately and "fairly".
     - impact of values on stack is captured,
-    - impact of circumstances where the instructions appear and their "surroundings" is captured.
+    - impact of circumstances where the instructions appear is captured.
 2. **little measurement noise** - we want programs to be such that noise is limited.
     - in particular we want to be able to tell, if factors external to the OPCODE execution impact the measurement,
     - i.e. we want to separate "good variance" from "bad variance." The former means variance that represents variability in computational cost inherent to the OPCODE execution. The latter means noise introduced by inadequate measurement and external factors.
@@ -263,15 +263,15 @@ This set of programs will have one program per OPCODE and it will be a smallest 
 
 This is an extension of the "Simplest valid program" approach, where we'll allow to generate programs which execute their OPCODEs with different arguments, so that we can enact their behavior to cover the scope of variability that the current gas schedule allows for (e.g. various sizes of the input for the `SHA3` OPCODE).
 
-#### Simplest valid program with simple surroundings
+#### Simplest valid program with surrounding bytecode prepended/appended
 
-Before a full-fledged support for exploring various surroundings and their impact on the execution of a given OPCODE, we can provide a simplified probe of the topic.
+Before a full-fledged support for exploring various circumstances and their impact on the execution of a given OPCODE, we can provide a simplified probe of the topic.
 
 In this approach, we will generate programs same as in "Simplest valid program" approach, but:
   - prepend and/or append a sequence of fixed arbitrary bytecodes, to put the analyzed OPCODE in the "middle" of the program, and/or
   - multiply the OPCODE with its stack management companions.
 
-Such programs can then be used for initial exploration of the impact of surroundings.
+Such programs can then be used for initial exploration of the impact of bytecode surrounding the OPCODE in question.
 
 #### Looped execution with stack balancing
 
@@ -284,7 +284,7 @@ This approach will be very useful to validate the individual instruction measure
 This is an extension of the "Simplest valid program" approach, where we'll generate random programs, mixing instructions of all OPCODEs from the subset, that only are known to execute successfully due to correct stack balancing.
 
 This approach will be very useful to validate the individual instruction measurements with whole-program measurements ("measure total").
-Also it will be applicable as the first step towards exploring the sources of variability of OPCODE cost driven by various contexts in which these OPCODEs are executed.
+Also it will be applicable as the first step towards exploring the sources of variability of OPCODE cost driven by various circumstances in which these OPCODEs are executed.
 
 #### Automated, adaptive generation
 
@@ -296,7 +296,7 @@ We could modify this idea to run a genetic algorithm (or any other adaptive meth
   - minimize variance (noise) coming from different environments
   - maximize uniformity
 
-This could also be useful to discover the impact of circumstances ("surrounding") (**TODO unify language circumstances, surrounding, context**), where a particular OPCODE can exhibit much different computational burden, depending on where it is located in the program.
+This could also be useful to discover the impact of circumstances, where a particular OPCODE can exhibit much different computational burden, depending on where it is located in the program.
 
 One challenge is how to model OPCODEs with variable size of parameters (e.g. `SHA3`): they would have unbounded values and also unbounded variance, if not modeled correctly.
 We could model as `t = c + a*x`, `c` constant, `x` size, `a` coefficient to model.
@@ -339,7 +339,7 @@ In the former, we measure each iteration of the inner loop of the EVM/Ewasm inte
 **Pros**
 
 - measurement is more granular and allows us to analyze the measurements without worrying about statistical errors,
-- in particular, it allows for granular discrimination between cost of OPCODEs located in various circumstances ("surroundings").
+- in particular, it allows for granular discrimination between cost of OPCODEs located in various circumstances.
 
 **Cons**
 
@@ -463,7 +463,7 @@ Refer to the other sections for details on the tasks.
 1. Program generation tasks
     1. Compile a detailed rundown of the specifics of each OPCODE
     2. Allow to customize stack/arguments
-    4. Generate programs with simple surroundings added to a single OPCODE
+    4. Generate programs with surrounding bytecode prepended/appended
     4. Generate programs so that they can enact different behavior of cache and data locality
     3. Generate programs with looped execution with stack balancing
     4. (opt) Generate random programs with stack balancing
@@ -492,7 +492,7 @@ Refer to the other sections for details on the tasks.
     1. Improve the visualization method to check distributions of measurements per OPCODE and environment (frequency plots used in Stage I are not useful)
     1. Look into the extreme outliers in OPCODE measurements, if they are still present after rectifying the instrumentation stack
     1. Revisit the choice of the pivot OPCODE for implementation-relative measurements, describe criteria for this choice
-    1. Allow analysis of OPCODE measurements coming from programs in which their execution has been parametrized (via arguments, context, surroundings)
+    1. Allow analysis of OPCODE measurements coming from programs in which their execution has been parametrized (via arguments, circumstances)
     2. Explore validation methods proposed
     3. Implement automated scripts for the chosen validation methods
     4. (opt) Implement (or adapt an existing implementation or existing data sets, if they exist) validation via blockchain history
