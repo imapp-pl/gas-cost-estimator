@@ -4,7 +4,7 @@
 
 **Abstract**
 
-We summarize the findings of the first stage of the "Gas Cost Estimator" research project. This research project aims to propose a method of estimating gas costs of EVM/Ewasm OPCODEs (a subset of). In the Stage I Report we give a brief overview of state of research on the topic, explain the motivation of conducting this research and present some early conclusions from the preliminary exploration. Next, we elaborate on the next steps to perform in the Stage II of this research project. We argue that measuring of individual OPCODE execution duration is feasible and gives ample opportunity of analyzing the differences of computational cost of different OPCODEs and different EVM/Ewasm implementations.
+We summarize the findings of the first stage of the "Gas Cost Estimator" research project. This research project aims to propose a method of estimating gas costs of EVM/Ewasm OPCODEs (a subset of). In the Stage I Report we give a brief overview of the state of research on the topic, explain the motivation of conducting this research and present some early conclusions from the preliminary exploration. Next, we elaborate on the next steps to perform in the Stage II of this research project. We argue that measuring individual OPCODE execution duration is feasible and gives ample opportunity to analyze the differences in computational cost of different OPCODEs and different EVM/Ewasm implementations.
 
 ## Introduction
 
@@ -32,7 +32,7 @@ Given however, that the transaction fee still is the lesser part of the block re
 It can also be stated, that it is the computational cost of PoW mining itself, which constitutes the major part of computational burden on the miner.
 
 However, adequate gas cost of computation is paramount from the perspective of network security.
-Gas cost is a natural deterrent from abusing the networks capacity.
+Gas cost is a natural deterrent from abusing the network's capacity.
 If pricing of computations was inadequate, it would mean that there are operations in EVM/Ewasm which are relatively underpriced, when compared to others.
 This would in turn mean that adversarial actors could craft the transactions in a way which puts significant load on the network, at the same time paying disproportionately low transaction fees.
 This situation opens the door to DoS attacks, which have happened and were given as main motivation for gas cost revisions in [12], [13], [14] and other research done in [8].
@@ -50,9 +50,9 @@ The need to have balanced pricing of EVM/Ewasm computations is brought up in num
 
 Another threat related to inadequate gas costs is mentioned in [15].
 Authors argue that such inadequate costs may lead to entire smart contracts becoming imbalanced in terms of their computational costs versus the amount of fees deduced for transacting using these contracts.
-This in turn could incentivize parties who include transactions in blocks (miners in Eth1.0) towards preferring certain contracts over other, in order to maximize their returns.
+This in turn could incentivize parties who include transactions in blocks (miners in Eth1.0) towards preferring certain contracts over others, in order to maximize their returns.
 This could lead to a less predictable behavior of the fee market, from the network users' perspective.
-Assuming that transactions can in fact be efficiently categorized in terms of which smart contracts they execute on, which is a non-trivial task, one should accept the possibility of such scenario.
+Assuming that transactions can in fact be efficiently categorized in terms of which smart contracts they execute on, which is a non-trivial task, one should accept the possibility of such a scenario.
 
 It is interesting to mention that, not entirely related to the motivations of this research but in similar vein, there is also prior work aimed at estimating the computational burden of individual OPCODEs (instructions) of the Java Virtual Machine (CPU), examples are [6], [16], [17], [18].
 
@@ -122,7 +122,7 @@ We took care to provide "fair" measurements for all OPCODEs and all EVM/Ewasm im
 This in particular will require additional polishing out in Stage II, as per [notes left here](https://github.com/imapp-pl/gas-cost-estimator/blob/master/docs/notes/execution_comparison.md), [here](https://github.com/imapp-pl/gas-cost-estimator/blob/master/docs/notes/instrumentation_measurement/evmone.md), [here](https://github.com/imapp-pl/gas-cost-estimator/blob/master/docs/notes/instrumentation_measurement/geth.md) and [here](https://github.com/imapp-pl/gas-cost-estimator/blob/master/docs/notes/instrumentation_measurement/openethereum.md).
 
 Additional to measuring the OPCODE execution time we measure the duration of the capture of time itself.
-This is motivated by the fact that (especially for the highly performant EVM/Ewasm implementations) the execution of a single instruction of the interpreter takes an very small amount of time.
+This is motivated by the fact that (especially for the highly performant EVM/Ewasm implementations) the execution of a single instruction of the interpreter takes a very small amount of time.
 To preserve the realistic proportion between the cost of "cheap" and "expensive" OPCODEs, we need to account for the overhead of the time measurement itself.
 
 The instrumentation and measurement were performed for four environments:
@@ -146,14 +146,14 @@ For Stage I we limited the analysis to graphical representation of the gathered 
 Simplifying, the following steps were performed on the measurement data:
 1. **Timer overhead adjustment** - offset the duration measurements for OPCODEs by an estimate of the timer overhead, proper to the environment (`geth`, `evmone`, `openethereum`).
 2. Draw simple minimums/maximums/means/quantiles etc., boxplots.
-3. **Implementation-relative measurements** - express the instruction duration in multiples of mean duration of a selected _pivot OPCODE_, so that we can analyze the relative distribution of computational cost of OPCODEs within each of the environments. This is motivated by the natural fact that implementations vary greatly in overall performance, and differences of cost of OPCODEs would be lost, if treated in absolute terms.
+3. **Implementation-relative measurements** - express the instruction duration in multiples of mean duration of a selected _pivot OPCODE_, so that we can analyze the relative distribution of computational cost of OPCODEs within each of the environments. This is motivated by the natural fact that implementations vary greatly in overall performance, and differences in cost of OPCODEs would be lost, if treated in absolute terms.
 4. Assess the impact of warm-up by plotting out the dynamics of OPCODE durations as a function of the consecutive number of run within the same sample (OS process).
 5. Do simple analysis of the dynamics of the timer overhead.
 
 **Figure 1: Implementation-relative measurements of time to compute particular OPCODEs** (click and download for high-quality image). For every OPCODE, the measured wallclock time is plotted using a boxplot. The units of the vertical axis are multiples of the wallclock time of the _pivot OPCODE_, calculated individually for each environment.
 ![Figure 1: Implementation-relative measurements of time to compute particular OPCODEs](./report_stage_i_assets/implementation_relative_all_opcodes.svg)
 
-The implementation of the preliminary analysis, in for of `R Markdown` notebooks, can be seen in the [`src/analysis` dir](https://github.com/imapp-pl/gas-cost-estimator/tree/master/src/analysis).
+The implementation of the preliminary analysis, in form of `R Markdown` notebooks, can be seen in the [`src/analysis` dir](https://github.com/imapp-pl/gas-cost-estimator/tree/master/src/analysis).
 An unedited HTML preview of the notebook output can be seen [here for the final analysis](https://htmlpreview.github.io/?https://github.com/imapp-pl/gas-cost-estimator/blob/master/src/analysis/exploration.nb.html) and [here for the timer overhead analysis](https://htmlpreview.github.io/?https://github.com/imapp-pl/gas-cost-estimator/blob/master/src/analysis/exploration_timers.nb.html)
 
 ### Preliminary findings
@@ -170,26 +170,26 @@ E.g., from the preliminary measurement data we saw that, for `evmone` and `opene
 This is however not the case for `geth`.
 This means that, given these results are accurate, which is to be further confirmed in Stage II, we might not expect a single good set of gas costs for all the OPCODEs in question, unless there is a parallel effort made to optimize the costly OPCODEs in selected implementations.
 
-#### Q2: is measuring of individual instructions feasible?
+#### Q2: Is measuring of individual instructions feasible?
 
-The obtained results led us to the conclusion that measuring of individual instructions can be feasible.
+The obtained results led us to the conclusion that measuring individual instructions can be feasible.
 However, care must be taken to perform validations of the assumption that the lack of timer precision or its overhead, nor the inclusion of timer function calls itself, don't introduce "unfairness" to the measurements collected.
 Refer to the validation techniques planned for Stage II analysis in [section Approach and plan for Stage II](#Approach-and-plan-for-Stage-II) for ideas on tackling this.
 There, we will also list possible fallback plans in case there is evidence that the noise and overhead present in this method of measurement is unacceptable.
 
 #### Q3: How can we explore the entire program space to capture all sources of variability of OPCODEs computational cost
 
-The main intention of the research presented here is to obtain relative comparison of costs of OPCODEs, accounting for the sources of variability that are already represented by the current gas cost schedule.
+The main intention of the research presented here is to obtain a relative comparison of costs of OPCODEs, accounting for the sources of variability that are already represented by the current gas cost schedule.
 An example of such variability is that the gas cost of a `SHA3` OPCODE is a function of the size of its arguments, `g = 30 + 6*x`, where `x` is the count of words (rounded up) for input data to the `SHA3` operation [2].
 Size of this OPCODE's arguments naturally impact its computational cost.
 
 It is tempting to search for sources of variability unaccounted for in the current gas schedule.
-A hypothetical example of such situation would be one, where, for example, `PUSH1` operation became more expensive, after having been repeated multiple times in the program.
+A hypothetical example of such a situation would be one, where, for example, `PUSH1` operation became more expensive, after having been repeated multiple times in the program.
 
 #### Q4: How should warm-up be treated?
 
 Preliminary results indicate that first OPCODEs to execute in the program, as well as first OPCODEs to execute in the context of an OS process, have a noticeable penalty in terms of execution duration.
-This is a natural phenomenon usually referred to as warm-up in program benchmarking, and the usual treatment is discarding of the first batch of measurement samples.
+This is a natural phenomenon usually referred to as warm-up in program benchmarking, and the usual treatment is discarding the first batch of measurement samples.
 
 We need to answer, what is the appropriate amount of warm-up executions which we want to discard, for the measurements to remain "fair" from the point of view of our goals.
 A limiting factor here is that the timer code to collect duration measurements itself seems to exhibit a warm-up phase.
@@ -413,7 +413,7 @@ Questions that the analysis stage should strive to answer:
 2. Is the method of measurement adequate?
 3. What is the gas cost estimation for every OPCODE analyzed?
 4. What is the quality of the particular gas cost estimation?
-5. What are the differences of gas cost estimations for various implementations, and how these might be addressed?
+5. What are the differences in gas cost estimates for various implementations, and how these might be addressed?
 
 #### Implementation-relative measurements
 
@@ -427,10 +427,10 @@ We'll use implementation-relative measurements whenever we want to compare the r
 Here we outline the choice of options for validations to do on the obtained measurements:
 1. **Compare OPCODE measurement statistics between themselves and between different implementations** - inspect the means/quantiles/variances/distributions and look for abnormalities, list out and attempt to explain them.
 1. **Compare individual instruction vs entire program execution** - see how well does the former predict the latter (see [Individual measurement vs entire program execution measurement](#Individual-measurement-vs-entire-program-execution-measurement)).
-2. **Analyze individual OPCODEs dynamics** - generate a multitude of programs whereby the OPCODE is ran in varying circumstances. See if the measurement error is random and we're accounting for all the dynamics of computational cost of the OPCODE.
+2. **Analyze individual OPCODEs dynamics** - generate a multitude of programs whereby the OPCODE is run in varying circumstances. See if the measurement error is random and we're accounting for all the dynamics of computational cost of the OPCODE.
 3. **Cross-environment OPCODE validation** - check OPCODEs which have drastically different relative estimates in different implementations/hardwares, look into whether the reason is intrinsic to the implementation/hardware or is due to error.
-4. **Impact on gas cost schedule** - estimate the gas costs, calibrate to the excluded OPCODEs and compare with current gas schedule. Repeat for estimations from various environments and methods. Analyze the impact of gas cost adjustments.
-3. **Historical validation** - check against blockchain history under normal conditions where the node is ran (see [Instrumenting and measuring the computations from blockchain history](#Instrumenting-and-measuring-the-computations-from-blockchain-history)).
+4. **Impact on gas cost schedule** - estimate the gas costs, calibrate to the excluded OPCODEs and compare with current gas schedule. Repeat for estimates from various environments and methods. Analyze the impact of gas cost adjustments.
+3. **Historical validation** - check against blockchain history under normal conditions where the node is run (see [Instrumenting and measuring the computations from blockchain history](#Instrumenting-and-measuring-the-computations-from-blockchain-history)).
 4. **Cross-timer validation** - capture all results using an alternative CPU cost proxy (e.g. instead of `runtimeNano` use `gotsc` CPU cycles), see how they compare.
 
 #### Instrumenting and measuring the computations from blockchain history
@@ -439,9 +439,9 @@ For an additional validation of the gas cost estimates, we consider instrumentin
 
 A problem arises from the fact that our gas cost estimator is prepared only for a subset of instructions (in particular, no IO/storage instructions), so we don't estimate for IO/storage instructions at all.
 If we want to validate using the execution of contracts historical transactions, this involves IO/storage.
-We need a way to relate our gas cost estimations (for a subset of OPCODEs), with the rest.
+We need a way to relate our gas cost estimates (for a subset of OPCODEs), with the rest.
 
-We will consider calibrating these together by picking a "pivot OPCODE", whose gas cost would remain unchanged, and adjusting gas cost for all other OPCODE from the analyzed subset to match relative difference in cost to the pivot OPCODE.
+We will consider calibrating these together by picking a "pivot OPCODE", whose gas cost would remain unchanged, and adjusting gas cost for all other OPCODE from the analyzed subset to match the relative difference in cost to the pivot OPCODE.
 For example, if we pick `COINBASE` as pivot, all other OPCODEs costs from our subset are expressed as multiples of `COINBASE`'s cost.
 Since currently `COINBASE` costs 2 gas, we derive new gas cost values for our subset of OPCODEs.
 The remainder of OPCODEs (IO/storage etc.) remains unadjusted.
@@ -460,8 +460,9 @@ The standardization effort will be done in the three domains:
 
 ## Appendix A: detailed task list
 
-In here, we collect a tentative list of various tasks and todos to complete in Stage II, which were identified during the completion of Stage I.
-This list _is not_ an exhaustive work breakdown structure for Stage II, as well as some of these tasks might be deemed unnecessary or optional (denoted "(opt)") during the execution of Stage II.
+Here we collect a tentative list of various tasks and todos to complete in Stage II, which were identified during the completion of Stage I.
+This list _is not_ an exhaustive work breakdown structure for Stage II.
+Some of these tasks might be deemed unnecessary or optional (denoted "(opt)") during the execution of Stage II.
 
 Refer to the other sections for details on the tasks.
 
@@ -489,7 +490,7 @@ Refer to the other sections for details on the tasks.
     9. (opt) Try further lowering the overhead of wallclock timers
     10. Provide consistent treatment of warm-up
     11. Analyze warm-up conditions versus normal EVM/Ewasm operation within an Ethereum node
-    12. Support gathering of timer overhead measuremnts during OPCODE measurements
+    12. Support gathering of timer overhead measurements during OPCODE measurements
     13. Support for instrumentation in at least one another Ewasm implementation
     14. Rethink the approach to garbage collection for environments that have one
 3. Analysis tasks
@@ -497,7 +498,7 @@ Refer to the other sections for details on the tasks.
     1. Improve the visualization method to check distributions of measurements per OPCODE and environment (frequency plots used in Stage I are not useful)
     1. Look into the extreme outliers in OPCODE measurements, if they are still present after rectifying the instrumentation stack
     1. Revisit the choice of the pivot OPCODE for implementation-relative measurements, describe criteria for this choice
-    1. Allow analysis of OPCODE measurements coming from programs in which their execution has been parametrized (via arguments, circumstances)
+    1. Allow analysis of OPCODE measurements coming from programs in which their execution has been parameterized (via arguments, circumstances)
     2. Explore validation methods proposed
     3. Implement automated scripts for the chosen validation methods
     4. (opt) Implement (or adapt an existing implementation or existing data sets, if they exist) validation via blockchain history
@@ -505,7 +506,7 @@ Refer to the other sections for details on the tasks.
     6. Identify OPCODEs which will not have a gas cost suitable for all environments and try to find the cause and recommend optimizations
     6. Answer "Q1: Can we devise a one-size-fits-all set of OPCODE gas costs?"
     7. Provide a quantitative argument (e.g. a statistical test) that for every OPCODE, measurement of the timer overhead is significantly smaller
-    7. Answer "Q2: is measuring of individual instructions feasible?"
+    7. Answer "Q2: is measuring individual instructions feasible?"
     8. (opt) Devise scoring functions which can be used to adaptively generate programs
     8. (opt) Provide a performant implementations of the scoring functions which can be reasonably plugged into an search algorithm for adaptive program generation
     8. (opt) Answer "Q3: How can we explore the entire program space to capture all sources of variability of OPCODEs computational cost"
