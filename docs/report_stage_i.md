@@ -216,7 +216,7 @@ It may only require the measuring of a single OPCODE in various circumstances, a
 As noted earlier, we envision that an added feature of the research could be a standard procedure to estimate gas costs in other environments.
 Similar attempts have been made in [7].
 
-See [section Approach and plan for Stage II](#Approach-and-plan-for-Stage-II)) for the plan how to facilitate standardization.
+See [section Approach and plan for Stage II](#Approach-and-plan-for-Stage-II) for the plan how to facilitate standardization.
 
 ## Approach and plan for Stage II
 
@@ -228,12 +228,12 @@ If the findings gathered invalidate the assumptions, the approach and plan will 
 Propose a method of giving an accurate proposition of the EVM/Ewasm gas costs for every one of the subset of EVM OPCODEs, as well as define what "accurate" means and how to assess it.
 
 The method should be feasible for various implementations/hardware etc. and have "good properties".
-Ideally, the method should become a standard (framework) for profiling EVM implementations in terms of OPCODE gas costs.
+Ideally, the method could become a standard (framework) for profiling EVM/Ewasm implementations in terms of OPCODE gas costs.
 
-Accurate and with good properties, in the context of an estimate of OPCODE gas cost, mean:
+Accurate and with good properties, in the context of an estimate of OPCODE gas cost, means:
 - It is proportional to the OPCODE's computational cost, or otherwise balanced when compared to other OPCODEs.
 - It is modeled to explain the variation in computational cost coming from different circumstances and/or parameters.
-- It is adequate for various implementations and environments _OR_.
+- It is adequate for all implementations and environments, if that's possible.
 - It can be clearly stated, when no such value exists because of differences in implementations.
 - It should have the measurement overhead and noise under control and "fair" for all OPCODEs.
 
