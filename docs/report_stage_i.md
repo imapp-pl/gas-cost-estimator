@@ -27,7 +27,7 @@ This report and the "Gas Cost Estimator" research project aims at devising a met
 The importance of adequate gas costs arises from the nature of computations done on the Ethereum blockchain, and has been discussed by many authors.
 
 It is intuitive that the parties participating in the network, who are responsible for validation of blockchain transactions and maintaining the state of the blockchain (miners in Eth1.0), are interested in fair pricing for the service they provide.
-This is emphasized in **TODO find ref**.
+This is emphasized in [7].
 Given however, that the transaction fee still is the lesser part of the block reward, as compared to PoW mining reward [1], the importance of this argument might be disputed.
 It can also be stated, that it is the computational cost of PoW mining itself, which constitutes the major part of computational burden on the miner.
 
@@ -35,28 +35,31 @@ However, adequate gas cost of computation is paramount from the perspective of n
 Gas cost is a natural deterrent from abusing the networks capacity.
 If pricing of computations was inadequate, it would mean that there are operations in EVM/Ewasm which are relatively underpriced, when compared to others.
 This would in turn mean that adversarial actors could craft the transactions in a way which puts significant load on the network, at the same time paying disproportionately low transaction fees.
-This situation opens the door to DoS attacks, which have happened and were given as main motivation for gas cost revisions in **TODO find ref**.
+This situation opens the door to DoS attacks, which have happened and were given as main motivation for gas cost revisions in [12], [13], [14] and other research done in [8].
 
 To add to this, there is the decentralization factor of having adequate gas costs.
 The computations by EVM/Ewasm components in Ethereum network nodes are performed by all nodes in the network, regardless of whether they are mining and earning transaction fees or not.
 In the situation described above, the effect of the DoS attack extends to all participants of the network, most severely impacting less performant systems running on consumer hardware.
 The ability of users running nodes on consumer hardware to keep up with the execution of transactions on the blockchain is very important for preserving the decentralized nature of Ethereum.
-Such arguments are present in **TODO find ref**.
+Such arguments are present in [9].
 
 Another motivation for this work is the indirect effect gas costs of instructions have on smart contract code.
 Since the optimization done on smart contract source and intermediate code is usually targeting minimization of gas expenditure of the users of the contract, inadequate gas costs attributed to instructions might lead to skewed optimization results, whereby an optimized smart contract bytecode is not optimal from the point of view of computational cost.
 
-Another threat related to inadequate gas costs is mentioned in **TODO find ref**.
+The need to have balanced pricing of EVM/Ewasm computations is brought up in numerous works and discussions like: [10], [11].
+
+Another threat related to inadequate gas costs is mentioned in [15].
 Authors argue that such inadequate costs may lead to entire smart contracts becoming imbalanced in terms of their computational costs versus the amount of fees deduced for transacting using these contracts.
 This in turn could incentivize parties who include transactions in blocks (miners in Eth1.0) towards preferring certain contracts over other, in order to maximize their returns.
 This could lead to a less predictable behavior of the fee market, from the network users' perspective.
 Assuming that transactions can in fact be efficiently categorized in terms of which smart contracts they execute on, which is a non-trivial task, one should accept the possibility of such scenario.
 
+It is interesting to mention that, not entirely related to the motivations of this research but in similar vein, there is also prior work aimed at estimating the computational burden of individual OPCODEs (instructions) of the Java Virtual Machine (CPU), examples are [6], [16], [17], [18].
+
 This report and the entire "Gas Cost Estimator" project are focusing on a subset of EVM/Ewasm OPCODEs.
 The OPCODEs in this subset (see [Appendix B: OPCODEs subset](#appendix-b-opcodes-subset) have in common that they do not include any instructions which access the Ethereum storage (e.g. `SSTORE`, `SLOAD` etc.).
 On one hand, the focus on only purely computational instructions is intended and desirable, as seen from the point of view whereby the importance of on-chain computations will increase, while the extensive use of Ethereum storage will diminish.
-This is driven by the current influx of L2-scalability solutions, which only store the minimum amount of data, putting the burden of providing data on the transaction senders and the burden of validating it on the smart contract.
-**TODO find ref**.
+This is driven by the current influx of L2-scalability solutions, which only store the minimum amount of data, putting the burden of providing data on the transaction senders and the burden of validating it on the smart contract [4].
 On the other hand, we intend to consider extending the method devised here to storage-bound instructions in the future as well.
 
 ### Standardization
@@ -203,7 +206,7 @@ It may only require the measuring of a single OPCODE in various contexts, allowi
 #### Q6: How to standardize the gas cost estimation procedure?
 
 As noted earlier, we envision that an added feature of the research could be a standard procedure to estimate gas costs in other environments.
-Similar attempts have been made in **TODO reference**.
+Similar attempts have been made in [7].
 
 See [section Approach and plan for Stage II](#Approach-and-plan-for-Stage-II)) for the plan how to facilitate standardization.
 
@@ -765,6 +768,18 @@ Refer to the [`exploration notebook`](https://htmlpreview.github.io/?https://git
 [1] [https://etherscan.io/block/11660498](https://etherscan.io/block/11660498)
 [2] [ETHEREUM: A SECURE DECENTRALISED GENERALISED TRANSACTION LEDGER PETERSBURG VERSION 6424f7d – 2020-12-28DR. GAVIN WOODFOUNDER, ETHEREUM & PARITYGAVIN@PARITY.IO](https://ethereum.github.io/yellowpaper/paper.pdf)
 [3] [Benchmarking EVM Instructions. Paweł Bylica @chfast](https://notes.ethereum.org/@chfast/benchmarking-evm-instructions)
-[4] [Broken Metre: Attacking Resource Metering in EVM. Daniel Perez, Benjamin Livshits](https://arxiv.org/pdf/1909.07220.pdf)
+[4] Perez, Daniel & Livshits, Benjamin. (2020). Broken Metre: Attacking Resource Metering in EVM. 10.14722/ndss.2020.24267.
 [5] [https://github.com/imapp-pl/gas-cost-estimator/pull/19#discussion_r554907184](https://github.com/imapp-pl/gas-cost-estimator/pull/19#discussion_r554907184)
-[6] [Platform Independent Timing of Java Virtual Machine Bytecode Instructions. Jonathan M. Lambert1and, James F.Power](http://mural.maynoothuniversity.ie/6382/2/JP-Platform.pdf)
+[6] Lambert, Jonathan & Power, James. (2008). Platform Independent Timing of Java Virtual Machine Bytecode Instructions. Electr. Notes Theor. Comput. Sci.. 220. 97-113. 10.1016/j.entcs.2008.11.021.
+[7] Aldweesh, Amjad & Alharby, Maher & Mehrnezhad, Maryam & van Moorsel, Aad. (2019). OpBench: A CPU Performance Benchmark for Ethereum Smart Contract Operation Code. 10.1109/Blockchain.2019.00043.
+[8] Chen, Ting & Li, Xiaoqi & Wang, Ying & Chen, Jiachi & Li, Zihao & Luo, Xiapu & Au, Man Ho & Zhang, Xiaosong. (2017). An Adaptive Gas Cost Mechanism for Ethereum to Defend Against Under-Priced DoS Attacks. 10.1007/978-3-319-72359-4_1.
+[9] Yang, Renlord & Murray, Toby & Rimba, Paul & Parampalli, Udaya. (2019). Empirically Analyzing Ethereum's Gas Mechanism.
+[10] [https://gist.github.com/holiman/7153e088af8941379cf21c0e4610d51f](https://gist.github.com/holiman/7153e088af8941379cf21c0e4610d51f)
+[11] [https://github.com/ethereum/go-ethereum/pull/21207](https://github.com/ethereum/go-ethereum/pull/21207)
+[12] [EIP-150](https://eips.ethereum.org/EIPS/eip-150)
+[13] [EIP-1884](https://eips.ethereum.org/EIPS/eip-1884)
+[14] [EIP-2046](https://eips.ethereum.org/EIPS/eip-2046)
+[15] Aldweesh, Amjad & Alharby, Maher & Solaiman, Ellis & van Moorsel, Aad. (2018). Performance Benchmarking of Smart Contracts to Assess Miner Incentives in Ethereum. 144-149. 10.1109/EDCC.2018.00034.
+[16] Wong, P. (2010). Bytecode Monitoring of Java Programs.
+[17] Camesi, Andrea & Hulaas, Jarle & Binder, Walter. (2006). Continuous Bytecode Instruction Counting for CPU Consumption Estimation. Third International Conference on the Quantitative Evaluation of Systems, QEST 2006. 10.1109/QEST.2006.12.
+[18] Bernard L. Peuto and Leonard J. Shustek. 1977. An instruction timing model of CPU performance. SIGARCH Comput. Archit. News 5, 7 (March 1977), 165–178. DOI:https://doi.org/10.1145/633615.810667

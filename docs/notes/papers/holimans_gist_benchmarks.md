@@ -26,6 +26,6 @@ In the discussion in the [original PR](https://github.com/ethereum/go-ethereum/p
 ### Takeaways
 
 1. Entirely different way to measure effort.
-2. Seeking to _balance_ operations - to equate gas spent on equally hard computations. (should cite when explaining motivation **TODO**)
+2. Seeking to _balance_ operations - to equate gas spent on equally hard computations. (should cite when explaining motivation)
 3. `holiman`'s approach (compare using gas depletion, rather than numbers of the loop being iterated) couples the measurement with the gas cost and effort for the accompanying ops (JUMP, PUSH, POP). If we do measurements per operation via instrumentation, we're doing something opposite.
 4. [This is linked](https://github.com/matter-labs/openethereum/commit/77471a1d08a0f088dfd3b30802036b3e0fbb38a6) in the discussion. Possibly useful cheatsheet for OpenEthereum
