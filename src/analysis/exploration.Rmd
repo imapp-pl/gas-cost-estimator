@@ -352,9 +352,20 @@ Now let's compare using the relative times, measured in multiples of the duratio
 ```{r fig.width=35, fig.height=10}
 par(mar = c(8,4,1,2) + 0.1)
 boxplot(measure_all_time_ns_rel ~ env:opcode_measured, data=measurements, las=2, col=mix_colors, outline=FALSE, cex.axis=0.5, drop=TRUE)
+legend(-10, 6.3, c("Geth", "Evmone", "OpenEthereum", "OpenEthereum Ewasm"), fill=env_colors, cex=1.3)
 abline(h=1, col="red", lty=3)
 ```
 </div>
+
+```{r include=FALSE}
+# export the plot to SVG for embedding
+svg(filename="implementation_relative_all_opcodes.svg", width=35, height=10)
+par(mar = c(8,4,1,2) + 0.1)
+boxplot(measure_all_time_ns_rel ~ env:opcode_measured, data=measurements, las=2, col=mix_colors, outline=FALSE, cex.axis=0.5, drop=TRUE)
+legend(-10, 6.3, c("Geth", "Evmone", "OpenEthereum", "OpenEthereum Ewasm"), fill=env_colors, cex=1.3)
+abline(h=1, col="red", lty=3)
+dev.off()
+```
 
 ```{r fig.width=20}
 measurements_ewasm = measurements[which(measurements$env=="ewasm"), ]

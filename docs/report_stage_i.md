@@ -144,9 +144,12 @@ For Stage I we limited the analysis to graphical representation of the gathered 
 Simplifying, the following steps were performed on the measurement data:
 1. **Timer overhead adjustment** - offset the duration measurements for OPCODEs by an estimate of the timer overhead, proper to the environment (`geth`, `evmone`, `openethereum`).
 2. Draw simple minimums/maximums/means/quantiles etc., boxplots.
-3. **Implementation-relative measurements** - express the instruction duration in multiples of mean duration of a selected "pivot OPCODE", so that we can analyze the relative distribution of computational cost of OPCODEs within each of the environments. This is motivated by the natural fact that implementations vary greatly in overall performance, and differences of cost of OPCODEs would be lost, if treated in absolute terms.
+3. **Implementation-relative measurements** - express the instruction duration in multiples of mean duration of a selected _pivot OPCODE_, so that we can analyze the relative distribution of computational cost of OPCODEs within each of the environments. This is motivated by the natural fact that implementations vary greatly in overall performance, and differences of cost of OPCODEs would be lost, if treated in absolute terms.
 4. Assess the impact of warm-up by plotting out the dynamics of OPCODE durations as a function of the consecutive number of run within the same sample (OS process).
 5. Do simple analysis of the dynamics of the timer overhead.
+
+**Figure 1: Implementation-relative measurements of time to compute particular OPCODEs** (click and download for high-quality image). For every OPCODE, the measured wallclock time is plotted using a boxplot. The units of the vertical axis are multiples of the wallclock time of the _pivot OPCODE_, calculated individually for each environment.
+![Figure 1: Implementation-relative measurements of time to compute particular OPCODEs](./report_stage_i_assets/implementation_relative_all_opcodes.svg)
 
 ### Preliminary findings
 
