@@ -87,6 +87,8 @@ As a consequence, we are phrasing our preliminary findings as questions that nee
 
 At Stage I a survey of existing literature and related work was done. We defer writing a full section on this to the Stage II paper.
 
+All work has been carried out in the public GitHub repo [imapp-pl/gas-cost-estimator](https://github.com/imapp-pl/gas-cost-estimator).
+
 ### Preliminary method
 
 During the execution of Stage I, preliminary experiments and analysis were performed in order to explore the dynamics of computational effort which OPCODEs of EVM/Ewasm exhibit.
@@ -150,6 +152,9 @@ Simplifying, the following steps were performed on the measurement data:
 
 **Figure 1: Implementation-relative measurements of time to compute particular OPCODEs** (click and download for high-quality image). For every OPCODE, the measured wallclock time is plotted using a boxplot. The units of the vertical axis are multiples of the wallclock time of the _pivot OPCODE_, calculated individually for each environment.
 ![Figure 1: Implementation-relative measurements of time to compute particular OPCODEs](./report_stage_i_assets/implementation_relative_all_opcodes.svg)
+
+The implementation of the preliminary analysis, in for of `R Markdown` notebooks, can be seen in the [`src/analysis` dir](https://github.com/imapp-pl/gas-cost-estimator/tree/master/src/analysis).
+An unedited HTML preview of the notebook output can be seen [here for the final analysis](https://htmlpreview.github.io/?https://github.com/imapp-pl/gas-cost-estimator/blob/master/src/analysis/exploration.nb.html) and [here for the timer overhead analysis](https://htmlpreview.github.io/?https://github.com/imapp-pl/gas-cost-estimator/blob/master/src/analysis/exploration_timers.nb.html)
 
 ### Preliminary findings
 
