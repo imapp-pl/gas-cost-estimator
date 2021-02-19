@@ -767,7 +767,7 @@ Refer to the [`exploration notebook`](https://htmlpreview.github.io/?https://git
 
 ## Acknowledgements
 
-[Paweł Bylica](https://github.com/chfast), [Marcin Benke](https://github.com/mbenke), [Radosław Zagórowicz](https://github.com/rodiazet) for invaluable help and contributions throughout the entire project.
+[Paweł Bylica](https://github.com/chfast), [Marcin Benke](https://github.com/mbenke), [Radosław Zagórowicz](https://github.com/rodiazet), [Piotr Janiuk](https://github.com/viggith) for invaluable help and contributions throughout the entire project.
 
 ## References
 
