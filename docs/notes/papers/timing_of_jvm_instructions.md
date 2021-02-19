@@ -1,7 +1,7 @@
 ## Platform Independent Timing of Java Virtual Machine Bytecode Instructions
 
 
-Jonathan M. Lambert1and  James F.Power
+Jonathan M. Lambert James F.Power
 
 http://mural.maynoothuniversity.ie/6382/2/JP-Platform.pdf
 

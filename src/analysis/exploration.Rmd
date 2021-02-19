@@ -87,9 +87,9 @@ Combine the two tables to see only times of the measured opcodes.
 ```{r fig.width=20}
 measurements = sqldf("SELECT opcode_measured, sample_id, run_id, measure_all_time_ns, env
                      FROM results
-                     INNER JOIN 
+                     INNER JOIN
                        programs ON(results.program_id = programs.program_id)
-                     WHERE 
+                     WHERE
                        (results.instruction_id = programs.measured_op_position AND results.env = 'geth') OR
                        (results.instruction_id = programs.measured_op_position_evmone AND results.env = 'evmone') OR
                        (results.instruction_id = programs.measured_op_position AND results.env = 'openethereum') OR
@@ -223,7 +223,7 @@ We're using `COINBASE` as the pivot OPCODE because it is (**TODO** verify all po
 - no outliers
 - seem to be a rather typical opcode in terms of timing in both implementations (it allows similar calibration to that using an overall mean)
 - `COINBASE` seems a rather peculiar choice for a pivot OPCODE, but `¯\_(ツ)_/¯`
-- (earlier pick was `POP`, but it is very cheap, close to timer measurement and precision) 
+- (earlier pick was `POP`, but it is very cheap, close to timer measurement and precision)
 - (second pick was `EXP(0, 0)`, but it had a bad outlier, we can revisit after the `evmone` outliers are sorted, **TODO**)
 - (third and fourth picks were `MULMOD(0, 0, 0)` and `GT(0, 0)`, but they belong to two groups which time very differently in `geth`/`evmone` - `geth` seems faster in arithmetic and slower in logical and comparison operators (**TODO** explore this more)
 
@@ -352,9 +352,20 @@ Now let's compare using the relative times, measured in multiples of the duratio
 ```{r fig.width=35, fig.height=10}
 par(mar = c(8,4,1,2) + 0.1)
 boxplot(measure_all_time_ns_rel ~ env:opcode_measured, data=measurements, las=2, col=mix_colors, outline=FALSE, cex.axis=0.5, drop=TRUE)
+legend(-10, 6.3, c("Geth", "Evmone", "OpenEthereum", "OpenEthereum Ewasm"), fill=env_colors, cex=1.3)
 abline(h=1, col="red", lty=3)
 ```
 </div>
+
+```{r include=FALSE}
+# export the plot to SVG for embedding
+svg(filename="implementation_relative_all_opcodes.svg", width=35, height=10)
+par(mar = c(8,4,1,2) + 0.1)
+boxplot(measure_all_time_ns_rel ~ env:opcode_measured, data=measurements, las=2, col=mix_colors, outline=FALSE, cex.axis=0.5, drop=TRUE)
+legend(-10, 6.3, c("Geth", "Evmone", "OpenEthereum", "OpenEthereum Ewasm"), fill=env_colors, cex=1.3)
+abline(h=1, col="red", lty=3)
+dev.off()
+```
 
 ```{r fig.width=20}
 measurements_ewasm = measurements[which(measurements$env=="ewasm"), ]

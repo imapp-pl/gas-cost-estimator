@@ -1,7 +1,13 @@
 # Gas Cost Estimator approach strategy
 
+----
+
+**NOTE: parts of this doc have been moved to the Stage I report. `strategy.md` may be a bit too speculative and obsolete/incomplete. Refer to the Stage I report first**
+
+----
+
 Here we organize thoughts on different approaches to consider.
-We focus on EVM for simplicity, but this should be substitutable by eWASM (Ethereum flavored WebAssembly) interpreters throughout the document.
+We focus on EVM for simplicity, but this should be substitutable by Ewasm (Ethereum flavored WebAssembly) interpreters throughout the document.
 
 ### Goal
 
@@ -50,7 +56,7 @@ This set of programs will have one program per OPCODE and it will be a smallest 
 
 See https://notes.ethereum.org/@chfast/benchmarking-evm-instructions
 
-#### Completely randomized with stack balancing **TODO**
+#### Completely randomized with stack balancing
 
 #### Automated, adaptive generation
 
