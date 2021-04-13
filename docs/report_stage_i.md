@@ -520,7 +520,7 @@ Refer to the other sections for details on the tasks.
     1. Provision and run measurements on a machine in the cloud
     2. Provision and run measurements on representative consumer-grade machines of various kinds
 5. Standardization tasks
-    5. Ensure easy application of the automated scripts for validation methods, document
+    1. Ensure easy application of the automated scripts for validation methods, document
 6. Documentation tasks
     1. Write full section on Related Work, from sources gathered in Stage I and Stage II
 
