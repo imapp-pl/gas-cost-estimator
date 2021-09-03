@@ -21,6 +21,7 @@ From `src`
 ```
 export GOPATH=
 export GOGC=off
+export GO111MODULE=off
 python3 program_generator/program_generator.py generate | xargs -L1 go run ./instrumentation_measurement/geth/main.go --bytecode
 ```
 

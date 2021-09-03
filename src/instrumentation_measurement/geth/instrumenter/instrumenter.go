@@ -20,9 +20,10 @@ type LogConfig struct {
 // InstrumenterLog is emitted to the vm.EVM each cycle and lists information about the current internal state
 // prior to the execution of the statement.
 type InstrumenterLog struct {
-	Pc     uint64    `json:"pc"`
-	Op     vm.OpCode `json:"op"`
-	TimeNs int64     `json:"timeNs"`
+	Pc          uint64    `json:"pc"`
+	Op          vm.OpCode `json:"op"`
+	TimeNs      int64     `json:"timeNs"`
+	TimerTimeNs int64     `json:"timerTimeNs"`
 }
 
 // InstrumenterLogger is an vm.EVM state logger and implements Tracer.
@@ -31,6 +32,13 @@ type InstrumenterLogger struct {
 
 	logs            []InstrumenterLog
 	lastCaptureTime int64
+
+	// worker fields, just to avoid reallocation of local vars
+	timeSincePrevious int64
+	runtimeNano1      int64
+	runtimeNano2      int64
+	sinceRuntimeNano  int64
+	log               InstrumenterLog
 }
 
 // NewInstrumenterLogger returns a new logger
@@ -50,9 +58,19 @@ func (l *InstrumenterLogger) CaptureStart(from common.Address, to common.Address
 
 // CaptureState logs a new structured log message and pushes it out to the environment
 func (l *InstrumenterLogger) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, rStack *vm.ReturnStack, rData []byte, contract *vm.Contract, depth int, err error) error {
-	timeSincePrevious := runtimeNano() - l.lastCaptureTime
-	log := InstrumenterLog{pc, op, timeSincePrevious}
-	l.logs = append(l.logs, log)
+	// measure the current iteration
+	l.timeSincePrevious = runtimeNano() - l.lastCaptureTime
+
+	// measure the most current timer overhead
+	l.runtimeNano1 = runtimeNano()
+	l.runtimeNano2 = runtimeNano()
+	l.sinceRuntimeNano = l.runtimeNano2 - l.runtimeNano1
+
+	// add to log
+	l.log = InstrumenterLog{pc, op, l.timeSincePrevious, l.sinceRuntimeNano}
+	l.logs = append(l.logs, l.log)
+
+	// start timing the next iteration
 	l.lastCaptureTime = runtimeNano()
 	return nil
 }
@@ -74,7 +92,7 @@ func (l *InstrumenterLogger) InstrumenterLogs() []InstrumenterLog { return l.log
 // WriteTrace writes a formatted trace to the given writer
 func WriteTrace(writer io.Writer, logs []InstrumenterLog) {
 	for _, log := range logs {
-		fmt.Fprintf(writer, "%-16spc=%08d time_ns=%v", log.Op, log.Pc, log.TimeNs)
+		fmt.Fprintf(writer, "%-16spc=%08d time_ns=%v timer_time_ns=%v", log.Op, log.Pc, log.TimeNs, log.TimerTimeNs)
 		fmt.Fprintln(writer)
 	}
 }
@@ -82,8 +100,7 @@ func WriteTrace(writer io.Writer, logs []InstrumenterLog) {
 func WriteCSVTrace(writer io.Writer, logs []InstrumenterLog, runId int) {
 	// CSV header must be in sync with these fields here :(, but it's in measurements.py
 	for instructionId, log := range logs {
-		// NOTE: we don't have measure_one_time_ns for now, we leave it out at the end
-		fmt.Fprintf(writer, "%v,%v,%v,", runId, instructionId, log.TimeNs)
+		fmt.Fprintf(writer, "%v,%v,%v,%v", runId, instructionId, log.TimeNs, log.TimerTimeNs)
 		fmt.Fprintln(writer)
 	}
 }

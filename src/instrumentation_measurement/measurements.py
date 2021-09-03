@@ -46,7 +46,7 @@ class Measurements(object):
     evm (string): which evm use. Default: geth. Allowed: geth, openethereum, evmone
     nSamples (integer): number of samples (individual starts of the EVM measuring executable) to do
     """
-    header = "program_id,sample_id,run_id,instruction_id,measure_all_time_ns,measure_one_time_ns"
+    header = "program_id,sample_id,run_id,instruction_id,measure_all_time_ns,measure_all_timer_time_ns"
     print(header)
 
     geth = "geth"
