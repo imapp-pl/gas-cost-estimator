@@ -35,8 +35,7 @@ type InstrumenterLogger struct {
 
 	// worker fields, just to avoid reallocation of local vars
 	timeSincePrevious int64
-	runtimeNano1      int64
-	runtimeNano2      int64
+	timerRuntime      int64
 	sinceRuntimeNano  int64
 	log               InstrumenterLog
 }
@@ -58,16 +57,17 @@ func (l *InstrumenterLogger) CaptureStart(from common.Address, to common.Address
 
 // CaptureState logs a new structured log message and pushes it out to the environment
 func (l *InstrumenterLogger) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, rStack *vm.ReturnStack, rData []byte, contract *vm.Contract, depth int, err error) error {
-	// measure the current iteration
-	l.timeSincePrevious = runtimeNano() - l.lastCaptureTime
+	// measure the current iteration (we'll deduce lastCaptureTime below)
+	l.timeSincePrevious = runtimeNano()
 
-	// measure the most current timer overhead
-	l.runtimeNano1 = runtimeNano()
-	l.runtimeNano2 = runtimeNano()
-	l.sinceRuntimeNano = l.runtimeNano2 - l.runtimeNano1
+	// measure the most current timer overhead, take a new measurement and deduce the
+	// previous timer reading
+	l.timerRuntime = runtimeNano()
+	l.timerRuntime -= l.timeSincePrevious
+	l.timeSincePrevious -= l.lastCaptureTime
 
 	// add to log
-	l.log = InstrumenterLog{pc, op, l.timeSincePrevious, l.sinceRuntimeNano}
+	l.log = InstrumenterLog{pc, op, l.timeSincePrevious, l.timerRuntime}
 	l.logs = append(l.logs, l.log)
 
 	// start timing the next iteration

@@ -7,9 +7,9 @@ Read in the output of `go run ./src/instrumentation_measurement/clock_resolution
 
 ```{r fig.width=20}
 setwd("~/sources/imapp/gas-cost-estimator/src")
-time_geth = read.csv("../../time_geth.csv")
-time_evmone = read.csv("../../time_evmone.csv", header = FALSE)
-time_openethereum = read.csv("../../time_openethereum.csv", header = FALSE)
+time_geth = read.csv("../../local/time_geth.csv")
+time_evmone = read.csv("../../local/time_evmone.csv", header = FALSE)
+time_openethereum = read.csv("../../local/time_openethereum.csv", header = FALSE)
 time_all = time_geth[1:200000, ]
 time_all$time_evmone = time_evmone[, 1]
 time_all$time_openethereum = time_openethereum[, 1]
@@ -34,6 +34,13 @@ lines(time$runtime_nano, type = "l", col = geth_color)
 lines(time$gotsc, type = "l", col = "purple")
 lines(time$time_evmone, type = "l", col = evmone_color)
 lines(time$time_openethereum, type = "l", col = openethereum_color)
+```
+
+```{r fig.width=20, fig.height=10}
+plot(NULL, xlim=c(1, N), ylim=c(0, 100))
+
+ma <- function(x, n = 50){stats::filter(x, rep(1 / n, n), sides = 2)}
+lines(ma(time$runtime_nano), type = "l", col = geth_color)
 ```
 
 ```{r fig.width=20}
