@@ -12,11 +12,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/core/vm/runtime"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
-
-	"./instrumenter"
 )
 
 func main() {
@@ -38,16 +37,14 @@ func main() {
 	cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
 
 	// Warm-up. **NOTE** we're keeping tracing on during warm-up, otherwise measurements are off
-	cfg.EVMConfig.Debug = true
-	tracer := instrumenter.NewInstrumenterLogger(nil)
-	cfg.EVMConfig.Tracer = tracer
+	cfg.EVMConfig.Debug = false
+	cfg.EVMConfig.Instrumenter = vm.NewInstrumenterLogger()
 	retWarmUp, _, errWarmUp := runtime.Execute(bytecode, nil, cfg)
 	// End warm-up
 
 	sampleStart := time.Now()
 	for i := 0; i < sampleSize; i++ {
-		tracer = instrumenter.NewInstrumenterLogger(nil)
-		cfg.EVMConfig.Tracer = tracer
+		cfg.EVMConfig.Instrumenter = vm.NewInstrumenterLogger()
 		go_runtime.GC()
 		start := time.Now()
 		_, _, err := runtime.Execute(bytecode, nil, cfg)
@@ -59,13 +56,13 @@ func main() {
 		if printEach {
 			fmt.Fprintln(os.Stderr, "Run duration:", duration)
 
-			instrumenterLogs := tracer.InstrumenterLogs()
-			instrumenter.WriteTrace(os.Stderr, instrumenterLogs)
+			instrumenterLogs := cfg.EVMConfig.Instrumenter.Logs
+			vm.WriteInstrumentation(os.Stderr, instrumenterLogs)
 		}
 
 		if printCSV {
-			instrumenterLogs := tracer.InstrumenterLogs()
-			instrumenter.WriteCSVTrace(os.Stdout, instrumenterLogs, i)
+			instrumenterLogs := cfg.EVMConfig.Instrumenter.Logs
+			vm.WriteCSVInstrumentation(os.Stdout, instrumenterLogs, i)
 		}
 	}
 
