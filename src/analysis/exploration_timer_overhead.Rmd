@@ -53,9 +53,9 @@ Note that the moving average of the timer measurement isn't interesting - it is 
 
 ```{r fig.width=20}
 N = 2000
-plot(NULL, xlim=c(1, N), ylim=c(20, 150))
-measurements$measure_all_timer_time_ns_ma = ma(measurements$measure_all_timer_time_ns)
-lines((measurements$measure_all_time_ns_raw), type = "l", col = geth_color)
+plot(NULL, xlim=c(1, N), ylim=c(20, 250))
+
+lines((measurements$measure_all_time_ns), type = "l", col = geth_color)
 lines((measurements$measure_all_timer_time_ns), type = "l", col = geth_time_color)
 lines(ma(measurements$measure_all_timer_time_ns), type = "l", col = "red")
 ```
@@ -145,6 +145,6 @@ adjusting to the periodict "slowness" of the computations.
 N = 10000
 plot(NULL, xlim=c(1, N), ylim=c(20, 150))
 
-lines((measurements$measure_all_time_ns_raw), type = "l", col = geth_color)
+lines((measurements$measure_all_time_ns), type = "l", col = geth_color)
 lines(runmin(measurements$measure_all_timer_time_ns, k = 50), type = "l", col = geth_time_color)
 ```
