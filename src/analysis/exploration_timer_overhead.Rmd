@@ -38,8 +38,10 @@ Measurements obtained via `cat ../../local/one_program.csv | python3 instrumenta
 ```{r fig.width=20}
 setwd("~/sources/imapp/gas-cost-estimator/src")
 result_geth = read.csv("../../local/result_geth_timer2_one_program.csv")
+result_geth_brutal = read.csv("../../local/result_geth_timer2_one_program_brutal.csv")
 result_geth$env = "geth"
-results = rbind(result_geth)
+result_geth_brutal$env = "geth_brutal"
+results = rbind(result_geth, result_geth_brutal)
 head(results)
 ```
 
@@ -51,52 +53,100 @@ measurements = sqldf("SELECT opcode_measured, sample_id, run_id, measure_all_tim
                      INNER JOIN
                        programs ON(results.program_id = programs.program_id)
                      WHERE
-                       (results.instruction_id = programs.measured_op_position AND results.env = 'geth')
+                       (results.instruction_id = programs.measured_op_position AND results.env = 'geth') OR
+                       (results.instruction_id = programs.measured_op_position AND results.env = 'geth_brutal')
                      ")
 
 head(measurements)
 ```
 
 Some initial plots.
-It can be seen, that there is some relation between the timer's measurement and the OPCODE measurement.
+
+**For earlier non-brutal measurement** it can be seen, that there is some relation between the timer's measurement and the OPCODE measurement.
 Note that the moving average of the timer measurement isn't interesting - it is too much impacted by the huge outliers, which are also present in timer measurements.
 
 <div class="superbigimage">
 ```{r fig.width=100, fig.height=7}
-N = nrow(measurements)
-plot(NULL, xlim=c(1, N), ylim=c(20, 250))
+non_brutal = measurements[which(measurements$env == "geth"), ]
+plot(NULL, xlim=c(1, nrow(non_brutal)), ylim=c(20, 250), main="geth")
 
-lines((measurements$measure_all_time_ns), type = "l", col = geth_color)
-lines((measurements$measure_all_timer_time_ns), type = "l", col = geth_time_color)
-lines(ma(measurements$measure_all_timer_time_ns), type = "l", col = "red")
+lines((non_brutal$measure_all_time_ns), type = "l", col = geth_color)
+lines((non_brutal$measure_all_timer_time_ns), type = "l", col = geth_time_color)
+lines(ma(non_brutal$measure_all_timer_time_ns), type = "l", col = "red")
+
+```
+</div>
+
+
+After changing the instrumentation method to brutal (without the overhead of a polymorphic `Tracer`), this effect is much weaker.
+
+<div class="superbigimage">
+```{r fig.width=100, fig.height=7}
+# brutal instrumentation
+brutal = measurements[which(measurements$env == "geth_brutal"), ]
+plot(NULL, xlim=c(1, nrow(brutal)), ylim=c(20, 250), main="geth_brutal")
+
+lines((brutal$measure_all_time_ns), type = "l", col = geth_color)
+lines((brutal$measure_all_timer_time_ns), type = "l", col = geth_time_color)
+lines(ma(brutal$measure_all_timer_time_ns), type = "l", col = "red")
 ```
 </div>
 
 Here we do some summary statistics on our data, correlation is there, somewhat.
 We'll remove outliers later.
 
+First non-brutal:
+
 ```{r}
-summary(measurements$measure_all_timer_time_ns)
-boxplot(measurements$measure_all_timer_time_ns, outline=FALSE)
+non_brutal = measurements[which(measurements$env == "geth"), ]
 
-summary(measurements$measure_all_time_ns)
-boxplot(measurements$measure_all_time_ns, outline=FALSE)
+summary(non_brutal$measure_all_timer_time_ns)
+boxplot(non_brutal$measure_all_timer_time_ns, outline=FALSE)
 
-measurements_sample = measurements[sample(nrow(measurements), 100), c("measure_all_time_ns", "measure_all_timer_time_ns")]
+summary(non_brutal$measure_all_time_ns)
+boxplot(non_brutal$measure_all_time_ns, outline=FALSE)
+
+measurements_sample = non_brutal[sample(nrow(non_brutal), 100), c("measure_all_time_ns", "measure_all_timer_time_ns")]
 var(measurements_sample)
 cor(measurements_sample)
 # cleanup
 rm(measurements_sample)
 ```
+
+Now brutal:
+
+```{r}
+brutal = measurements[which(measurements$env == "geth_brutal"), ]
+
+summary(brutal$measure_all_timer_time_ns)
+boxplot(brutal$measure_all_timer_time_ns, outline=FALSE)
+
+summary(brutal$measure_all_time_ns)
+boxplot(brutal$measure_all_time_ns, outline=FALSE)
+
+measurements_sample = brutal[sample(nrow(measurements), 100), c("measure_all_time_ns", "measure_all_timer_time_ns")]
+var(measurements_sample)
+cor(measurements_sample)
+# cleanup
+rm(measurements_sample)
+```
+
 Remove outliers here.
 
 ```{r}
-outliers1 = boxplot(measurements$measure_all_time_ns, plot=FALSE)$out
-outliers2 = boxplot(measurements$measure_all_timer_time_ns, plot=FALSE)$out
+remove_outliers <- function(df, col, selection_col, selection_val) {
+  subset = df[which(df[, selection_col] == selection_val), ]
+  print(subset)
+  outliers = boxplot(subset[, col], plot=FALSE)$out
+  print(outliers)
+  no_outliers = df[-which(df[, col] %in% outliers && df[, selection_col] == selection_val), ]
+  return(no_outliers)
+}
 
-measurements_no_outliers = measurements
-measurements_no_outliers = measurements_no_outliers[-which(measurements_no_outliers$measure_all_time_ns %in% outliers1),]
-measurements_no_outliers = measurements_no_outliers[-which(measurements_no_outliers$measure_all_timer_time_ns %in% outliers2),]
+measurements_no_outliers = remove_outliers(measurements, "measure_all_time_ns", "env", "geth")
+measurements_no_outliers = remove_outliers(measurements_no_outliers, "measure_all_timer_time_ns", "env", "geth")
+measurements_no_outliers = remove_outliers(measurements_no_outliers, "measure_all_time_ns", "env", "geth_brutal")
+measurements_no_outliers = remove_outliers(measurements_no_outliers, "measure_all_timer_time_ns", "env", "geth_brutal")
 ```
 
 
