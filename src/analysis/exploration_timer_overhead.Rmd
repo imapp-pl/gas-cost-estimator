@@ -47,7 +47,9 @@ result_geth$env = "geth"
 result_geth_brutal$env = "geth_brutal"
 result_evmone = read.csv("../../local/result_evmone_timer.csv")
 result_evmone$env = "evmone"
-results = rbind(result_geth, result_geth_brutal, result_evmone)
+result_openethereum = read.csv("../../local/result_openethereum_timer.csv")
+result_openethereum$env = "openethereum"
+results = rbind(result_geth, result_geth_brutal, result_evmone, result_openethereum)
 head(results)
 ```
 
@@ -61,7 +63,8 @@ measurements = sqldf("SELECT opcode_measured, sample_id, run_id, measure_all_tim
                      WHERE
                        (results.instruction_id = programs.measured_op_position AND results.env = 'geth') OR
                        (results.instruction_id = programs.measured_op_position AND results.env = 'geth_brutal') OR
-                       (results.instruction_id = programs.measured_op_position_evmone AND results.env = 'evmone')
+                       (results.instruction_id = programs.measured_op_position_evmone AND results.env = 'evmone') OR
+                       (results.instruction_id = programs.measured_op_position AND results.env = 'openethereum')
                      ")
 
 head(measurements)
@@ -74,16 +77,16 @@ Note that the moving average of the timer measurement isn't interesting - it is 
 
 <div class="superbigimage">
 ```{r fig.width=100, fig.height=7}
-plot_over_time <- function(df, selection_col, selection_val, color, time_color) {
+plot_over_time <- function(df, selection_col, selection_val, color, time_color, yrange) {
   subset = df[which(df[, selection_col] == selection_val), ]
-  plot(NULL, xlim=c(1, nrow(subset)), ylim=c(20, 250), main=selection_val)
+  plot(NULL, xlim=c(1, nrow(subset)), ylim=yrange, main=selection_val)
   
   lines((subset$measure_all_time_ns), type = "l", col = color)
   lines((subset$measure_all_timer_time_ns), type = "l", col = time_color)
   lines(ma(subset$measure_all_timer_time_ns), type = "l", col = "grey")
 }
 
-plot_over_time(measurements, "env", "geth", geth_color, geth_time_color)
+plot_over_time(measurements, "env", "geth", geth_color, geth_time_color, c(20, 250))
 
 ```
 </div>
@@ -94,15 +97,21 @@ We'll keep on validating this finding in the rest of the notebook.
 
 <div class="superbigimage">
 ```{r fig.width=100, fig.height=7}
-plot_over_time(measurements, "env", "geth_brutal", geth_color, geth_time_color)
+plot_over_time(measurements, "env", "geth_brutal", geth_color, geth_time_color, c(20, 250))
 ```
 </div>
 
-Now `evmone`:
+Now `evmone` and `openethereum`:
 
 <div class="superbigimage">
 ```{r fig.width=100, fig.height=7}
-plot_over_time(measurements, "env", "evmone", evmone_color, evmone_time_color)
+plot_over_time(measurements, "env", "evmone", evmone_color, evmone_time_color, c(15, 50))
+```
+</div>
+
+<div class="superbigimage">
+```{r fig.width=100, fig.height=7}
+plot_over_time(measurements, "env", "openethereum", openethereum_color, openethereum_time_color, c(15, 200))
 ```
 </div>
 
@@ -139,6 +148,10 @@ Other EVMs
 summary_stats(measurements, "env", "evmone")
 ```
 
+```{r}
+summary_stats(measurements, "env", "openethereum")
+```
+
 ### Remove outliers
 
 ```{r}
@@ -155,6 +168,8 @@ measurements_no_outliers = remove_outliers(measurements_no_outliers, "measure_al
 measurements_no_outliers = remove_outliers(measurements_no_outliers, "measure_all_timer_time_ns", "env", "geth_brutal")
 measurements_no_outliers = remove_outliers(measurements_no_outliers, "measure_all_time_ns", "env", "evmone")
 measurements_no_outliers = remove_outliers(measurements_no_outliers, "measure_all_timer_time_ns", "env", "evmone")
+measurements_no_outliers = remove_outliers(measurements_no_outliers, "measure_all_time_ns", "env", "openethereum")
+measurements_no_outliers = remove_outliers(measurements_no_outliers, "measure_all_timer_time_ns", "env", "openethereum")
 ```
 
 
@@ -171,11 +186,12 @@ scatter_plot <- function(df, selection_col, selection_val, color) {
   scatter.smooth(y=subset$measure_all_time_ns, x=subset$measure_all_timer_time_ns, col=color)
 }
 
-par(mfrow=c(1,3))
+par(mfrow=c(1,4))
 
 scatter_plot(measurements_no_outliers, "env", "geth", geth_time_color)
 scatter_plot(measurements_no_outliers, "env", "geth_brutal", geth_time_color)
 scatter_plot(measurements_no_outliers, "env", "evmone", evmone_time_color)
+scatter_plot(measurements_no_outliers, "env", "openethereum", openethereum_time_color)
 ```
 
 Sampled correlation and normality tests. (We do some normality tests, but we're not going to attach to the linear regression result too much anyway.).
@@ -205,6 +221,7 @@ cor_norm <- function(df, selection_col, selection_val) {
 cor_norm(measurements_no_outliers, "env", "geth")
 cor_norm(measurements_no_outliers, "env", "geth_brutal")
 cor_norm(measurements_no_outliers, "env", "evmone")
+cor_norm(measurements_no_outliers, "env", "openethereum")
 ```
 
 **For non-brutal measurements in geth** the linear model seems to be in favor of the linear relation, which is contrary to the concept of the timer being "slow".
@@ -214,6 +231,8 @@ The OPCODE measurement seems to increase by 3.5 ns, whenever we increase the tim
 **For brutal** this relation is gone. The slope is below 1, which kinda makes sense - the timer overhead adds on to the measurement.:
 
 **TODO** the `evmone` result is strange
+
+**TODO** `openethereum` has also some stronger relationship with the timer overhead measurement - investigate
 
 ```{r}
 linear_model <- function(df, selection_col, selection_val) {
@@ -226,6 +245,7 @@ linear_model <- function(df, selection_col, selection_val) {
 summary(linear_model(measurements_no_outliers, "env", "geth"))
 summary(linear_model(measurements_no_outliers, "env", "geth_brutal"))
 summary(linear_model(measurements_no_outliers, "env", "evmone"))
+summary(linear_model(measurements_no_outliers, "env", "openethereum"))
 ```
 
 ## Conclusion
@@ -266,5 +286,13 @@ plot_with_runmin(measurements, "env", "geth_brutal", geth_color, geth_time_color
 <div class="superbigimage">
 ```{r fig.width=100, fig.height=7}
 plot_with_runmin(measurements, "env", "evmone", evmone_color, evmone_time_color, 50)
+```
+</div>
+
+`openethereum`:
+
+<div class="superbigimage">
+```{r fig.width=100, fig.height=7}
+plot_with_runmin(measurements, "env", "openethereum", openethereum_color, openethereum_time_color, 200)
 ```
 </div>
