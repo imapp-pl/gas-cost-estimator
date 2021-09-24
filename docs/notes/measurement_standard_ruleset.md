@@ -1,10 +1,10 @@
 ## Measurement standard ruleset
 
-In order to ensure easy portability and adaptability to various clients and environments, we write down a ruleset of how should OPCODE measurements be conducted
+In order to ensure easy portability and adaptability to various clients and environments, we write down a ruleset of how should OPCODE measurements be conducted.
 
 ### `measure_all`
 
-In `measure_all` we measure the time of all OPCODEs exectued for a given program.
+In `measure_all` we measure the individual times of all OPCODEs exectued for a given program.
 We also measure the timer overhead alongside the OPCODE execution measurement.
 
 It turned out to be much better to measure by applying crude modifications to the EVM interpreter code, than to measure via calling a callback (e.g. `Tracer.CaptureState` for `geth`).
