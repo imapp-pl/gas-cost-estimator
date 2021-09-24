@@ -215,7 +215,7 @@ cor_norm <- function(df, selection_col, selection_val) {
   lines(density(subset$measure_all_time_ns),col=2) 
   
   hist(log(subset$measure_all_time_ns), probability=T, main=selection_val)
-  lines(density(log(subset$measure_all_time_ns)),col=2) 
+  lines(density(log(subset$measure_all_time_ns)),col=2)
 }
 
 cor_norm(measurements_no_outliers, "env", "geth")
@@ -296,3 +296,20 @@ plot_with_runmin(measurements, "env", "evmone", evmone_color, evmone_time_color,
 plot_with_runmin(measurements, "env", "openethereum", openethereum_color, openethereum_time_color, 200)
 ```
 </div>
+
+```{r}
+histogram_difference <- function(df, selection_col, selection_val) {
+  subset = df[which(df[, selection_col] == selection_val), ]
+  
+  sample = subset[sample(nrow(subset), 5000), c("measure_all_time_ns", "measure_all_timer_time_ns")]
+  difference = subset$measure_all_time_ns - runmin(subset$measure_all_timer_time, k=10)
+  
+  hist(difference, probability=T, main=c(selection_val, "difference"))
+  lines(density(difference), col=2) 
+}
+
+histogram_difference(measurements_no_outliers, "env", "geth")
+histogram_difference(measurements_no_outliers, "env", "geth_brutal")
+histogram_difference(measurements_no_outliers, "env", "evmone")
+histogram_difference(measurements_no_outliers, "env", "openethereum")
+```
