@@ -82,6 +82,10 @@ What is going on between `CaptureState`s (every opcode):
 - (moved after `execute` in current fork) `in.cfg.Tracer.CaptureState(...)` tracing itself, just before `execute` of an opcode
 - `logged = true` if tracing is on
 
+### Execution environment
+
+Please see Dockerfile.geth file to learn how to prepare the environment.
+
 
 ### Rough notes
 

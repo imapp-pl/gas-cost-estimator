@@ -1,0 +1,14 @@
+FROM rust:1.55.0
+
+WORKDIR /srv/app/
+COPY ./src/ /srv/app/src/
+
+RUN git clone -b wallclock https://github.com/imapp-pl/openethereum.git
+WORKDIR /srv/app/openethereum/evmbin/
+
+RUN apt-get update -y
+RUN apt-get install -y yasm
+RUN apt-get install -y cmake
+RUN cargo build --release
+
+WORKDIR /srv/app/openethereum/
