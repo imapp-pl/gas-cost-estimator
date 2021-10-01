@@ -30,14 +30,13 @@ type InstrumenterLog struct {
 type InstrumenterLogger struct {
 	cfg LogConfig
 
-	logs            []InstrumenterLog
-	lastCaptureTime int64
+	logs      []InstrumenterLog
+	startTime int64
 
 	// worker fields, just to avoid reallocation of local vars
-	timeSincePrevious int64
-	timerRuntime      int64
-	sinceRuntimeNano  int64
-	log               InstrumenterLog
+	opCodeDuration int64
+	timerDuration  int64
+	log            InstrumenterLog
 }
 
 // NewInstrumenterLogger returns a new logger
@@ -51,27 +50,27 @@ func NewInstrumenterLogger(cfg *LogConfig) *InstrumenterLogger {
 
 // CaptureStart implements the Tracer interface to initialize the tracing operation.
 func (l *InstrumenterLogger) CaptureStart(from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) error {
-	l.lastCaptureTime = runtimeNano()
+	l.startTime = runtimeNano()
 	return nil
 }
 
 // CaptureState logs a new structured log message and pushes it out to the environment
 func (l *InstrumenterLogger) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, rStack *vm.ReturnStack, rData []byte, contract *vm.Contract, depth int, err error) error {
-	// measure the current iteration (we'll deduce lastCaptureTime below)
-	l.timeSincePrevious = runtimeNano()
+	// measure the current iteration (we'll deduct startTime below)
+	l.opCodeDuration = runtimeNano()
 
-	// measure the most current timer overhead, take a new measurement and deduce the
+	// measure the most current timer overhead, take a new measurement and later deduct the
 	// previous timer reading
-	l.timerRuntime = runtimeNano()
-	l.timerRuntime -= l.timeSincePrevious
-	l.timeSincePrevious -= l.lastCaptureTime
+	l.timerDuration = runtimeNano()
+	l.timerDuration -= l.opCodeDuration
+	l.opCodeDuration -= l.startTime
 
 	// add to log
-	l.log = InstrumenterLog{pc, op, l.timeSincePrevious, l.timerRuntime}
+	l.log = InstrumenterLog{pc, op, l.opCodeDuration, l.timerDuration}
 	l.logs = append(l.logs, l.log)
 
 	// start timing the next iteration
-	l.lastCaptureTime = runtimeNano()
+	l.startTime = runtimeNano()
 	return nil
 }
 
