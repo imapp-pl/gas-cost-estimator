@@ -24,5 +24,8 @@ RUN git checkout wallclock
 WORKDIR /srv/app/src/instrumentation_measurement
 RUN go get ./geth/...
 
+RUN chmod a+x ./src/check_clocksource.sh
+RUN ./src/check_clocksource.sh
+
 WORKDIR /srv/app/
 

@@ -1,5 +1,13 @@
 # Investigation of timer differences in cloud/docker
 
+`tl;dr` `sudo sh -c "echo tsc >/sys/devices/system/clocksource/clocksource0/current_clocksource"` on the machine to ensure we are using vDSO for timer, at least matters for go
+
+### Problem
+
+The timer readings are much more costly in golang when executed on an AWS VM, compared to laptop.
+This turned out to be caused by AWS using its `xen` clock which seems to not do vDSO, resulting in a costly "classic" syscall.
+
+
 local laptop:
 
 ```
@@ -123,9 +131,34 @@ Flags:                           fpu vme de pse tsc msr pae mce cx8 apic sep mtr
   2. https://cs.opensource.google/go/go/+/master:src/runtime/time_nofake.go;l=20?q=nanotime&ss=go%2Fgo:src%2Fruntime%2F `return nanotime1()`
   3. which version I'm using? `go version go1.17.1 linux/amd64`
   4. https://github.com/golang/go/blob/8d09f7c5178b04bade2859d32d0710233a620d4f/src/runtime/sys_linux_amd64.s#L237
+3. Running the clock measurement tool in docker: `sudo docker run --rm -it measurements-geth   bash -c "go get github.com/dterei/gotsc && cd src && go run instrumentation_measurement/clock_resolution_go/main.go"`
+4. The vDSO fallback logic is key.
+    - the "traditional syscall" is the `fallback` label in the `nanotime1` assembly
+    - this in turn resolves to `SYS_clock_gettime`
+    - when we run the `clock_resolution_go/main.go` we can see that our `runtimeNano` is very similar to the `clock_gettime` timer. Also, `time.Now()` still equals 2x `runtimeNano`, because it makes 2 such calls!
+5. from vDSO manpage:
+    - `find arch/$ARCH/ -name '*vdso*.so*' -o -name '*gate*.so*'`
+    - didn't follow this but
+6. from the Article 6. BINGO:
+    -
+    ```
+    # locally
+    $ cat /sys/devices/system/clocksource/clocksource0/current_clocksource
+    tsc
+    $ sudo docker run --rm -it measurements-geth   bash -c "cat /sys/devices/system/clocksource/clocksource0/current_clocksource"
+    tsc
+    # on cloud VM
+    $ cat /sys/devices/system/clocksource/clocksource0/current_clocksource
+    xen
+    $ sudo docker run --rm -it measurements-geth   bash -c "cat /sys/devices/system/clocksource/clocksource0/current_clocksource"
+    xen
+    ```
+7. `cat /sys/devices/system/clocksource/clocksource0/current_clocksource` fixes the problem!
 
 ### Articles
 
 1. https://pythonspeed.com/articles/docker-performance-overhead/ - nothing new, `--privileged` flag, that doesn't fix the timers, only some speedup
 2. https://www.blazemeter.com/blog/performance-testing-with-docker - irrelevant
 3. https://stackoverflow.com/questions/60840320/docker-50-performance-hit-on-cpu-intensive-code - `--security-opt seccomp:unconfined`, that doesn't produce noticeable change
+4. https://en.wikipedia.org/wiki/VDSO - what is vDSO, important: "if the kernel does not have vDSO support, a traditional syscall is made"
+5. https://man7.org/linux/man-pages/man7/vdso.7.html - very important
