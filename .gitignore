@@ -4,3 +4,5 @@ src/.RData
 src/.Rhistory
 
 __pycache__
+
+*.nb.html
