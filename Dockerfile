@@ -22,7 +22,7 @@ RUN git fetch imapp-pl wallclock
 RUN git checkout wallclock
 
 WORKDIR /srv/app/src/instrumentation_measurement
-RUN go get ./...
+RUN go get ./geth/...
 
 WORKDIR /srv/app/
 
