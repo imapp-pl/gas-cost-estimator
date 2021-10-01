@@ -1,6 +1,6 @@
 [submodule "src/instrumentation_measurement/openethereum"]
 	path = src/instrumentation_measurement/openethereum
-	url = git@github.com:imapp-pl/openethereum.git
+	url = ../openethereum.git
 [submodule "src/instrumentation_measurement/evmone"]
 	path = src/instrumentation_measurement/evmone
-	url = git@github.com:imapp-pl/evmone.git
+	url = ../evmone.git
