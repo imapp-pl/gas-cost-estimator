@@ -10,6 +10,7 @@ RUN pip install -r src/program_generator/requirements.txt
 # base for golang
 ADD https://golang.org/dl/go1.17.1.linux-amd64.tar.gz .
 RUN tar -C /usr/local -xzf ./go1.17.1.linux-amd64.tar.gz
+RUN rm go1.17.1.linux-amd64.tar.gz
 
 ENV PATH=$PATH:/usr/local/go/bin
 ENV GOPATH=/srv/app/.go
