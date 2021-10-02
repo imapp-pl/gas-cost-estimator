@@ -153,7 +153,7 @@ Flags:                           fpu vme de pse tsc msr pae mce cx8 apic sep mtr
     $ sudo docker run --rm -it measurements-geth   bash -c "cat /sys/devices/system/clocksource/clocksource0/current_clocksource"
     xen
     ```
-7. `cat /sys/devices/system/clocksource/clocksource0/current_clocksource` fixes the problem!
+7. `sudo sh -c "echo tsc >/sys/devices/system/clocksource/clocksource0/current_clocksource"` fixes the problem!
 
 ### Articles
 
