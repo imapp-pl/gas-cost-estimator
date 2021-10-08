@@ -1,15 +1,40 @@
-FROM alpine:3.14.2
+FROM python:3.8-alpine
 
 RUN apk update && apk add g++ cmake git make
 
 WORKDIR /srv/app/
 
-RUN git clone --recursive -b wallclock https://github.com/imapp-pl/evmone.git
+# base for python
+COPY ./src/program_generator/requirements.txt /srv/app/src/program_generator/requirements.txt
+RUN pip install -r src/program_generator/requirements.txt
 
-RUN mkdir -p /srv/app/evmone/build
-WORKDIR /srv/app/evmone/build
+# base for evmone
+WORKDIR /srv/
+RUN git clone --recursive https://github.com/imapp-pl/evmone.git temp/evmone_builder
+RUN mkdir -p /srv/temp/evmone_builder/build
+WORKDIR /srv/temp/evmone_builder/build
 
 RUN cmake .. -DEVMONE_TESTING=ON \
   && cmake --build . -- -j
 
-WORKDIR /srv/app/evmone
+# get our files
+# NOTE: we don't do `RUN git submodule update --init`. You should do this in the host
+COPY ./src/ /srv/app/src/
+
+# refresh the evmone build from `master` to our branch
+RUN mv /srv/temp/evmone_builder/build /srv/app/src/instrumentation_measurement/evmone
+WORKDIR /srv/app/src/instrumentation_measurement/evmone/build
+RUN rm /srv/app/src/instrumentation_measurement/evmone/build/CMakeCache.txt
+
+RUN cmake .. -DEVMONE_TESTING=ON \
+  && cmake --build . -- -j
+
+WORKDIR /srv/app/
+
+RUN ls -alh /srv/app/src/check_clocksource.sh
+
+# check correct host configuration
+RUN chmod a+x /srv/app/src/check_clocksource.sh
+
+RUN ls -alh /srv/app/src/check_clocksource.sh
+RUN /srv/app/src/check_clocksource.sh
