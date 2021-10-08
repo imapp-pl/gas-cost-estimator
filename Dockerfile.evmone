@@ -31,10 +31,6 @@ RUN cmake .. -DEVMONE_TESTING=ON \
 
 WORKDIR /srv/app/
 
-RUN ls -alh /srv/app/src/check_clocksource.sh
-
 # check correct host configuration
 RUN chmod a+x /srv/app/src/check_clocksource.sh
-
-RUN ls -alh /srv/app/src/check_clocksource.sh
 RUN /srv/app/src/check_clocksource.sh
