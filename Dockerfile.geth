@@ -8,7 +8,9 @@ COPY ./src/program_generator/requirements.txt /srv/app/src/program_generator/req
 RUN pip install -r src/program_generator/requirements.txt
 
 # base for golang
-ADD https://golang.org/dl/go1.17.1.linux-amd64.tar.gz .
+RUN wget --no-verbose --show-progress --progress=bar:force:noscroll \
+  https://golang.org/dl/go1.17.1.linux-amd64.tar.gz
+
 RUN tar -C /usr/local -xzf ./go1.17.1.linux-amd64.tar.gz
 RUN rm go1.17.1.linux-amd64.tar.gz
 
