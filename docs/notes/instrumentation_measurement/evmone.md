@@ -9,7 +9,7 @@
     git submodule update --init
     cd build
     cmake .. -DEVMONE_TESTING=ON
-    cmake --build . -- -j
+    cmake --build . -- -j $(nproc)
     ```
     Changes related to the Gas Cost Estimator are in branch `wallclock` in both `evmone` and `evmc` git submodules.
    

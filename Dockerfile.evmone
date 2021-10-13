@@ -15,7 +15,7 @@ RUN mkdir -p /srv/temp/evmone_builder/build
 WORKDIR /srv/temp/evmone_builder/build
 
 RUN cmake .. -DEVMONE_TESTING=ON \
-  && cmake --build . -- -j
+  && cmake --build . --
 
 # get our files for evmone
 # NOTE: we don't do `RUN git submodule update --init`. You should do this in the host
@@ -27,7 +27,7 @@ WORKDIR /srv/app/src/instrumentation_measurement/evmone/build
 RUN rm /srv/app/src/instrumentation_measurement/evmone/build/CMakeCache.txt
 
 RUN cmake .. -DEVMONE_TESTING=ON \
-  && cmake --build . -- -j
+  && cmake --build . --
 
 # get the remainder of our files
 COPY ./src/ /srv/app/src/
