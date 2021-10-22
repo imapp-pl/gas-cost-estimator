@@ -23,11 +23,19 @@ ENV GOBIN=/srv/app/.go/bin
 # fixed golang dependencies
 RUN go get github.com/ethereum/go-ethereum
 
-# get our files
+# get our version of geth
+
+# change this argument to cause docker to re-fetch our branch
+# NOTE: the sha itself is _ignored_
+ARG GETH_VERSION_SHA=unspecified
 WORKDIR /srv/app/.go/src/github.com/ethereum/go-ethereum
 RUN git remote add imapp-pl https://github.com/imapp-pl/go-ethereum.git
 RUN git fetch imapp-pl wallclock-${MEASUREMENT_MODE} 
 RUN git checkout wallclock-${MEASUREMENT_MODE}
+# show us what we're checking out!
+RUN git show --no-patch
+
+# get the remainder of our code
 COPY ./src/ /srv/app/src/
 
 WORKDIR /srv/app/src/instrumentation_measurement
