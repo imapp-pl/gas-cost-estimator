@@ -1,5 +1,7 @@
 MEASUREMENT_MODE ?= all
 IMAGE_VERSION ?= latest
+# see Dockerfile.geth
+GETH_VERSION_SHA ?= unspecified
 
 build: build-geth build-evmone build-openethereum
 	
@@ -7,6 +9,7 @@ build-geth:
 	docker build -f Dockerfile.geth \
 		--tag  "gas-cost-estimator/geth_${MEASUREMENT_MODE}:${IMAGE_VERSION}" \
 		--build-arg  MEASUREMENT_MODE=${MEASUREMENT_MODE} \
+		--build-arg  GETH_VERSION_SHA=${GETH_VERSION_SHA} \
 		.
 
 build-evmone:
