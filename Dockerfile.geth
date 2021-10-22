@@ -1,7 +1,5 @@
 FROM python:3.8
 
-ARG MEASUREMENT_MODE=all
-
 WORKDIR /srv/app/
 
 # base for python
@@ -28,6 +26,9 @@ RUN go get github.com/ethereum/go-ethereum
 # change this argument to cause docker to re-fetch our branch
 # NOTE: the sha itself is _ignored_
 ARG GETH_VERSION_SHA=unspecified
+# manipulate this argument to choose between measurements: all, total
+ARG MEASUREMENT_MODE=all
+
 WORKDIR /srv/app/.go/src/github.com/ethereum/go-ethereum
 RUN git remote add imapp-pl https://github.com/imapp-pl/go-ethereum.git
 RUN git fetch imapp-pl wallclock-${MEASUREMENT_MODE} 
