@@ -19,10 +19,12 @@ import (
 )
 
 func main() {
+
 	bytecodePtr := flag.String("bytecode", "", "EVM bytecode to execute and measure")
 	sampleSizePtr := flag.Int("sampleSize", 1, "Size of the sample - number of measured repetitions of execution")
 	printEachPtr := flag.Bool("printEach", true, "If false, printing of each execution time is skipped")
 	printCSVPtr := flag.Bool("printCSV", false, "If true, will print a CSV with standard results to STDOUT")
+  modePtr := flag.String("mode", "all", "Measurement mode. Available options: all")
 
 	flag.Parse()
 
@@ -30,6 +32,12 @@ func main() {
 	sampleSize := *sampleSizePtr
 	printEach := *printEachPtr
 	printCSV := *printCSVPtr
+  mode := *modePtr
+
+  if mode != "all" {
+    fmt.Fprintln(os.Stderr, "Invalid measurement mode: ", mode)
+    os.Exit(1)
+  }
 
 	cfg := new(runtime.Config)
 	setDefaults(cfg)
@@ -44,26 +52,7 @@ func main() {
 
 	sampleStart := time.Now()
 	for i := 0; i < sampleSize; i++ {
-		cfg.EVMConfig.Instrumenter = vm.NewInstrumenterLogger()
-		go_runtime.GC()
-		start := time.Now()
-		_, _, err := runtime.Execute(bytecode, nil, cfg)
-		duration := time.Since(start)
-
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-		}
-		if printEach {
-			fmt.Fprintln(os.Stderr, "Run duration:", duration)
-
-			instrumenterLogs := cfg.EVMConfig.Instrumenter.Logs
-			vm.WriteInstrumentation(os.Stderr, instrumenterLogs)
-		}
-
-		if printCSV {
-			instrumenterLogs := cfg.EVMConfig.Instrumenter.Logs
-			vm.WriteCSVInstrumentation(os.Stdout, instrumenterLogs, i)
-		}
+    MeasureAll(cfg, bytecode, printEach, printCSV, i)
 	}
 
 	sampleDuration := time.Since(sampleStart)
@@ -75,6 +64,29 @@ func main() {
 	fmt.Fprintln(os.Stderr, "Return:", retWarmUp)
 	fmt.Fprintln(os.Stderr, "Sample duration:", sampleDuration)
 
+}
+
+func MeasureAll(cfg *runtime.Config, bytecode []byte, printEach bool, printCSV bool, sampleId int) {
+  cfg.EVMConfig.Instrumenter = vm.NewInstrumenterLogger()
+  go_runtime.GC()
+  start := time.Now()
+  _, _, err := runtime.Execute(bytecode, nil, cfg)
+  duration := time.Since(start)
+
+  if err != nil {
+    fmt.Fprintln(os.Stderr, err)
+  }
+  if printEach {
+    fmt.Fprintln(os.Stderr, "Run duration:", duration)
+
+    instrumenterLogs := cfg.EVMConfig.Instrumenter.Logs
+    vm.WriteInstrumentation(os.Stderr, instrumenterLogs)
+  }
+
+  if printCSV {
+    instrumenterLogs := cfg.EVMConfig.Instrumenter.Logs
+    vm.WriteCSVInstrumentation(os.Stdout, instrumenterLogs, sampleId)
+  }
 }
 
 // copied directly from github.com/ethereum/go-ethereum/core/vm/runtime/runtime.go

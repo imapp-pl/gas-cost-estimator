@@ -1,5 +1,6 @@
 FROM python:3.8
 
+ARG MEASUREMENT_MODE=all
 
 WORKDIR /srv/app/
 
@@ -25,8 +26,8 @@ RUN go get github.com/ethereum/go-ethereum
 # get our files
 WORKDIR /srv/app/.go/src/github.com/ethereum/go-ethereum
 RUN git remote add imapp-pl https://github.com/imapp-pl/go-ethereum.git
-RUN git fetch imapp-pl wallclock
-RUN git checkout wallclock
+RUN git fetch imapp-pl wallclock-${MEASUREMENT_MODE} 
+RUN git checkout wallclock-${MEASUREMENT_MODE}
 COPY ./src/ /srv/app/src/
 
 WORKDIR /srv/app/src/instrumentation_measurement
