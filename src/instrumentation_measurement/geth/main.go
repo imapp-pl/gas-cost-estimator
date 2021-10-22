@@ -9,6 +9,8 @@ import (
 	go_runtime "runtime"
 	"time"
 
+  _ "unsafe"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -34,7 +36,7 @@ func main() {
 	printCSV := *printCSVPtr
   mode := *modePtr
 
-  if mode != "all" {
+  if mode != "all" && mode != "total" {
     fmt.Fprintln(os.Stderr, "Invalid measurement mode: ", mode)
     os.Exit(1)
   }
@@ -52,7 +54,11 @@ func main() {
 
 	sampleStart := time.Now()
 	for i := 0; i < sampleSize; i++ {
-    MeasureAll(cfg, bytecode, printEach, printCSV, i)
+    if mode == "all" {
+      MeasureAll(cfg, bytecode, printEach, printCSV, i)
+    } else {
+      MeasureTotal(cfg, bytecode, printEach, printCSV, i)
+    }
 	}
 
 	sampleDuration := time.Since(sampleStart)
@@ -64,6 +70,28 @@ func main() {
 	fmt.Fprintln(os.Stderr, "Return:", retWarmUp)
 	fmt.Fprintln(os.Stderr, "Sample duration:", sampleDuration)
 
+}
+
+func MeasureTotal(cfg *runtime.Config, bytecode []byte, printEach bool, printCSV bool, sampleId int) {
+  cfg.EVMConfig.Instrumenter = vm.NewInstrumenterLogger()
+  go_runtime.GC()
+
+  cfg.EVMConfig.Instrumenter.StartTime =  runtimeNano()
+  _, _, err := runtime.Execute(bytecode, nil, cfg)
+
+  // Measure runtime 
+  cfg.EVMConfig.Instrumenter.TotalExecutionDuration = runtimeNano()
+  cfg.EVMConfig.Instrumenter.TimerDuration = runtimeNano()
+  cfg.EVMConfig.Instrumenter.TimerDuration -= cfg.EVMConfig.Instrumenter.TotalExecutionDuration
+  cfg.EVMConfig.Instrumenter.TotalExecutionDuration -=  cfg.EVMConfig.Instrumenter.StartTime
+
+  if err != nil {
+    fmt.Fprintln(os.Stderr, err)
+  }
+
+  if printCSV {
+    vm.WriteCSVInstrumentationTotal(os.Stdout, cfg.EVMConfig.Instrumenter, sampleId)
+  }
 }
 
 func MeasureAll(cfg *runtime.Config, bytecode []byte, printEach bool, printCSV bool, sampleId int) {
@@ -85,7 +113,7 @@ func MeasureAll(cfg *runtime.Config, bytecode []byte, printEach bool, printCSV b
 
   if printCSV {
     instrumenterLogs := cfg.EVMConfig.Instrumenter.Logs
-    vm.WriteCSVInstrumentation(os.Stdout, instrumenterLogs, sampleId)
+    vm.WriteCSVInstrumentationAll(os.Stdout, instrumenterLogs, sampleId)
   }
 }
 
@@ -135,3 +163,7 @@ func setDefaults(cfg *runtime.Config) {
 		}
 	}
 }
+
+// runtimeNano returns the current value of the runtime clock in nanoseconds.
+//go:linkname runtimeNano runtime.nanotime
+func runtimeNano() int64
