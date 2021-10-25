@@ -56,7 +56,7 @@ class ProgramGenerator(object):
 
     self._operations = [opcodes[op] for op in selection]
 
-  def generate(self, fullCsv=False, count=1, gasLimit=10000, seed=None, min=0, max=0):
+  def generate(self, fullCsv=False, count=1, gasLimit=10000, seed=None, min=0, max=2):
     """
     Main entrypoint of the CLI tool. Should dispatch to the desired generation routine and print
     programs to STDOUT
@@ -66,6 +66,8 @@ class ProgramGenerator(object):
     count (int): the number of programs
     gasLimit(int): the gas limit for a single program
     seed: a seed for random number generator, if None then default behaviour for random()
+    min: min stack size, a generated program will keep the stack size at least this value during execution
+    max: max stack size, a generated program will keep the stack size at most this value during execution
     """
 
     if seed:
@@ -78,17 +80,14 @@ class ProgramGenerator(object):
 
     if fullCsv:
       writer = csv.writer(sys.stdout, delimiter=',', quotechar='"')
-      opcodes = [operation['Mnemonic'] for operation in self._operations]
 
-      # TODO: for now we only have a single program per opcode, hence the program_id is:
-      program_ids = [opcode + '_0' for opcode in opcodes]
-      measured_op_positions = [program.measured_op_position for program in programs]
+      program_ids = [i for i, program in enumerate(programs)]
       bytecodes = [program.bytecode for program in programs]
 
-      header = ['program_id', 'opcode_measured', 'measured_op_position', 'bytecode']
+      header = ['program_id', 'bytecode']
       writer.writerow(header)
 
-      rows = zip(program_ids, opcodes, measured_op_positions, bytecodes)
+      rows = zip(program_ids, bytecodes)
       for row in rows:
         writer.writerow(row)
     else:
@@ -113,30 +112,47 @@ class ProgramGenerator(object):
     while gas < gasLimit:
       op_type = random.choice(stack_op_types)
       ops_count += 1
+
+      # the push op is enforced or the valid choice is the push op
       if stack <= _min or (op_type == 'push' and stack < _max):
         bytecode += self._random_push32()
         gas += 3
         stack += 1
         continue
+
+      # the pop op is enforced or the valid choice is the pop op
       if stack >= _max or op_type == 'pop':
         bytecode += '50'  # pop
         gas += 2
         stack -= 1
         continue
 
-      # swap or dup from now on
-      gas += 3
       if op_type == 'swap' and stack == 1:  # swap is impossible, do dup instead
         op_type = 'dup'
-      range = stack if op_type == 'dup' else stack-1
-      if range > 16:
-        range = 16
-      position = 1 if range == 1 else random.randrange(1, range, 1)
-      op_num = position - 1 + (8*16 if op_type == 'dup' else 9*16)
-      op = hex(op_num)[2:]
-      bytecode += op
+
+      if op_type == 'swap':
+        max_position = stack-1  # the position is * in the name SWAP*
+        if max_position > 16:
+          max_position = 16
+        position = 1 if max_position == 1 else random.randrange(1, max_position, 1)
+        op_num = 9*16 + position - 1  # 0x90 is SWAP1
+        op = hex(op_num)[2:]
+        bytecode += op
+        gas += 3
+        continue
+
       if op_type == 'dup':
+        max_position = stack  # the position is * in the name DUP*
+        if max_position > 16:
+          max_position = 16
+        position = 1 if max_position == 1 else random.randrange(1, max_position, 1)
+        op_num = 8*16 + position - 1  # 0x80 is DUP1
+        op = hex(op_num)[2:]
+        bytecode += op
         stack += 1
+        gas += 3
+        continue
+
     return Program(bytecode, ops_count)
 
   def _random_push32(self):
@@ -146,45 +162,6 @@ class ProgramGenerator(object):
     if len(value) < 64:
       value = (64-len(value))*'0' + value
     return '7f' + value
-
-  def _prepend_simplest_stack_prepare(self, operation):
-    """
-    Prepends simples pushes (`i32.const` for Ewasm) to meet the stack requirements for `operation`.
-    """
-
-    if operation['Value'] != '0xfe':
-      # valid opcodes
-      removed_from_stack = int(operation['Removed from stack'])
-      # i.e. 23 from 0x23
-      opcode = operation['Value'][2:4]
-      # push some garbage enough times to satisfy stack requirement for operation
-      pushes = ["6020"] * removed_from_stack
-      has_parameter = True if 'Parameter' in operation and operation['Parameter'] else False
-      bytecode = ''.join(pushes + [opcode, operation['Parameter']]) if has_parameter else ''.join(pushes + [opcode])
-      return Program(bytecode, removed_from_stack)
-    else:
-      # designated invalid opcode
-      return Program('fe', 0)
-
-  def _maybe_prepend_something(self, program):
-    """
-    Just prepends some operation that's as little significant as possible to avoid running the
-    measured operation as first operation (current `instrumenter.go` captures startup time there).
-
-    TODO: remove when not necessary anymore
-    """
-    should_prepend = program.measured_op_position == 0
-
-    prependable = constants.EVM_SOMETHING
-    prependable_length = constants.EVM_SOMETHING_LENGTH
-
-    if should_prepend:
-      bytecode = prependable + program.bytecode
-      measured_op_position = prependable_length + program.measured_op_position
-
-      return Program(bytecode, measured_op_position)
-    else:
-      return program
 
   def _fill_opcodes_push_dup_swap(self, opcodes):
     pushes = constants.EVM_PUSHES
