@@ -54,9 +54,9 @@ class ProgramGenerator(object):
       reader = csv.DictReader(csvfile, delimiter=' ', quotechar='"')
       selection = [i['Opcode'] for i in reader]
 
-    self._operations = [opcodes[op] for op in selection]
+    self._operations = {int(op, 16): opcodes[op] for op in selection}
 
-  def generate(self, fullCsv=False, count=1, gasLimit=10000, seed=None):
+  def generate(self, fullCsv=False, count=1, gasLimit=10000, seed=None, dominant=None):
     """
     Main entrypoint of the CLI tool. Should dispatch to the desired generation routine and print
     programs to STDOUT
@@ -66,6 +66,7 @@ class ProgramGenerator(object):
     count (int): the number of programs
     gasLimit(int): the gas limit for a single program
     seed: a seed for random number generator, if None then default behaviour for random()
+    dominant: an opcode that is picked more often then others, probability ~0.5
     """
 
     if seed:
@@ -73,7 +74,7 @@ class ProgramGenerator(object):
 
     programs = []
     for i in range(count):
-      program = self._generate_random_arithmetic(gasLimit)
+      program = self._generate_random_arithmetic(gasLimit, dominant)
       programs.append(program)
 
     if fullCsv:
@@ -92,7 +93,7 @@ class ProgramGenerator(object):
       for program in programs:
         print(program.bytecode)
 
-  def _generate_random_arithmetic(self, gasLimit):
+  def _generate_random_arithmetic(self, gasLimit, dominant):
     """
     Generates one large programs with multiple arithmetic operations
     """
@@ -103,16 +104,39 @@ class ProgramGenerator(object):
     # gas used
     gas = 3
     # constant list of arithmetic operations
-    arithmetic_ops = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09]
+    arithmetic_ops = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09]  # ADD MUL SUB DIV SDIV MOD SMOD ADDMOD MULMOD
+    bitwise_ops = [0x16, 0x17, 0x18, 0x19]  # AND OR XOR NOT
+    byte_op = [0x1a]  # BYTE
+    shift_ops = [0x1b, 0x1c, 0x1d]  # SHL, SHR, SAR
+    all_ops = []
+    all_ops.extend(arithmetic_ops)
+    all_ops.extend(bitwise_ops)
+    all_ops.extend(byte_op)
+    all_ops.extend(shift_ops)
+
+    if dominant and dominant not in all_ops:
+      raise ValueError(dominant)
+
     while gas < gasLimit:
-      op = random.choice(arithmetic_ops)
+      if dominant:
+        if random.random() < 0.5:
+          op = dominant
+        else:
+          op = random.choice(all_ops)
+      else:
+        op = random.choice(all_ops)
       operation = self._operations[op]
       # one value is always on the stack
       needed_pushes = int(operation['Removed from stack']) - 1
       # i.e. 23 from 0x23
       opcode = operation['Value'][2:4]
-      for i in range(needed_pushes):
-        bytecode += self._random_push32()
+      if op in arithmetic_ops or op in bitwise_ops:
+        for i in range(needed_pushes):
+          bytecode += self._random_push32()
+      elif op in byte_op:  # BYTE needs 0-31 value on the stack
+        bytecode += self._random_push_for_byte()
+      elif op in shift_ops:  # SHL, SHR, SAR need 0-255 value on the stack
+        bytecode += self._random_push1()
       bytecode += opcode
       ops_count += needed_pushes + 1
       # push goes for 3
@@ -126,6 +150,22 @@ class ProgramGenerator(object):
     if len(value) < 64:
       value = (64-len(value))*'0' + value
     return '7f' + value
+
+  def _random_push1(self):
+    value = random.getrandbits(8)
+    value = hex(value)
+    value = value[2:]
+    if len(value) < 2:
+      value = (2-len(value))*'0' + value
+    return '60' + value
+
+  def _random_push_for_byte(self):
+    value = random.randint(0, 31)
+    value = hex(value)
+    value = value[2:]
+    if len(value) < 2:
+      value = (2-len(value))*'0' + value
+    return '60' + value
 
   def _fill_opcodes_push_dup_swap(self, opcodes):
     pushes = constants.EVM_PUSHES
