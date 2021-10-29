@@ -31,9 +31,17 @@ class Measurements(object):
   | run_id | instruction_id | measure_all_time_ns | measure_one_time_ns |
   """
 
+  def _program_from_csv_row(self, row):
+    program_id = row['program_id']
+    bytecode = row['bytecode']
+
+    # might be missing
+    measured_op_position = row.get('measured_op_position')
+    return Program(program_id, bytecode, measured_op_position)
+
   def __init__(self):
     reader = csv.DictReader(sys.stdin, delimiter=',', quotechar='"')
-    self._programs = [Program(i['program_id'], i['bytecode'], int(i['measured_op_position'])) for i in reader]
+    self._programs = [self._program_from_csv_row(row) for row in reader]
 
   def measure(self, sampleSize, mode="all", evm="geth", nSamples=1):
     """
