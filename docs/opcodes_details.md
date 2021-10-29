@@ -40,6 +40,9 @@ The "simple" ones
 0x18,XOR,3,verylow,2,1,Bitwise XOR operation.,
 0x19,NOT,3,verylow,1,1,Bitwise NOT operation.,
 0x1a,BYTE,3,verylow,2,1,Retrieve single byte from word,
+0x1b,SHL,3,verylow,2,1,Left shift operation,
+0x1c,SHR,3,verylow,2,1,Logical right shift operation,
+0x1d,SAR,3,verylow,2,1,Arithmetic (signed) right shift operation,
 ```
 
 They pop and push, or pop and peek and then modify stack in-place.
@@ -167,6 +170,135 @@ see `CALLDATACOPY`, everything is same just the data is from the code not input
 
 Size of the value could have impact (b/c it's loaded from BigInt for `geth` at least)
 
+## `0x3d,RETURNDATASIZE`
+
+`0x3d,RETURNDATASIZE,2,,0,1,Pushes the size of the return data buffer onto the stack,`
+
+- **geth**: Data is in `len(interpreter.returnData)`
+- **evmone**: Data is in `state.return_data.size()`
+- **openethereum**: Data is in `self.return_data.len()`
+
+## `0x3e,RETURNDATACOPY`
+
+`0x3e,RETURNDATACOPY,"3 + 3 * ceil(amount / 32)",,3,0,This opcode has similar semantics to CALLDATACOPY, but instead of copying `
+
+see `CALLDATACOPY`, everything is same just the data is from the code not input
+
+## `0x41,COINBASE` and friends
+
+`0x42,TIMESTAMP`, `0x43,NUMBER`, `0x44,DIFFICULTY`, `0x45,GASLIMIT` all follow COINBASE's example, just picking different fields from the same structures.
+
+`0x41,COINBASE,2,base,0,1,Get the block’s beneficiary address.,`
+
+- **geth**: Data is in `interpreter.evm.Context.Coinbase.Bytes()`
+- **evmone**: Data is in `state.host.get_tx_context().block_coinbase`
+- **openethereum**: Data is in `ext.env_info().author.clone()`
+
+## `0x50,POP`
+
+`0x50,POP,2,base,1,0,Remove item from stack.,`
+
+### Parameters
+
+- size of the stack?
+- size of the popped element?
+
+## `0x51,MLOAD`
+
+`0x51,MLOAD,3,verylow,1,1,Load word from memory.,`
+
+no comments here
+
+## `0x52,MSTORE` and the 8bit friend
+
+`0x52,MSTORE,3,verylow,2,0,Save word to memory,`
+`0x53,MSTORE8,3,verylow,2,0,Save byte to memory.,`
+
+### Parameters
+
+- amount of memory allocated (depending on the store index requested)
+
+## `0x56,JUMP`
+
+`0x56,JUMP,8,mid,1,0,Alter the program counter,`
+
+- **geth** - just validates and sets PC, simple
+- **evmone** - the code block pre-processing might heavily impact cost (ask PB **TODO**)
+- **openethereum** - jumptable is initialized on first JUMP!
+
+### Parameters
+
+- first vs subsequent jumps, esp. for large jumptables. **TODO**: specify this better.
+- size of jumptable
+
+## `0x57,JUMPI`
+
+`0x57,JUMPI,10,high,2,0,Conditionally alter the program counter.,`
+
+JUMPI only differs by checking the condition on the stack.
+Similar comments apply
+
+### Parameters
+
+- same as for JUMP
+- whether the jump actually happens or not!
+
+## `0x58,PC`
+
+`0x58,PC,2,base,0,1,Get the value of the program counter prior to the increment corresponding to this instruction.,`
+
+no comments here
+
+## `0x59,MSIZE`
+
+`0x59,MSIZE,2,base,0,1,Get the size of active memory in bytes.,`
+
+no comments here, I can't imagine sizing the memory variable could depend on anything.
+
+## `0x5a,GAS`
+
+`0x5a,GAS,2,base,0,1,"Get the amount of available gas, including the corresponding reduction for the cost of this instruction.",`
+
+Implementation differ due to different approaches to gas tracking, but I don't see any hidden parameters to account for.
+
+## `0x5b,JUMPDEST`
+
+`0x5b,JUMPDEST,1,,0,0,Mark a valid destination for jumps,`
+
+- **geth** noop
+- **evmone** not a noop, flushes some gas calculations for the code block. Note - JUMPDEST is rewriten to a `evmone`-specific OPX_BEGINBLOCK
+- **openethereum** noop
+
+## `0x60,PUSH1` and friends
+
+`0x60 -- 0x7f,PUSH*,3,verylow,0,1,Place * byte item on stack. 0 < * <= 32,`
+
+- **geth** `PUSH1` is a special case
+- **evmone** `PUSH1`-`PUSH8` are special optimized cases. Also the push contents seem to be prepared in the analysis step
+- **openethereum** -
+
+### Parameters
+
+- cost can be slightly different, if PUSHx doesn't have x bytes left in the code. Not sure if this is worth measuring though (**TODO**)
+
+## `0x80,DUP1` and friends, cousin `0x90,SWAP1` and his friends too
+
+`0x80 -- 0x8f,DUP*,3,verylow,*,* + 1,Duplicate *th stack item. 0 < * <= 16,`
+`0x90 -- 0x9f,SWAP*,3,verylow,* + 1,* + 1,Exchange 1st and (* + 1)th stack items.,`
+
+straightforward in all impls. No comments.
+
+## `0xf3,RETURN` and `0xfd,REVERT`
+
+`0xf3,RETURN,0,zero,2,0,Halt execution returning output data.,`
+`0xfd,REVERT,,,2,0,End execution, revert state changes, return data mem[p…(p+s)),`
+
+- **evmone** - does a check_memory (**TODO** clarify with PB) and also does a micro-optimization for `size == 0`
+
+## Parameters
+
+needs clarifying the above TODO
+
 ## `0xfe,INVALID`
 
 `0xfe,INVALID,NA,,NA,NA,Designated invalid instruction.,`
@@ -176,4 +308,8 @@ Size of the value could have impact (b/c it's loaded from BigInt for `geth` at l
 - **openethereum**: returns Done with BadInstruction, does nothing.
 
 can be dropped
+
+## Misc notes
+
+- `BEGINSUB, JUMPSUB and RETURNSUB` are implemented in `openethereum` and `geth`, but they're only proposed in a pending https://eips.ethereum.org/EIPS/eip-2315.
 
