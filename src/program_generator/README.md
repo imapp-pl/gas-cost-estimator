@@ -46,3 +46,24 @@ python3 program_generator/program_generator.py generate --fullCsv | python3 inst
 ```
 
 or similar.
+
+### Versions
+
+Generate programs containing arithmetic operations
+
+```
+python3 program_generator/pg_arythmetic.py generate --count=2 --gasLimit=100 --seed=123123123
+```
+
+A parameter `--fullCsv` works as well. All parameters are optional. 
+The parameter `count` is the number of expected programs.
+The parameter `seed` is the seed of randomness.
+
+Generate programs containing stack operations
+
+```
+python3 program_generator/pg_stack.py generate --count=1 --gasLimit=1000 --seed=123123123 --max=128 --min=1
+```
+
+A parameter `--fullCsv` works as well. All parameters are optional.
+Parameters `min` and `max` refer to the stack size.
