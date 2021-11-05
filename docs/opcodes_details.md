@@ -4,6 +4,21 @@ This file contains a detailed rundown of all EVM OPCODEs concerned, with notes o
 
 Based on `src/program_generator/data/opcodes.csv` and `src/program_generator/data/selection.csv`.
 
+## Takeaways
+
+See below for a detailed OPCODE-by-OPCODE description of parameters and concerns.
+This is a proposed list of things to tackle, in order from important to negligible:
+
+- parametrize values on the stack taken for stack-only operations, see sections `0x01,ADD`, `0x0a,EXP`
+- parametrize amount of memory allocation using memory read/write OPCODEs, see section `0x52,MSTORE`
+- parametrize `JUMP` AND `JUMPI` calls circumstances, see their sections
+- parametrize `JUMPDEST` calls circumstances, see section
+- parametrize amount of memory copying and padding, see sections `0x37,CALLDATACOPY`, `0x39,CODECOPY`, `0x3e,RETURNDATACOPY`
+- parametrize size of the stack, see sections `0x50,POP` `0x60,PUSH1` `0x80,DUP1`
+- parametrize amount of memory allocation using OPCODEs other than MLOAD, see sections `0x37,CALLDATACOPY`, `0x39,CODECOPY`, `0x3e,RETURNDATACOPY`, `0xf3,RETURN`
+- parametrize context values, see sections `0x30,ADDRESS` `0x32,ORIGIN` `0x33,CALLER` `0x34,CALLVALUE` `0x3a,GASPRICE` `0x41,COINBASE`
+  - in particular parametrize BigInt-based variables: `0x3a,GASPRICE`, `0x34,CALLVALUE`
+
 ## `0x00,STOP`
 
 `0x00,STOP,0,zero,0,0,Halts execution.,`
@@ -87,8 +102,6 @@ See `ADDRESS`
 
 `0x33,CALLER,2,base,0,1,Get caller address.,`
 
-See `ADDRESS`
-
 - **geth**: Data is in `callContext.contract.Caller().Bytes()` - is getting this always costing the same? **TODO**
 - **evmone**: Data is in `state.msg.sender`
 - **openethereum**: Data is in `self.params.sender.clone()`
@@ -126,6 +139,8 @@ Things might depend on `state.msg.input_size` and if the `offset+32` fits into t
 - **evmone**: Data is in `state.msg.input_size`.
 - **openethereum**: Data is in `self.params.data.as_ref().map_or(0, |l| l.len())`. Will `None` in `data` have different cost? probably negligible.
 
+no comments here, I can't imagine sizing could depend on anything.
+
 ## `0x37,CALLDATACOPY`
 
 `0x37,CALLDATACOPY,"2 + 3 * (number of words copied, rounded up)",,3,0,Copy input data in current environment to memory.,2 is paid for the operation plus 3 for each word copied (rounded up).`
@@ -148,13 +163,15 @@ Things might depend on `state.msg.input_size` and if the `offset+32` fits into t
 - **evmone**: Data is in `state.code.size()`
 - **openethereum**: Data is in `self.reader.len()`
 
-### Parameters
-
-- size of the code?
+no comments here, I can't imagine sizing could depend on anything.
 
 ## `0x39,CODECOPY`
 
 `0x39,CODECOPY,"2 + 3 * (number of words copied, rounded up)",,3,0,Copy code running in current environment to memory.,2 is paid for the operation plus 3 for each word copied (rounded up).`
+
+- **geth**: Data is in `callContext.contract.Code`
+- **evmone**: Data is in `state.code`
+- **openethereum**: Data is in `self.reader.code`
 
 see `CALLDATACOPY`, everything is same just the data is from the code not input
 
@@ -178,9 +195,15 @@ Size of the value could have impact (b/c it's loaded from BigInt for `geth` at l
 - **evmone**: Data is in `state.return_data.size()`
 - **openethereum**: Data is in `self.return_data.len()`
 
+no comments here, I can't imagine sizing could depend on anything.
+
 ## `0x3e,RETURNDATACOPY`
 
 `0x3e,RETURNDATACOPY,"3 + 3 * ceil(amount / 32)",,3,0,This opcode has similar semantics to CALLDATACOPY, but instead of copying `
+
+- **geth**: Data is in `interpreter.returnData`
+- **evmone**: Data is in `state.return_data`
+- **openethereum**: Data is in `self.return_data`
 
 see `CALLDATACOPY`, everything is same just the data is from the code not input
 
@@ -201,7 +224,6 @@ see `CALLDATACOPY`, everything is same just the data is from the code not input
 ### Parameters
 
 - size of the stack?
-- size of the popped element?
 
 ## `0x51,MLOAD`
 
@@ -269,6 +291,10 @@ Implementation differ due to different approaches to gas tracking, but I don't s
 - **evmone** not a noop, flushes some gas calculations for the code block. Note - JUMPDEST is rewriten to a `evmone`-specific OPX_BEGINBLOCK
 - **openethereum** noop
 
+### Parameters
+
+- the size of preceeding/following code block
+
 ## `0x60,PUSH1` and friends
 
 `0x60 -- 0x7f,PUSH*,3,verylow,0,1,Place * byte item on stack. 0 < * <= 32,`
@@ -295,7 +321,7 @@ straightforward in all impls. No comments.
 
 - **evmone** - does a check_memory (**TODO** clarify with PB) and also does a micro-optimization for `size == 0`
 
-## Parameters
+### Parameters
 
 needs clarifying the above TODO
 
@@ -303,7 +329,7 @@ needs clarifying the above TODO
 
 `0xfe,INVALID,NA,,NA,NA,Designated invalid instruction.,`
 
-- **geth**: not defined, will short-circuit with `ErrInvalidOpCode` and not be added to the measurements CSV
+- **geth**: not defined, will short-circuit with `ErrInvalidOpCode` exception and not be added to the measurements CSV
 - **evmone**: sets execution state to invalid instruction and does nothing
 - **openethereum**: returns Done with BadInstruction, does nothing.
 
@@ -312,4 +338,3 @@ can be dropped
 ## Misc notes
 
 - `BEGINSUB, JUMPSUB and RETURNSUB` are implemented in `openethereum` and `geth`, but they're only proposed in a pending https://eips.ethereum.org/EIPS/eip-2315.
-
