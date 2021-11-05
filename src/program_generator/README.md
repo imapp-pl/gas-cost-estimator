@@ -57,7 +57,9 @@ python3 program_generator/pg_arythmetic.py generate --count=2 --gasLimit=100 --s
 
 A parameter `--fullCsv` works as well. All parameters are optional. 
 The parameter `count` is the number of expected programs.
-The parameter `seed` is the seed of randomness.
+The parameter `seed` is the seed of randomness, ptional.
+A single program can be limited by `gasLimit`, `opsLimit`, `bytecodeLimit`. The default is `opsLimit=100`.
+The (optional) dominant is the opcode draw with probability ~0.5, for example `--dominant=0x06`.
 
 Generate programs containing stack operations
 

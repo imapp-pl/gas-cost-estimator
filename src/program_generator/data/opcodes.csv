@@ -9,7 +9,7 @@ Value,Mnemonic,Gas Used,Subset,Removed from stack,Added to stack,Notes,Formula N
 0x07,SMOD,5,low,2,1,Signed modulo remainder operation.,
 0x08,ADDMOD,8,mid,3,1,Modulo addition operation.,
 0x09,MULMOD,8,mid,3,1,Modulo multiplication operation.,
-0x0a,EXP,(exp == 0) ? 10 : (10 + 10 * (1 + log256(exp))),,2,1,Exponential operation.,"If exponent is 0, gas used is 10. If exponent is greater than 0, gas used is 10 plus 10 times a factor related to how large the log of the exponent is."
+0x0a,EXP,(exp == 0) ? 10 : (10 + 50 * (1 + log256(exp))),,2,1,Exponential operation.,"If exponent is 0, gas used is 10. If exponent is greater than 0, gas used is 10 plus 50 times a factor related to how large the log of the exponent is."
 0x0b,SIGNEXTEND,5,low,2,1,Extend length of two’s complement signed integer.,
 0x10,LT,3,verylow,2,1,Less-than comparison.,
 0x11,GT,3,verylow,2,1,Greater-than comparison.,

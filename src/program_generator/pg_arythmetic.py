@@ -56,25 +56,29 @@ class ProgramGenerator(object):
 
     self._operations = {int(op, 16): opcodes[op] for op in selection}
 
-  def generate(self, fullCsv=False, count=1, gasLimit=10000, seed=None, dominant=None):
+  def generate(self, fullCsv=False, count=1, gasLimit=None, opsLimit=None, bytecodeLimit=None, seed=None, dominant=None):
     """
     Main entrypoint of the CLI tool. Should dispatch to the desired generation routine and print
-    programs to STDOUT
+    programs to STDOUT. If no limits given then by default opsLimit=100
 
     Parameters:
     fullCsv (boolean): if set, will generate programs with accompanying data in CSV format
     count (int): the number of programs
-    gasLimit(int): the gas limit for a single program
+    gasLimit (int): the gas limit for a single program
+    opsLimit (int): the limit operations for a single program, including pushes as one
+    bytecodeLimit (int): the bytecode limit of a single program
     seed: a seed for random number generator, if None then default behaviour for random()
     dominant: an opcode that is picked more often then others, probability ~0.5
     """
 
     if seed:
       random.seed(a=seed, version=2)
+    if not gasLimit and not opsLimit and not bytecodeLimit:
+      opsLimit = 100
 
     programs = []
     for i in range(count):
-      program = self._generate_random_arithmetic(gasLimit, dominant)
+      program = self._generate_random_arithmetic(gasLimit, opsLimit, bytecodeLimit, dominant)
       programs.append(program)
 
     if fullCsv:
@@ -93,7 +97,7 @@ class ProgramGenerator(object):
       for program in programs:
         print(program.bytecode)
 
-  def _generate_random_arithmetic(self, gasLimit, dominant):
+  def _generate_random_arithmetic(self, gasLimit, opsLimit, bytecodeLimit, dominant):
     """
     Generates one large programs with multiple arithmetic operations
     """
@@ -105,19 +109,21 @@ class ProgramGenerator(object):
     gas = 3
     # constant list of arithmetic operations
     arithmetic_ops = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09]  # ADD MUL SUB DIV SDIV MOD SMOD ADDMOD MULMOD
+    exp_ops = [0x0a]  # EXP
     bitwise_ops = [0x16, 0x17, 0x18, 0x19]  # AND OR XOR NOT
-    byte_op = [0x1a]  # BYTE
+    byte_ops = [0x1a, 0x0b]  # BYTE SIGNEXTEND
     shift_ops = [0x1b, 0x1c, 0x1d]  # SHL, SHR, SAR
     all_ops = []
     all_ops.extend(arithmetic_ops)
+    all_ops.extend(exp_ops)
     all_ops.extend(bitwise_ops)
-    all_ops.extend(byte_op)
+    all_ops.extend(byte_ops)
     all_ops.extend(shift_ops)
 
     if dominant and dominant not in all_ops:
       raise ValueError(dominant)
 
-    while gas < gasLimit:
+    while (not gasLimit or gas < gasLimit) and (not opsLimit or ops_count < opsLimit) and (not bytecodeLimit or len(bytecode)<2*bytecodeLimit):
       if dominant:
         if random.random() < 0.5:
           op = dominant
@@ -133,14 +139,23 @@ class ProgramGenerator(object):
       if op in arithmetic_ops or op in bitwise_ops:
         for i in range(needed_pushes):
           bytecode += self._random_push32()
-      elif op in byte_op:  # BYTE needs 0-31 value on the stack
-        bytecode += self._random_push_for_byte()
+      elif op in exp_ops:
+        bytecode += self._random_push1()  # the exponent less than 256
+        bytecode += '90'  # SWAP1 so the exponent is first on the stack
+        ops_count += 1   # additional SWAP1 cost
+        gas += 3   # additional SWAP1 cost
+      elif op in byte_ops:  # BYTE SIGNEXTEND needs 0-31 value on the stack
+        bytecode += self._random_push_less_32()
       elif op in shift_ops:  # SHL, SHR, SAR need 0-255 value on the stack
         bytecode += self._random_push1()
       bytecode += opcode
       ops_count += needed_pushes + 1
       # push goes for 3
-      gas += 3 * needed_pushes + int(operation['Gas Used'])
+      gas += 3 * needed_pushes
+      if op in exp_ops:
+        gas += 60  # gas cost of EXP with the exponent 0<exponent<256
+      else:
+        gas += int(operation['Gas Used'])
     return Program(bytecode, ops_count)
 
   def _random_push32(self):
@@ -159,7 +174,7 @@ class ProgramGenerator(object):
       value = (2-len(value))*'0' + value
     return '60' + value
 
-  def _random_push_for_byte(self):
+  def _random_push_less_32(self):
     value = random.randint(0, 31)
     value = hex(value)
     value = value[2:]
