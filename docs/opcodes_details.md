@@ -64,7 +64,7 @@ They pop and push, or pop and peek and then modify stack in-place.
 
 ### Parameters
 
-2 or 3 values on the stack, should not have impact on cost.
+2 or 3 values on the stack, [might have impact on cost](https://github.com/imapp-pl/gas-cost-estimator/pull/64/files#r744731521).
 
 ## `0x0a,EXP`
 
@@ -288,12 +288,14 @@ Implementation differ due to different approaches to gas tracking, but I don't s
 `0x5b,JUMPDEST,1,,0,0,Mark a valid destination for jumps,`
 
 - **geth** noop
-- **evmone** not a noop, flushes some gas calculations for the code block. Note - JUMPDEST is rewriten to a `evmone`-specific OPX_BEGINBLOCK
+- **evmone**:
+  - (`Advanced` mode) not a noop, flushes some gas calculations for the code block. Note - JUMPDEST is rewriten to a `evmone`-specific OPX_BEGINBLOCK
+  - (`Baseline` mode) noop
 - **openethereum** noop
 
 ### Parameters
 
-- the size of preceeding/following code block
+None. The size of preceeding/following code block would be if `evmone/Advanced` was used, but we're switch to `evmone/Baseline`.
 
 ## `0x60,PUSH1` and friends
 
@@ -319,11 +321,14 @@ straightforward in all impls. No comments.
 `0xf3,RETURN,0,zero,2,0,Halt execution returning output data.,`
 `0xfd,REVERT,,,2,0,End execution, revert state changes, return data mem[p…(p+s)),`
 
-- **evmone** - does a check_memory (**TODO** clarify with PB) and also does a micro-optimization for `size == 0`
+- **geth** - checks memory
+- **evmone** - checks memory and also does a micro-optimization for `size == 0`
+- **openethereum** - checks memory
 
 ### Parameters
 
-needs clarifying the above TODO
+- size of data actually copied (depends on the contents of input and the memory offsets)
+- amount of memory allocated
 
 ## `0xfe,INVALID`
 
