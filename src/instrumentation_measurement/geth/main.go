@@ -26,7 +26,7 @@ func main() {
 	sampleSizePtr := flag.Int("sampleSize", 1, "Size of the sample - number of measured repetitions of execution")
 	printEachPtr := flag.Bool("printEach", true, "If false, printing of each execution time is skipped")
 	printCSVPtr := flag.Bool("printCSV", false, "If true, will print a CSV with standard results to STDOUT")
-  modePtr := flag.String("mode", "all", "Measurement mode. Available options: all")
+  modePtr := flag.String("mode", "all", "Measurement mode. Available options: all, total, trace")
 
 	flag.Parse()
 
@@ -36,7 +36,7 @@ func main() {
 	printCSV := *printCSVPtr
   mode := *modePtr
 
-  if mode != "all" && mode != "total" {
+  if mode != "all" && mode != "total"  && mode != "trace" {
     fmt.Fprintln(os.Stderr, "Invalid measurement mode: ", mode)
     os.Exit(1)
   }
@@ -56,8 +56,10 @@ func main() {
 	for i := 0; i < sampleSize; i++ {
     if mode == "all" {
       MeasureAll(cfg, bytecode, printEach, printCSV, i)
-    } else {
+    } else if mode == "total" {
       MeasureTotal(cfg, bytecode, printEach, printCSV, i)
+    } else if mode == "trace" {
+      TraceBytecode(cfg, bytecode, printCSV, i)
     }
 	}
 
@@ -70,6 +72,39 @@ func main() {
 	fmt.Fprintln(os.Stderr, "Return:", retWarmUp)
 	fmt.Fprintln(os.Stderr, "Sample duration:", sampleDuration)
 
+}
+
+func TraceBytecode(cfg *runtime.Config, bytecode []byte, printCSV bool, sampleId int) {
+      tracerConfig := new(vm.LogConfig)
+      setDefaultTracerConfig(tracerConfig)
+
+      tracer := vm.NewStructLogger(tracerConfig)
+      cfg.EVMConfig.Tracer = tracer
+      cfg.EVMConfig.Debug = true
+
+      _, _, err := runtime.Execute(bytecode, nil, cfg)
+      if err != nil {
+        fmt.Fprintln(os.Stderr, err)
+      }
+
+      if printCSV {
+        logs := tracer.StructLogs()
+        for i, log := range logs {
+          fmt.Fprintf(os.Stdout, "%d,%d,%v,%d", i, log.Pc, log.Op, len(log.Stack))
+
+          // let's print only 32 elems of the stack
+          for i, elem := range log.Stack {
+            if i < 32 {
+              fmt.Fprintf(os.Stdout, ",%d", elem)
+            }
+          }
+          // if there are not 32 elems, append the csv with empty columns
+          for i := len(log.Stack) ; i < 32 ; i++ {
+            fmt.Fprintf(os.Stdout, ",")
+          }
+          fmt.Fprintf(os.Stdout, "\n")
+        }
+      }
 }
 
 func MeasureTotal(cfg *runtime.Config, bytecode []byte, printEach bool, printCSV bool, sampleId int) {
@@ -162,6 +197,16 @@ func setDefaults(cfg *runtime.Config) {
 			return common.BytesToHash(crypto.Keccak256([]byte(new(big.Int).SetUint64(n).String())))
 		}
 	}
+}
+
+// for full options see github.com/ethereum/go-ethereum/core/vm/logger.go:50
+func setDefaultTracerConfig(cfg *vm.LogConfig)  {
+	cfg.DisableMemory = false
+  cfg.DisableStack = false
+  cfg.DisableStorage = true
+  cfg.DisableReturnData = false
+  cfg.Debug = false
+  cfg.Limit = 0
 }
 
 // runtimeNano returns the current value of the runtime clock in nanoseconds.
