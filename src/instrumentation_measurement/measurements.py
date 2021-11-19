@@ -53,7 +53,7 @@ class Measurements(object):
     sampleSize (integer): size of a sample to pass into the EVM measuring executable
     evm (string): which evm use. Default: geth. Allowed: geth, openethereum, evmone
     nSamples (integer): number of samples (individual starts of the EVM measuring executable) to do
-    mode (string): Measurement mode. Allowed: total, all
+    mode (string): Measurement mode. Allowed: total, all, trace
     """
 
     geth = "geth"
@@ -63,20 +63,28 @@ class Measurements(object):
 
     measure_total = "total"
     measure_all = "all"
+    trace_opcodes = "trace"
 
 
     if evm not in {geth, openethereum, evmone, openethereum_ewasm}:
       print("Wrong evm parameter. Allowed are: {}, {}, {}, {}".format(geth, openethereum, evmone, openethereum_ewasm))
       return
 
-    if mode not in {measure_total, measure_all}:
-        print("Invalid measurement mode. Allowed options: {}, {}".format(measure_total, measure_all))
+    if mode not in {measure_total, measure_all, trace_opcodes}:
+        print("Invalid measurement mode. Allowed options: {}, {}, {}".format(measure_total, measure_all, trace_opcodes))
         return
     elif mode == measure_total:
         header = "program_id,sample_id,run_id,measure_total_time_ns,measure_total_timer_time_ns"
         print(header)
     elif mode == measure_all:
         header = "program_id,sample_id,run_id,instruction_id,measure_all_time_ns,measure_all_timer_time_ns"
+        print(header)
+    elif mode == trace_opcodes:
+        header = "program_id,sample_id,instruction_id,pc,op,stack_depth,stack_elem0"
+        for i in range(32):
+            elem = ",stack_elem{}".format(i)
+            header += elem
+
         print(header)
 
 
