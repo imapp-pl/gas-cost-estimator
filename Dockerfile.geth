@@ -36,15 +36,19 @@ RUN git checkout wallclock-${MEASUREMENT_MODE}
 # show us what we're checking out!
 RUN git show --no-patch
 
-# get the remainder of our code
-COPY ./src/ /srv/app/src/
+# get the remainder of measurement code
+COPY ./src/instrumentation_measurement /srv/app/src/instrumentation_measurement
 
 WORKDIR /srv/app/src/instrumentation_measurement
 RUN go get ./geth/...
 
+# get the rest (program generation etc.) 
+COPY ./src/ /srv/app/src/
+
 WORKDIR /srv/app/
 
 # check correct host configuration
+ARG SKIP_CLOCKSOURCE_CHECK=false
 RUN chmod a+x ./src/check_clocksource.sh
 RUN ./src/check_clocksource.sh
 
