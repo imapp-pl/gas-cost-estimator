@@ -31,7 +31,7 @@ head(total_measurements)
 ```{r}
 # temporary workaround for obtaining the estimated cost weights
 setwd("~/sources/imapp/gas-cost-estimator/src")
-estimated_cost = read.csv("../../local/rough_opcode_costs.csv")
+estimated_cost = read.csv("../../local/rough_opcode_costs_new.csv")
 head(estimated_cost)
 ```
 
@@ -64,5 +64,6 @@ boxplot(measure_total_time_ns ~ program_id, data=total_measurements, outline=FAL
 # tapply(total_measurements$measure_total_time_ns, total_measurements$program_id, summary)
 ```
 ```{r}
-plot(validation$avg_measure_total_time_ns, validation$cost)
+scatter.smooth(validation$cost, validation$avg_measure_total_time_ns, col='red')
+summary(lm(avg_measure_total_time_ns ~ cost, data=validation))
 ```
