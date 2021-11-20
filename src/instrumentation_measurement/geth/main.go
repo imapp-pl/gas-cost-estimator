@@ -111,14 +111,7 @@ func MeasureTotal(cfg *runtime.Config, bytecode []byte, printEach bool, printCSV
   cfg.EVMConfig.Instrumenter = vm.NewInstrumenterLogger()
   go_runtime.GC()
 
-  cfg.EVMConfig.Instrumenter.StartTime =  runtimeNano()
   _, _, err := runtime.Execute(bytecode, nil, cfg)
-
-  // Measure runtime 
-  cfg.EVMConfig.Instrumenter.TotalExecutionDuration = runtimeNano()
-  cfg.EVMConfig.Instrumenter.TimerDuration = runtimeNano()
-  cfg.EVMConfig.Instrumenter.TimerDuration -= cfg.EVMConfig.Instrumenter.TotalExecutionDuration
-  cfg.EVMConfig.Instrumenter.TotalExecutionDuration -=  cfg.EVMConfig.Instrumenter.StartTime
 
   if err != nil {
     fmt.Fprintln(os.Stderr, err)
