@@ -125,12 +125,16 @@ class ProgramGenerator(object):
     bitwise_ops = [0x16, 0x17, 0x18, 0x19]  # AND OR XOR NOT
     byte_ops = [0x1a, 0x0b]  # BYTE SIGNEXTEND
     shift_ops = [0x1b, 0x1c, 0x1d]  # SHL, SHR, SAR
+    comparison_ops = [0x10, 0x11, 0x12, 0x13, 0x14]  # LT, GT, SLT, SGT, EQ
+    iszero_ops = [0x15]  # ISZERO
     all_ops = []
     all_ops.extend(arithmetic_ops)
     all_ops.extend(exp_ops)
     all_ops.extend(bitwise_ops)
     all_ops.extend(byte_ops)
     all_ops.extend(shift_ops)
+    all_ops.extend(comparison_ops)
+    all_ops.extend(iszero_ops)
 
     if dominant and dominant not in all_ops:
       raise ValueError(dominant)
@@ -153,7 +157,7 @@ class ProgramGenerator(object):
       needed_pushes = int(operation['Removed from stack']) - 1
       # i.e. 23 from 0x23
       opcode = operation['Value'][2:4]
-      if op in arithmetic_ops or op in bitwise_ops:
+      if op in arithmetic_ops or op in bitwise_ops or op in comparison_ops:
         for i in range(needed_pushes):
           bytecode += self._random_push(push)
       elif op in exp_ops:
