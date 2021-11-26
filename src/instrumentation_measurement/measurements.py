@@ -80,7 +80,7 @@ class Measurements(object):
         header = "program_id,sample_id,run_id,instruction_id,measure_all_time_ns,measure_all_timer_time_ns"
         print(header)
     elif mode == trace_opcodes:
-        header = "program_id,sample_id,instruction_id,pc,op,stack_depth,stack_elem0"
+        header = "program_id,sample_id,instruction_id,pc,op,stack_depth"
         for i in range(32):
             elem = ",stack_elem{}".format(i)
             header += elem
