@@ -38,7 +38,7 @@ head(estimated_cost)
 ```{r}
 ops_per_program = data.frame(table(traces$program_id, traces$op, dnn=c("program_id", "op")))
 
-estimated_programs = sqldf("SELECT program_id, sum(ops_per_program.Freq * estimated_cost.q50) as cost
+estimated_programs = sqldf("SELECT program_id, sum(ops_per_program.Freq * estimated_cost.min) as cost
                            FROM ops_per_program
                            INNER JOIN estimated_cost ON ops_per_program.op == estimated_cost.op
                            GROUP BY program_id")
