@@ -55,12 +55,13 @@ Generate programs containing arithmetic operations
 python3 program_generator/pg_arythmetic.py generate --count=2 --gasLimit=100 --seed=123123123
 ```
 
-- A parameter `--fullCsv` works as well. All parameters are optional. 
+- The parameter `--fullCsv` works as well. All parameters are optional. 
 - The parameter `count` is the number of expected programs.
 - The parameter `seed` is the seed of randomness, ptional.
 - A single program can be limited by `gasLimit`, `opsLimit`, `bytecodeLimit`. The default is `opsLimit=100`.
 - The (optional) dominant is the opcode draw with probability ~0.5, for example `--dominant=0x06`.
-- The program generator uses `push32` to populate random values. This can be altered by `--push=16` for instance.  
+- The program generator uses `push32` to populate random values. This can be altered by `--push=16` for instance.
+- The flag `--cleanStack` pushes new values on the stack for every opcode execution.
 
 Generate programs containing stack operations
 
