@@ -21,7 +21,6 @@ programs = read.csv("../../local/pg_arythmetic_c100_ops10.csv")
 traces = read.csv("../../local/trace_pg_arythmetic_c100_ops10.csv")
 head(traces)
 ```
-
 ```{r}
 setwd("~/sources/imapp/gas-cost-estimator/src")
 total_measurements = read.csv("../../local/geth_pg_arythmetic_c100_ops10.csv")
@@ -43,15 +42,37 @@ estimated_programs = sqldf("SELECT program_id, sum(ops_per_program.Freq * estima
                            INNER JOIN estimated_cost ON ops_per_program.op == estimated_cost.op
                            GROUP BY program_id")
 
+# ORDER BY is needed here, so that the programs are ordered by program_id numerically
+# this is a hacky way of ensuring we can merge it with other program data like fingerprints
+# TODO: make this more robust
 validation = sqldf("SELECT
                       estimated_programs.program_id,
                       avg(total_measurements.measure_total_time_ns) as avg_measure_total_time_ns,
                       cost
                     FROM estimated_programs
                     INNER JOIN total_measurements ON total_measurements.program_id == estimated_programs.program_id
-                    GROUP BY estimated_programs.program_id")
+                    GROUP BY estimated_programs.program_id
+                    ORDER BY cast(estimated_programs.program_id AS int)")
 
 head(validation)
+```
+
+We need an additional simple (plottable) "fingerprint" of the OPCODEs included in the program, to evaluate the validation plot at a glance.
+
+```{r}
+library(nlme)
+fingerprint <- function(x) {
+  x[which(!(x$op %in% c('PUSH32', 'PUSH1', 'STOP'))),'op']
+}
+has_exp <- function(x) {
+  if ('EXP' %in% x$op) 'red' else 'blue'
+}
+count_zero_args <- function(x) {
+  sum(!is.na(x$stack_elem0) & x$stack_elem0 == 0 | !is.na(x$stack_elem1) & x$stack_elem1 == 0 | !is.na(x$stack_elem2) & x$stack_elem2 == 0)
+}
+validation$fingerprint = gapply(traces, c('op', 'program_id'), FUN=function(x) fingerprint(x), groups=traces$program_id)
+validation$has_exp = gapply(traces, c('op'), FUN=function(x) has_exp(x), groups=traces$program_id)
+validation$n_zero_args = gapply(traces, c('op', 'program_id', 'stack_elem0', 'stack_elem1', 'stack_elem2'), FUN=function(x) count_zero_args(x), groups=traces$program_id)
 ```
 
 Basic inspection of data reveals strong decreasing trend for each sample (sequence of runs) and a lot of outliers.
@@ -63,7 +84,43 @@ boxplot(measure_total_time_ns ~ program_id, data=total_measurements, outline=FAL
 # tapply(total_measurements$measure_total_time_ns, total_measurements$program_id, hist, probability=T)
 # tapply(total_measurements$measure_total_time_ns, total_measurements$program_id, summary)
 ```
+
+The relation between the estimated `cost` and the measured `avg_measure_total_time_ns` is quite evident for
+"cheap" programs, but not anymore for "expensive" program in the set.
+Educated guess was it is because of `EXP`, which has been measured individually with smallest argument in the Stage I, and those measurements led to the estimated `cost`.
+Thereby the `EXP` programs are consistently underestimated.
+
 ```{r}
-scatter.smooth(validation$cost, validation$avg_measure_total_time_ns, col='red')
-summary(lm(avg_measure_total_time_ns ~ cost, data=validation))
+plot_validation <- function(df) {
+  scatter.smooth(df$cost, df$avg_measure_total_time_ns, col=df$has_exp)
+  text(avg_measure_total_time_ns~cost, data=df, labels=program_id, cex=0.6, pos=4, font=2)
+  text(avg_measure_total_time_ns~cost, data=df, labels=n_zero_args, cex=0.6, pos=1, font=2)
+}
+plot_validation(validation)
+```
+
+```{r}
+lm_validation <- function(df) {
+  summary(lm(avg_measure_total_time_ns ~ cost, data=df))  
+}
+lm_validation(validation)
+```
+
+
+```{r}
+validation_safe_subset = validation[which(validation$has_exp == 'blue' & validation$n_zero_args == 0),]
+plot_validation(validation_safe_subset)
+```
+
+```{r}
+lm_validation(validation_safe_subset)
+```
+
+```{r}
+validation_problem_subset = validation[which(validation$has_exp == 'red' & validation$n_zero_args != 0),]
+plot_validation(validation_problem_subset)
+```
+
+```{r}
+lm_validation(validation_problem_subset)
 ```
