@@ -37,7 +37,12 @@ head(estimated_cost)
 ```{r}
 ops_per_program = data.frame(table(traces$program_id, traces$op, dnn=c("program_id", "op")))
 
-estimated_programs = sqldf("SELECT program_id, sum(ops_per_program.Freq * estimated_cost.min) as cost
+estimated_programs = sqldf("SELECT
+                              program_id,
+                              sum(ops_per_program.Freq * estimated_cost.mean) as avg_cost,
+                              sum(ops_per_program.Freq * estimated_cost.q50) as q50_cost,
+                              sum(ops_per_program.Freq * estimated_cost.min) as min_cost,
+                              sum(ops_per_program.Freq * estimated_cost.current_gas) as current_gas_cost
                            FROM ops_per_program
                            INNER JOIN estimated_cost ON ops_per_program.op == estimated_cost.op
                            GROUP BY program_id")
@@ -48,7 +53,11 @@ estimated_programs = sqldf("SELECT program_id, sum(ops_per_program.Freq * estima
 validation = sqldf("SELECT
                       estimated_programs.program_id,
                       avg(total_measurements.measure_total_time_ns) as avg_measure_total_time_ns,
-                      cost
+                      min(total_measurements.measure_total_time_ns) as min_measure_total_time_ns,
+                      avg_cost,
+                      q50_cost,
+                      min_cost,
+                      current_gas_cost
                     FROM estimated_programs
                     INNER JOIN total_measurements ON total_measurements.program_id == estimated_programs.program_id
                     GROUP BY estimated_programs.program_id
@@ -77,7 +86,7 @@ validation$n_zero_args = gapply(traces, c('op', 'program_id', 'stack_elem0', 'st
 
 Basic inspection of data reveals strong decreasing trend for each sample (sequence of runs) and a lot of outliers.
 
-```{r}
+```{r fig.width=20}
 plot(total_measurements$measure_total_time_ns, ylim=c(0,3200))
 boxplot(total_measurements$measure_total_time_ns)
 boxplot(measure_total_time_ns ~ program_id, data=total_measurements, outline=FALSE)
@@ -91,36 +100,55 @@ Educated guess was it is because of `EXP`, which has been measured individually 
 Thereby the `EXP` programs are consistently underestimated.
 
 ```{r}
-plot_validation <- function(df) {
-  scatter.smooth(df$cost, df$avg_measure_total_time_ns, col=df$has_exp)
-  text(avg_measure_total_time_ns~cost, data=df, labels=program_id, cex=0.6, pos=4, font=2)
-  text(avg_measure_total_time_ns~cost, data=df, labels=n_zero_args, cex=0.6, pos=1, font=2)
+explained_variable = 'min_measure_total_time_ns'
+estimate_variable = 'min_cost'
+
+plot_validation <- function(df, yvar, xvar) {
+  scatter.smooth(df[,xvar], df[,yvar], col=df$has_exp)
+  text(df[,yvar] ~ df[,xvar], data=df, labels=program_id, cex=0.6, pos=4, font=2)
+  text(df[,yvar] ~ df[,xvar], data=df, labels=n_zero_args, cex=0.6, pos=1, font=2)
 }
-plot_validation(validation)
+plot_validation(validation, explained_variable, estimate_variable)
 ```
 
 ```{r}
-lm_validation <- function(df) {
-  summary(lm(avg_measure_total_time_ns ~ cost, data=df))  
+lm_validation <- function(df, yvar, xvar) {
+  summary(lm(df[, yvar] ~ df[,xvar], data=df))  
 }
-lm_validation(validation)
+lm_validation(validation, explained_variable, estimate_variable)
 ```
 
 
-```{r}
+```{r fig.width=10}
 validation_safe_subset = validation[which(validation$has_exp == 'blue' & validation$n_zero_args == 0),]
-plot_validation(validation_safe_subset)
+par(mfrow=c(1,2))
+plot_validation(validation_safe_subset, explained_variable, estimate_variable)
+plot_validation(validation_safe_subset, explained_variable, 'current_gas_cost')
 ```
 
 ```{r}
-lm_validation(validation_safe_subset)
+model = lm_validation(validation_safe_subset, explained_variable, estimate_variable)
+print(model)
+print("-------------------")
+lm_validation(validation_safe_subset, explained_variable, 'current_gas_cost')
 ```
+Here, for comparison the programs that currently turn out to be problematic:
 
 ```{r}
 validation_problem_subset = validation[which(validation$has_exp == 'red' & validation$n_zero_args != 0),]
-plot_validation(validation_problem_subset)
+plot_validation(validation_problem_subset, explained_variable, estimate_variable)
 ```
 
 ```{r}
-lm_validation(validation_problem_subset)
+lm_validation(validation_problem_subset, explained_variable, estimate_variable)
+```
+
+```{r}
+plot(validation_safe_subset[, estimate_variable], model$residuals)
+plot(validation_safe_subset[, explained_variable], model$residuals)
+```
+
+```{r}
+validation_resids = validation_safe_subset
+validation_resids$residuals = model$residuals
 ```
