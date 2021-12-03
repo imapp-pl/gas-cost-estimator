@@ -108,7 +108,9 @@ sqldf("SELECT program_id, count(*) FROM result_evmone GROUP BY program_id")
 Let's also adjust for the rough estimate of the overhead of the timer.
 We're subtracting these estimates from all measurements, for more granularity on the fastest instructions.
 
-Our "ball-park" estimates of minimum clock measurement overhead:
+**UPDATE**: We're using the global minimum of the timer measurement collected to get the estimate of the timer overhead.
+
+Our **EARLIER** "ball-park" estimates of minimum clock measurement overhead:
 
 - blue - `geth` - `17ns` ([minimum for `runtimeNano`](https://htmlpreview.github.io/?https://github.com/imapp-pl/gas-cost-estimator/blob/master/src/analysis/exploration_timers.nb.html))
   - (earlier try: `30ns` median for `runtimeNano` from a different measurement)
@@ -121,9 +123,9 @@ Our "ball-park" estimates of minimum clock measurement overhead:
 - yellow - `ewasm` - same as `openethereum`
 
 ```{r fig.width=20}
-rough_estimate_time_overhead_geth = 17
-rough_estimate_time_overhead_evmone = 16
-rough_estimate_time_overhead_openethereum = 17
+rough_estimate_time_overhead_geth = min(result_geth$measure_all_timer_time_ns)
+rough_estimate_time_overhead_evmone = min(result_evmone$measure_all_timer_time_ns)
+rough_estimate_time_overhead_openethereum = min(result_openethereum$measure_all_timer_time_ns)
 
 measurements_geth = measurements[which(measurements$env=="geth"), ]
 measurements_evmone = measurements[which(measurements$env=="evmone"), ]
@@ -179,14 +181,41 @@ measurements_evmone = measurements[which(measurements$env=="evmone"), ]
 measurements_openethereum = measurements[which(measurements$env=="openethereum"), ]
 measurements_ewasm = measurements[which(measurements$env=="ewasm"), ]
 
-print("geth")
-tapply(measurements_geth$measure_all_time_ns, measurements_geth$opcode_measured_evm, summary)
-print("evmone")
-tapply(measurements_evmone$measure_all_time_ns, measurements_evmone$opcode_measured_evm, summary)
-print("openethereum")
-tapply(measurements_openethereum$measure_all_time_ns, measurements_openethereum$opcode_measured_evm, summary)
-print("ewasm")
-tapply(measurements_ewasm$measure_all_time_ns, measurements_ewasm$opcode_measured_ewasm, summary)
+summary_geth = tapply(measurements_geth$measure_all_time_ns, measurements_geth$opcode_measured_evm, summary)
+summary_evmone = tapply(measurements_evmone$measure_all_time_ns, measurements_evmone$opcode_measured_evm, summary)
+summary_openethereum = tapply(measurements_openethereum$measure_all_time_ns, measurements_openethereum$opcode_measured_evm, summary)
+summary_ewasm = tapply(measurements_ewasm$measure_all_time_ns, measurements_ewasm$opcode_measured_ewasm, summary)
+
+print('geth')
+print(head(summary_geth))
+print('evmone')
+print(head(summary_evmone))
+print('openethereum')
+print(head(summary_openethereum))
+print('ewasm')
+print(head(summary_ewasm))
+```
+
+Export what we consider rough estimates of OPCODE cost. **NOTE** this will be changed for sure.
+
+```{r}
+estimated_cost = data.frame(matrix(ncol = 8, nrow = 0))
+opcodes = programs_evm$opcode_measured[-which(programs_evm$opcode_measured=='INVALID')]
+for (op in opcodes) {
+  estimated_cost = rbind(estimated_cost, c(op, as.numeric(summary_geth[[op]]), 'geth'))
+}
+for (op in opcodes) {
+  estimated_cost = rbind(estimated_cost, c(op, as.numeric(summary_evmone[[op]]), 'evmone'))
+}
+for (op in opcodes) {
+  estimated_cost = rbind(estimated_cost, c(op, as.numeric(summary_openethereum[[op]]), 'openethereum'))
+}
+colnames(estimated_cost) <- c('op', 'min', 'q25', 'q50', 'mean', 'q75', 'max', 'env')
+```
+
+```{r}
+setwd("~/sources/imapp/gas-cost-estimator/src")
+write.csv(estimated_cost, "../../local/estimated_cost.csv", quote=FALSE, row.names=FALSE)
 ```
 
 ```{r include=FALSE}
