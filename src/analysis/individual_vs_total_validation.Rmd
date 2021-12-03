@@ -160,6 +160,22 @@ We adjust the program set by:
 2. Reclaiming control over them, to avoid the proliferation of 0 entries on the stack
 
 ```{r}
+# save previous results, we'll reuse the names moving forward
+estimated_programs_first_pass = estimated_programs
+model_first_pass = model
+ops_per_program_first_pass = ops_per_program
+total_measurements_first_pass = total_measurements
+traces_first_pass = traces
+validation_first_pass = validation
+validation_problem_subset_first_pass = validation_problem_subset
+validation_resids_first_pass = validation_resids
+validation_safe_subset_first_pass = validation_safe_subset
+program_set_codename_first_pass = program_set_codename
+rm('estimated_programs', 'model', 'ops_per_program',
+   'total_measurements', 'traces', 'validation', 'validation_problem_subset',
+   'validation_resids', 'validation_safe_subset', 'program_set_codename')
+
+# point to the new data set
 program_set_codename = "c100_ops30_clean_smallpush"
 ```
 
@@ -218,6 +234,8 @@ validation$n_zero_args = gapply(traces, c('op', 'program_id', 'stack_elem0', 'st
 
 Basic inspection of data reveals strong decreasing trend for each sample (sequence of runs) and a lot of outliers.
 
+**TODO**: try increasing the sample size and see impact on the decreasing trend - will it stabilize?
+
 ```{r fig.width=20}
 plot(total_measurements$measure_total_time_ns, ylim=c(0,3200))
 boxplot(total_measurements$measure_total_time_ns)
@@ -229,14 +247,27 @@ par(mfrow=c(1,2))
 plot_validation(validation, explained_variable, estimate_variable)
 plot_validation(validation, explained_variable, 'current_gas_cost')
 ```
+Try with the safer subset (no EXP) again, to check how do we compare against the current gas cost.
+Current gas cost is completely off for EXP.
+**NOTE**: the safe subset has different criteria vs the previous one.
+
+```{r fig.width=10}
+validation_no_exp = validation[which(validation$has_exp == 'blue'),]
+par(mfrow=c(1,2))
+plot_validation(validation_no_exp, explained_variable, estimate_variable)
+plot_validation(validation_no_exp, explained_variable, 'current_gas_cost')
+```
 
 ```{r}
 model = lm_validation(validation, explained_variable, estimate_variable)
 print(model)
 ```
+**NOTE** the linear model for current gas cost doesn't make any sense with EXP included.
+To compare the no-EXP subset, where the current gas cost is a decent estimate:
 
 ```{r}
-lm_validation(validation, explained_variable, 'current_gas_cost')
+lm_validation(validation_no_exp, explained_variable, estimate_variable)
+lm_validation(validation_no_exp, explained_variable, 'current_gas_cost')
 ```
 
 ```{r}
