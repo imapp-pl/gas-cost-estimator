@@ -169,7 +169,9 @@ We adjust the program set by:
 This improved the results greatly and allowed us to keep `EXP` programs
 
 We adjust the analysis:
-1. Remove outliers from the `measure_total` results
+1. Remove outliers from the `measure_total` results (doesn't change much, but healthy anyway)
+2. Double-check the warmup with longer samples (seems ok, no adjustments)
+3. Check if trivial variable like program length doesn't provide a good-enough estimate for cost
 
 ### Clean the program set
 
@@ -302,6 +304,27 @@ for (program_id in 0:n_programs)
   program_measurements = total_measurements[which(total_measurements$program_id==program_id), ]
   plot(program_measurements$measure_total_time_ns)
 }
+```
+### Check estimation using trivial variables
+
+Based on the plots alone, it does not appear like our estimation only relies on trivial variables.
+
+```{r}
+program_length <- function(x) {
+  max(x$instruction_id)
+}
+count_op <- function(x, op) {
+  sum(x$op == op)
+}
+# the "trivial" variables to check if we are not doing trivial estimation
+validation$program_length = gapply(traces, c('program_id', 'instruction_id'), FUN=function(x) program_length(x), groups=traces$program_id)
+validation$n_push = gapply(traces, c('program_id', 'op'), FUN=function(x) count_op(x, 'PUSH1'), groups=traces$program_id)
+validation$n_pop = gapply(traces, c('program_id', 'op'), FUN=function(x) count_op(x, 'POP'), groups=traces$program_id)
+
+par(mfrow=c(1,3))
+plot_validation(validation, explained_variable, 'program_length')
+plot_validation(validation, explained_variable, 'n_push')
+plot_validation(validation, explained_variable, 'n_pop ')
 ```
 
 ```{r}
