@@ -103,12 +103,17 @@ Thereby the `EXP` programs are consistently underestimated.
 explained_variable = 'min_measure_total_time_ns'
 estimate_variable = 'min_cost'
 
-plot_validation <- function(df, yvar, xvar) {
+plot_validation <- function(df, yvar, xvar, label_n_zero_args) {
+  if (missing(label_n_zero_args)) {
+    label_n_zero_args = FALSE
+  }
   scatter.smooth(df[,xvar], df[,yvar], col=df$has_exp)
   text(df[,yvar] ~ df[,xvar], data=df, labels=program_id, cex=0.6, pos=4, font=2)
-  text(df[,yvar] ~ df[,xvar], data=df, labels=n_zero_args, cex=0.6, pos=1, font=2)
+  if (label_n_zero_args) {
+    text(df[,yvar] ~ df[,xvar], data=df, labels=n_zero_args, cex=0.6, pos=1, font=2)
+  }
 }
-plot_validation(validation, explained_variable, estimate_variable)
+plot_validation(validation, explained_variable, estimate_variable, label_n_zero_args=TRUE)
 ```
 
 ```{r}
@@ -136,7 +141,7 @@ Here, for comparison the programs that currently turn out to be problematic:
 
 ```{r}
 validation_problem_subset = validation[which(validation$has_exp == 'red' | validation$n_zero_args != 0),]
-plot_validation(validation_problem_subset, explained_variable, estimate_variable)
+plot_validation(validation_problem_subset, explained_variable, estimate_variable, label_n_zero_args=TRUE)
 ```
 
 ```{r}
@@ -153,11 +158,20 @@ validation_resids = validation_safe_subset
 validation_resids$residuals = model$residuals
 ```
 
-## Cleaning the program set
+## Tweak the validation
+
+Since the results are not very good so far, we try the following ideas to improve the fit:
 
 We adjust the program set by:
 1. Decreasing the size of stack arguments to 1-byte numbers, which mirrors the estimated costs (which used a fixed arg of 32)
 2. Reclaiming control over them, to avoid the proliferation of 0 entries on the stack
+
+This improved the results greatly and allowed us to keep `EXP` programs
+
+We adjust the analysis:
+1. Remove outliers from the `measure_total` results
+
+### Clean the program set
 
 ```{r}
 # save previous results, we'll reuse the names moving forward
@@ -191,6 +205,21 @@ head(traces)
 ```{r}
 setwd("~/sources/imapp/gas-cost-estimator/src")
 total_measurements = read.csv(paste("../../local/geth_pg_arythmetic_", program_set_codename, ".csv", sep=""))
+head(total_measurements)
+```
+### Remove outliers
+
+```{r}
+remove_outliers <- function(df, col) {
+  # we don't have subsets, so the entire df is a subset
+  subset = df
+  outliers = boxplot(subset[, col], plot=FALSE)$out
+  # NOTE here we're also not filtering by the subset
+  no_outliers = df[-which(df[, col] %in% outliers), ]
+  return(no_outliers)
+}
+
+total_measurements = remove_outliers(total_measurements, "measure_total_time_ns")
 head(total_measurements)
 ```
 
@@ -237,9 +266,11 @@ Basic inspection of data reveals strong decreasing trend for each sample (sequen
 **TODO**: try increasing the sample size and see impact on the decreasing trend - will it stabilize?
 
 ```{r fig.width=20}
-plot(total_measurements$measure_total_time_ns, ylim=c(0,3200))
+# we've removed outliers so picking the right ylim / OUTLINE no longer required
+
+plot(total_measurements$measure_total_time_ns)
 boxplot(total_measurements$measure_total_time_ns)
-boxplot(measure_total_time_ns ~ program_id, data=total_measurements, outline=FALSE)
+boxplot(measure_total_time_ns ~ program_id, data=total_measurements)
 ```
 
 ```{r}
