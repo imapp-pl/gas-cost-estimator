@@ -223,6 +223,23 @@ total_measurements = remove_outliers(total_measurements, "measure_total_time_ns"
 head(total_measurements)
 ```
 
+### Check the warmup using longer samples
+
+This data set was generated like the "normal" one, but with `--sampleSize=500`.
+
+We check the long-term warm-up, but it seems to stabilize after ~40 runs and remain stable.
+More details on the usual program set below.
+
+```{r}
+setwd("~/sources/imapp/gas-cost-estimator/src")
+total_measurements_warmup = read.csv(paste("../../local/geth_pg_arythmetic_", program_set_codename, "_checkwarmup", ".csv", sep=""))
+head(total_measurements_warmup)
+total_measurements_warmup = remove_outliers(total_measurements_warmup, "measure_total_time_ns")
+head(total_measurements_warmup)
+
+boxplot(measure_total_time_ns ~ run_id, data=total_measurements_warmup, las=2)
+```
+
 ```{r}
 ops_per_program = data.frame(table(traces$program_id, traces$op, dnn=c("program_id", "op")))
 
@@ -263,14 +280,28 @@ validation$n_zero_args = gapply(traces, c('op', 'program_id', 'stack_elem0', 'st
 
 Basic inspection of data reveals strong decreasing trend for each sample (sequence of runs) and a lot of outliers.
 
-**TODO**: try increasing the sample size and see impact on the decreasing trend - will it stabilize?
-
-```{r fig.width=20}
+```{r fig.width=15}
 # we've removed outliers so picking the right ylim / OUTLINE no longer required
 
 plot(total_measurements$measure_total_time_ns)
-boxplot(total_measurements$measure_total_time_ns)
 boxplot(measure_total_time_ns ~ program_id, data=total_measurements)
+boxplot(measure_total_time_ns ~ run_id, data=total_measurements, las=2)
+```
+
+Here is a detailed inspection of the "warm-up" profiles for first 40 programs.
+Each program seems to warm-up the same.
+
+```{r fig.width=15, fig.height=30}
+n_programs = 40
+n_plot_cols = 4
+n_plot_rows = n_programs %/% n_plot_cols + 1
+par(mfrow=c(n_plot_rows, n_plot_cols))
+program_id=0
+for (program_id in 0:n_programs)
+{
+  program_measurements = total_measurements[which(total_measurements$program_id==program_id), ]
+  plot(program_measurements$measure_total_time_ns)
+}
 ```
 
 ```{r}
