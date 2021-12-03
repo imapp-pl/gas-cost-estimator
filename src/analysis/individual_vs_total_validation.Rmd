@@ -28,10 +28,11 @@ head(total_measurements)
 ```
 
 ```{r}
-# temporary workaround for obtaining the estimated cost weights
 setwd("~/sources/imapp/gas-cost-estimator/src")
+
+# the preliminary exploration still used the "roughly" exported estimated cost
+# the next section used the properly exported estimated costs for all envs
 estimated_cost = read.csv("../../local/rough_opcode_costs_new.csv")
-head(estimated_cost)
 ```
 
 ```{r}
@@ -42,9 +43,9 @@ estimated_programs = sqldf("SELECT
                               sum(ops_per_program.Freq * estimated_cost.mean) as avg_cost,
                               sum(ops_per_program.Freq * estimated_cost.q50) as q50_cost,
                               sum(ops_per_program.Freq * estimated_cost.min) as min_cost,
-                              sum(ops_per_program.Freq * estimated_cost.current_gas) as current_gas_cost
+                              sum(ops_per_program.Freq * current_gas_cost.current_gas) as current_gas_cost
                            FROM ops_per_program
-                           INNER JOIN estimated_cost ON ops_per_program.op == estimated_cost.op
+                           INNER JOIN estimated_cost, current_gas_cost ON ops_per_program.op == estimated_cost.op AND ops_per_program.op == current_gas_cost.op
                            GROUP BY program_id")
 
 # ORDER BY is needed here, so that the programs are ordered by program_id numerically
@@ -117,10 +118,15 @@ plot_validation(validation, explained_variable, estimate_variable, label_n_zero_
 ```
 
 ```{r}
-lm_validation <- function(df, yvar, xvar) {
-  summary(lm(df[, yvar] ~ df[,xvar], data=df))  
+lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
+  if (! missing(selection_col) & ! missing(selection_val)) {
+    subset = df[which(df[, selection_col] == selection_val), ]
+  } else {
+    subset = df
+  }
+  lm(subset[, yvar] ~ subset[,xvar], data=subset)
 }
-lm_validation(validation, explained_variable, estimate_variable)
+summary(lm_validation(validation, explained_variable, estimate_variable))
 ```
 
 
@@ -133,9 +139,9 @@ plot_validation(validation_safe_subset, explained_variable, 'current_gas_cost')
 
 ```{r}
 model = lm_validation(validation_safe_subset, explained_variable, estimate_variable)
-print(model)
+summary(model)
 print("-------------------")
-lm_validation(validation_safe_subset, explained_variable, 'current_gas_cost')
+summary(lm_validation(validation_safe_subset, explained_variable, 'current_gas_cost'))
 ```
 Here, for comparison the programs that currently turn out to be problematic:
 
@@ -145,7 +151,7 @@ plot_validation(validation_problem_subset, explained_variable, estimate_variable
 ```
 
 ```{r}
-lm_validation(validation_problem_subset, explained_variable, estimate_variable)
+summary(lm_validation(validation_problem_subset, explained_variable, estimate_variable))
 ```
 
 ```{r}
@@ -177,6 +183,7 @@ We adjust the analysis:
 
 ```{r}
 # save previous results, we'll reuse the names moving forward
+estimated_cost_first_pass = estimated_cost
 estimated_programs_first_pass = estimated_programs
 model_first_pass = model
 ops_per_program_first_pass = ops_per_program
@@ -187,7 +194,7 @@ validation_problem_subset_first_pass = validation_problem_subset
 validation_resids_first_pass = validation_resids
 validation_safe_subset_first_pass = validation_safe_subset
 program_set_codename_first_pass = program_set_codename
-rm('estimated_programs', 'model', 'ops_per_program',
+rm('estimated_cost', 'estimated_programs', 'model', 'ops_per_program',
    'total_measurements', 'traces', 'validation', 'validation_problem_subset',
    'validation_resids', 'validation_safe_subset', 'program_set_codename')
 
@@ -196,6 +203,15 @@ program_set_codename = "c100_ops30_clean_smallpush"
 ```
 
 Redo all the calculations from the above
+
+```{r}
+setwd("~/sources/imapp/gas-cost-estimator/src")
+
+estimated_cost = read.csv("../../local/estimated_cost.csv")
+current_gas_cost = read.csv("../../local/current_gas_cost.csv")
+head(estimated_cost)
+head(current_gas_cost)
+```
 
 ```{r fig.width=20}
 setwd("~/sources/imapp/gas-cost-estimator/src")
@@ -206,8 +222,10 @@ head(traces)
 
 ```{r}
 setwd("~/sources/imapp/gas-cost-estimator/src")
-total_measurements = read.csv(paste("../../local/geth_pg_arythmetic_", program_set_codename, ".csv", sep=""))
-head(total_measurements)
+total_measurements_geth = read.csv(paste("../../local/geth_pg_arythmetic_", program_set_codename, ".csv", sep=""))
+head(total_measurements_geth)
+total_measurements_evmone = read.csv(paste("../../local/evmone_pg_arythmetic_", program_set_codename, ".csv", sep=""))
+head(total_measurements_evmone)
 ```
 ### Remove outliers
 
@@ -221,10 +239,18 @@ remove_outliers <- function(df, col) {
   return(no_outliers)
 }
 
-total_measurements = remove_outliers(total_measurements, "measure_total_time_ns")
-head(total_measurements)
+total_measurements_geth = remove_outliers(total_measurements_geth, "measure_total_time_ns")
+head(total_measurements_geth)
+total_measurements_evmone = remove_outliers(total_measurements_evmone, "measure_total_time_ns")
+head(total_measurements_evmone)
 ```
 
+```{r}
+total_measurements_geth$env = 'geth'
+total_measurements_evmone$env = 'evmone'
+total_measurements = rbind(total_measurements_geth, total_measurements_evmone)
+head(total_measurements)
+```
 ### Check the warmup using longer samples
 
 This data set was generated like the "normal" one, but with `--sampleSize=500`.
@@ -242,6 +268,8 @@ head(total_measurements_warmup)
 boxplot(measure_total_time_ns ~ run_id, data=total_measurements_warmup, las=2)
 ```
 
+### Validation using improved data/method
+
 ```{r}
 ops_per_program = data.frame(table(traces$program_id, traces$op, dnn=c("program_id", "op")))
 
@@ -250,10 +278,12 @@ estimated_programs = sqldf("SELECT
                               sum(ops_per_program.Freq * estimated_cost.mean) as avg_cost,
                               sum(ops_per_program.Freq * estimated_cost.q50) as q50_cost,
                               sum(ops_per_program.Freq * estimated_cost.min) as min_cost,
-                              sum(ops_per_program.Freq * estimated_cost.current_gas) as current_gas_cost
+                              sum(ops_per_program.Freq * current_gas_cost.current_gas) as current_gas_cost,
+                              env
                            FROM ops_per_program
                            INNER JOIN estimated_cost ON ops_per_program.op == estimated_cost.op
-                           GROUP BY program_id")
+                           INNER JOIN current_gas_cost ON ops_per_program.op == current_gas_cost.op
+                           GROUP BY program_id, env")
 
 # ORDER BY is needed here, so that the programs are ordered by program_id numerically
 # this is a hacky way of ensuring we can merge it with other program data like fingerprints
@@ -265,11 +295,14 @@ validation = sqldf("SELECT
                       avg_cost,
                       q50_cost,
                       min_cost,
-                      current_gas_cost
+                      current_gas_cost,
+                      estimated_programs.env
                     FROM estimated_programs
-                    INNER JOIN total_measurements ON total_measurements.program_id == estimated_programs.program_id
-                    GROUP BY estimated_programs.program_id
-                    ORDER BY cast(estimated_programs.program_id AS int)")
+                    INNER JOIN total_measurements ON 
+                          total_measurements.program_id == estimated_programs.program_id
+                      AND total_measurements.env == estimated_programs.env
+                    GROUP BY estimated_programs.program_id, estimated_programs.env
+                    ORDER BY estimated_programs.env, cast(estimated_programs.program_id AS int)")
 
 head(validation)
 ```
@@ -285,25 +318,35 @@ Basic inspection of data reveals strong decreasing trend for each sample (sequen
 ```{r fig.width=15}
 # we've removed outliers so picking the right ylim / OUTLINE no longer required
 
-plot(total_measurements$measure_total_time_ns)
-boxplot(measure_total_time_ns ~ program_id, data=total_measurements)
-boxplot(measure_total_time_ns ~ run_id, data=total_measurements, las=2)
+overview_plots <- function(df, selection_col, selection_val) {
+  subset = df[which(df[, selection_col] == selection_val), ]
+  plot(subset$measure_total_time_ns, main=selection_val)
+  boxplot(measure_total_time_ns ~ program_id, data=subset, main=selection_val)
+  boxplot(measure_total_time_ns ~ run_id, data=subset, las=2, main=selection_val)
+}
+overview_plots(total_measurements, 'env', 'geth')
+overview_plots(total_measurements, 'env', 'evmone')
 ```
 
 Here is a detailed inspection of the "warm-up" profiles for first 40 programs.
 Each program seems to warm-up the same.
 
 ```{r fig.width=15, fig.height=30}
-n_programs = 40
-n_plot_cols = 4
-n_plot_rows = n_programs %/% n_plot_cols + 1
-par(mfrow=c(n_plot_rows, n_plot_cols))
-program_id=0
-for (program_id in 0:n_programs)
-{
-  program_measurements = total_measurements[which(total_measurements$program_id==program_id), ]
-  plot(program_measurements$measure_total_time_ns)
+warmup_profile_plots <- function(df, selection_col, selection_val) {
+  subset = df[which(df[, selection_col] == selection_val), ]
+  n_programs = 40
+  n_plot_cols = 4
+  n_plot_rows = n_programs %/% n_plot_cols + 1
+  par(mfrow=c(n_plot_rows, n_plot_cols))
+  program_id=0
+  for (program_id in 0:n_programs)
+  {
+    program_measurements = subset[which(subset$program_id==program_id), ]
+    plot(program_measurements$measure_total_time_ns, main=selection_val)
+  }
 }
+warmup_profile_plots(total_measurements, 'env', 'geth')
+warmup_profile_plots(total_measurements, 'env', 'evmone')
 ```
 ### Check estimation using trivial variables
 
@@ -320,47 +363,58 @@ count_op <- function(x, op) {
 validation$program_length = gapply(traces, c('program_id', 'instruction_id'), FUN=function(x) program_length(x), groups=traces$program_id)
 validation$n_push = gapply(traces, c('program_id', 'op'), FUN=function(x) count_op(x, 'PUSH1'), groups=traces$program_id)
 validation$n_pop = gapply(traces, c('program_id', 'op'), FUN=function(x) count_op(x, 'POP'), groups=traces$program_id)
-
-par(mfrow=c(1,3))
-plot_validation(validation, explained_variable, 'program_length')
-plot_validation(validation, explained_variable, 'n_push')
-plot_validation(validation, explained_variable, 'n_pop ')
 ```
 
 ```{r}
-par(mfrow=c(1,2))
-plot_validation(validation, explained_variable, estimate_variable)
-plot_validation(validation, explained_variable, 'current_gas_cost')
+trivial_variable_plots <- function(df, selection_col, selection_val) {
+  subset = df[which(df[, selection_col] == selection_val), ]
+  par(mfrow=c(1,3))
+  plot_validation(subset, explained_variable, 'program_length')
+  plot_validation(subset, explained_variable, 'n_push')
+  plot_validation(subset, explained_variable, 'n_pop')
+}
+trivial_variable_plots(validation, 'env', 'geth')
+trivial_variable_plots(validation, 'env', 'evmone')
 ```
+
+```{r}
+compare_current_gas_cost_plots <- function(df, selection_col, selection_val) {
+  subset = df[which(df[, selection_col] == selection_val), ]
+  par(mfrow=c(1,2))
+  plot_validation(subset, explained_variable, estimate_variable)
+  plot_validation(subset, explained_variable, 'current_gas_cost')
+}
+compare_current_gas_cost_plots(validation, 'env', 'geth')
+compare_current_gas_cost_plots(validation, 'env', 'evmone')
+```
+
 Try with the safer subset (no EXP) again, to check how do we compare against the current gas cost.
 Current gas cost is completely off for EXP.
 **NOTE**: the safe subset has different criteria vs the previous one.
 
 ```{r fig.width=10}
 validation_no_exp = validation[which(validation$has_exp == 'blue'),]
-par(mfrow=c(1,2))
-plot_validation(validation_no_exp, explained_variable, estimate_variable)
-plot_validation(validation_no_exp, explained_variable, 'current_gas_cost')
+compare_current_gas_cost_plots(validation_no_exp, 'env', 'geth')
+compare_current_gas_cost_plots(validation_no_exp, 'env', 'evmone')
 ```
 
 ```{r}
-model = lm_validation(validation, explained_variable, estimate_variable)
-print(model)
+model_geth = lm_validation(validation, explained_variable, estimate_variable, selection_col='env', selection_val='geth')
+model_evmone = lm_validation(validation, explained_variable, estimate_variable, selection_col='env', selection_val='evmone')
+summary(model_geth)
+summary(model_evmone)
 ```
 **NOTE** the linear model for current gas cost doesn't make any sense with EXP included.
 To compare the no-EXP subset, where the current gas cost is a decent estimate:
 
 ```{r}
-lm_validation(validation_no_exp, explained_variable, estimate_variable)
-lm_validation(validation_no_exp, explained_variable, 'current_gas_cost')
+summary(lm_validation(validation_no_exp, explained_variable, estimate_variable, selection_col='env', selection_val='geth'))
+summary(lm_validation(validation_no_exp, explained_variable, 'current_gas_cost', selection_col='env', selection_val='geth'))
+summary(lm_validation(validation_no_exp, explained_variable, estimate_variable, selection_col='env', selection_val='evmone'))
+summary(lm_validation(validation_no_exp, explained_variable, 'current_gas_cost', selection_col='env', selection_val='evmone'))
 ```
 
 ```{r}
-plot(validation[, estimate_variable], model$residuals)
-plot(validation[, explained_variable], model$residuals)
-```
-
-```{r}
-validation_resids = validation
-validation_resids$residuals = model$residuals
+plot(model_geth)
+plot(model_evmone)
 ```
