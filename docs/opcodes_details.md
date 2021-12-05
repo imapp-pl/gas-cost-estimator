@@ -7,7 +7,7 @@ Based on `src/program_generator/data/opcodes.csv` and `src/program_generator/dat
 ## Takeaways
 
 See below for a detailed OPCODE-by-OPCODE description of parameters and concerns.
-This is a proposed list of things to tackle, in order from important to negligible:
+This is a proposed list of things to tackle, in order of importance:
 
 - parametrize values on the stack taken for stack-only operations, see sections `0x01,ADD`, `0x0a,EXP`
 - parametrize amount of memory allocation using memory read/write OPCODEs, see section `0x52,MSTORE`
