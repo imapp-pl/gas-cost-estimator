@@ -465,6 +465,103 @@ print('evmone')
 summary(model_evmone)
 ```
 
+#### Model coefficients: discussion
+
+See later section for the model diagnostics; we're assuming here that the linear model makes sense.
+
+Under such assumption, the model tells us that for every nanoseconds spent when calculating the OPCODE time during the individual measurements (our estimation), a larger program spends (see **`Coefficients`** section of the above summary):
+
+1. `0.78808 ns` with `geth`
+2. `0.6682 ns` with `evmone`
+
+It is not surprising that the larger program calculates the OPCODE more efficiently.
+It might be that the "dense" invocation of timer calls is altering the processing pipeline.
+
+This coefficient might capture the "penalty" we're incurring when measuring the OPCODE execution individually.
+It seems to be on an acceptable level, however, we must pay attention to whether this "penalty" isn't OPCODE-dependent **TODO**.
+If it were, it could mean that the estimated costs are not "fair" across OPCODEs.
+
+Another aspect to investigate is the **`Intercept`**, which could be seen as the "estimated cost of an empty program".
+
+For `evmone` it is statistically insignificant, so can assume it's zero.
+
+For `geth` however it is large, `930 ns`.
+It cannot be explained by warm-up, which seems to amount to maximum of around `400 ns` for a couple of first measurement runs.
+We've ran the same program set using the `measure_all` method (we measure all individual OPCODE time).
+
+Quick ideas, what could contribute to this intercept:
+1. some lazy initialization of something inside `geth` / `golang` (but this seems like much smaller impact ~`70 ns`)
+2. the impact of non-linearity of the data offsetting the model "upwards" (again, this shouldn't be that much)
+3. warm-up (as mentioned, not big enough)
+4. some silly error
+
+**TODO** this and next section needs revisiting
+
+##### `geth`'s intercept
+
+**TODO** I don't understand these results, needs a follow-up.
+
+```{r}
+setwd("~/sources/imapp/gas-cost-estimator/src")
+measure_all_geth = read.csv(paste("../../local/geth_pg_arythmetic_", program_set_codename, "_measure_all", ".csv", sep=""))
+head(measure_all_geth)
+```
+```{r}
+measure_all_geth_details = sqldf("SELECT
+                                  traces.instruction_id,
+                                  traces.program_id,
+                                  avg(measure_all_time_ns - 22) as avg_opcode_time_ns,
+                                  min(measure_all_time_ns - 22) as min_opcode_time_ns,
+                                  estimated_cost.*
+                                FROM measure_all_geth
+                                INNER JOIN traces ON
+                                     measure_all_geth.instruction_id = traces.instruction_id
+                                 AND measure_all_geth.program_id = traces.program_id
+                                INNER JOIN estimated_cost ON
+                                     traces.op = estimated_cost.op
+                                WHERE estimated_cost.env = 'geth'
+                                GROUP BY measure_all_geth.program_id, measure_all_geth.instruction_id
+                                ")
+head(measure_all_geth_details)
+```
+
+```{r}
+# the -22 is coming from the other notebook, this is the rough estimate of the
+# timer overhead for the individual OPCODE measurements
+measure_all_geth_sums = sqldf("SELECT
+                                 program_id,
+                                 sample_id,
+                                 run_id,
+                                 sum(measure_all_time_ns - 22) as sum_program_time_ns
+                                FROM measure_all_geth
+                                GROUP BY program_id, sample_id, run_id
+                              ")
+
+```
+
+```{r}
+measure_all_geth_sum_stats = sqldf("SELECT
+                                      measure_all_geth_sums.program_id,
+                                      avg(sum_program_time_ns) as avg_sum_program_time_ns,
+                                      min(sum_program_time_ns) as min_sum_program_time_ns,
+                                      validation.avg_measure_total_time_ns,
+                                      validation.min_measure_total_time_ns,
+                                      (avg(sum_program_time_ns) - validation.avg_measure_total_time_ns) as diff_avg,
+                                      (min(sum_program_time_ns) - validation.min_measure_total_time_ns) as diff_min
+                                    FROM measure_all_geth_sums
+                                    INNER JOIN validation ON
+                                          measure_all_geth_sums.program_id = validation.program_id
+                                    WHERE validation.env = 'geth'
+                                    GROUP BY measure_all_geth_sums.program_id
+                                  ")
+head(measure_all_geth_sum_stats)
+```
+
+```{r}
+summary(measure_all_geth_sum_stats)
+```
+
+
 #### Compare model with current gas schedule
 
 **NOTE** the linear model for current gas cost doesn't make any sense with EXP included.
