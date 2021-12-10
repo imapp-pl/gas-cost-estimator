@@ -63,6 +63,7 @@ setwd("~/sources/imapp/gas-cost-estimator/src")
 # the preliminary exploration still used the "roughly" exported estimated cost
 # the next section used the properly exported estimated costs for all envs
 estimated_cost = read.csv("../../local/rough_opcode_costs_new.csv")
+current_gas_cost = read.csv("../../local/current_gas_cost.csv")
 ```
 
 Calculate the frequencies of each OPCODE in each program:
@@ -107,7 +108,7 @@ We need an additional simple (plottable) "fingerprint" of the OPCODEs included i
 
 ```{r}
 fingerprint <- function(x) {
-  x[which(!(x$op %in% c('PUSH32', 'PUSH1', 'STOP'))),'op']
+  paste(x[which(!(x$op %in% c('PUSH32', 'PUSH1', 'STOP', 'POP'))),'op'], collapse=' ')
 }
 has_exp <- function(x) {
   if ('EXP' %in% x$op) 'red' else 'blue'
@@ -453,6 +454,8 @@ compare_current_gas_cost_plots(validation_no_exp, 'env', 'geth')
 compare_current_gas_cost_plots(validation_no_exp, 'env', 'evmone')
 ```
 
+### Final validation model
+
 ```{r}
 model_geth = lm_validation(validation, explained_variable, estimate_variable, selection_col='env', selection_val='geth')
 model_evmone = lm_validation(validation, explained_variable, estimate_variable, selection_col='env', selection_val='evmone')
@@ -461,6 +464,9 @@ summary(model_geth)
 print('evmone')
 summary(model_evmone)
 ```
+
+#### Compare model with current gas schedule
+
 **NOTE** the linear model for current gas cost doesn't make any sense with EXP included.
 To compare the no-EXP subset, where the current gas cost is a decent estimate:
 
@@ -474,6 +480,11 @@ summary(lm_validation(validation_no_exp, explained_variable, estimate_variable, 
 print('evmone, gas schedule')
 summary(lm_validation(validation_no_exp, explained_variable, 'current_gas_cost', selection_col='env', selection_val='evmone'))
 ```
+#### Model diagnostics
+
+The linear model metrics are reasonable. Things to watch out for:
+1. Non-linearity for `geth` (costlier programs overestimated)
+2. Non-normality for `evmone`
 
 ```{r fig.width=15}
 par(mfrow=c(2,4))
