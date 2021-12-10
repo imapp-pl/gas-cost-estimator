@@ -5,13 +5,33 @@ output: html_notebook
 
 ```{r include=FALSE, fig.width=20}
 library(sqldf)
+library(nlme)
 ```
 
-## Data preparations
+## First pass validation
 
-We're using the random arithmetic program generator via: `python3 program_generator/pg_arythmetic.py generate --count=100 --opsLimit=10 --fullCsv > ../../local/pg_arythmetic_100_10.csv`.
+In this pass we discover some adjustments needed to the validation process.
+Keeping this version of the script for future reference.
+Scroll down to Final validation section.
 
-Then tracing it using: `docker run   --rm -v /home/user/sources/imapp/local:/srv/local  -it gas-cost-estimator/geth_all sh -c "cd src && cat /srv/local/pg_arythmetic_100_10.csv | python3 instrumentation_measurement/measurements.py measure --evm geth --mode trace --sampleSize 1 > /srv/local/trace_pg_arythmetic_100_10.csv"`.
+### Data preparations
+
+We're using the random arithmetic program generator via:
+
+```{bash}
+python3 program_generator/pg_arythmetic.py generate --count=100 --opsLimit=10 --fullCsv > ../../local/pg_arythmetic_100_10.csv`.
+```
+
+Then tracing it using:
+
+```{bash}
+docker run \
+  --rm -v /home/user/sources/imapp/local:/srv/local \
+  -it gas-cost-estimator/geth_all \
+  sh -c "cd src && cat /srv/local/pg_arythmetic_100_10.csv | python3 instrumentation_measurement/measurements.py measure --evm geth --mode trace --sampleSize 1 > /srv/local/trace_pg_arythmetic_100_10.csv"`.
+```
+
+This gives us the first analyzed program set `c100_ops10`. We'll learn that it needs to be improved and change later.
 
 ```{r fig.width=20}
 setwd("~/sources/imapp/gas-cost-estimator/src")
@@ -21,6 +41,16 @@ program_set_codename = "c100_ops10"
 traces = read.csv(paste("../../local/trace_pg_arythmetic_", program_set_codename, ".csv", sep=""))
 head(traces)
 ```
+Measure the program set in `measure_total` mode using:
+
+```{bash}
+docker run \
+  --rm   --privileged --security-opt seccomp:unconfined \
+  -v /home/ubuntu/pdobacz/local:/srv/local \
+  -it gas-cost-estimator/geth_total \
+  sh -c "cd src && cat /srv/local/pg_arythmetic_c100_ops10.csv | python3 instrumentation_measurement/measurements.py measure --evm geth --mode total --sampleSize=50 --nSamples=1 > /srv/local/geth_pg_arythmetic_c100_ops10.csv"
+```
+
 ```{r}
 setwd("~/sources/imapp/gas-cost-estimator/src")
 total_measurements = read.csv(paste("../../local/geth_pg_arythmetic_", program_set_codename, ".csv", sep=""))
@@ -35,9 +65,15 @@ setwd("~/sources/imapp/gas-cost-estimator/src")
 estimated_cost = read.csv("../../local/rough_opcode_costs_new.csv")
 ```
 
+Calculate the frequencies of each OPCODE in each program:
+
 ```{r}
 ops_per_program = data.frame(table(traces$program_id, traces$op, dnn=c("program_id", "op")))
+```
 
+Join the data to obtain figures about the estimated costs and a full validation data frame for programs:
+
+```{r}
 estimated_programs = sqldf("SELECT
                               program_id,
                               sum(ops_per_program.Freq * estimated_cost.mean) as avg_cost,
@@ -70,7 +106,6 @@ head(validation)
 We need an additional simple (plottable) "fingerprint" of the OPCODEs included in the program, to evaluate the validation plot at a glance.
 
 ```{r}
-library(nlme)
 fingerprint <- function(x) {
   x[which(!(x$op %in% c('PUSH32', 'PUSH1', 'STOP'))),'op']
 }
@@ -91,19 +126,23 @@ Basic inspection of data reveals strong decreasing trend for each sample (sequen
 plot(total_measurements$measure_total_time_ns, ylim=c(0,3200))
 boxplot(total_measurements$measure_total_time_ns)
 boxplot(measure_total_time_ns ~ program_id, data=total_measurements, outline=FALSE)
-# tapply(total_measurements$measure_total_time_ns, total_measurements$program_id, hist, probability=T)
-# tapply(total_measurements$measure_total_time_ns, total_measurements$program_id, summary)
+```
+At the first pass we are going to use minimum as the statistic to estimate and estimate with.
+So far this gives the best results, and is somewhat relevant to the question we're asking: "Is the individual measurement resolution and precision good enough to estimate costs?".
+
+For actual estimation of the gas costs, we may want to switch to median, mean or some other, more "average" statistic.
+
+```{r}
+explained_variable = 'min_measure_total_time_ns'
+estimate_variable = 'min_cost'
 ```
 
 The relation between the estimated `cost` and the measured `avg_measure_total_time_ns` is quite evident for
 "cheap" programs, but not anymore for "expensive" program in the set.
 Educated guess was it is because of `EXP`, which has been measured individually with smallest argument in the Stage I, and those measurements led to the estimated `cost`.
-Thereby the `EXP` programs are consistently underestimated.
+Thereby the `EXP` programs are consistently badly estimated.
 
 ```{r}
-explained_variable = 'min_measure_total_time_ns'
-estimate_variable = 'min_cost'
-
 plot_validation <- function(df, yvar, xvar, label_n_zero_args) {
   if (missing(label_n_zero_args)) {
     label_n_zero_args = FALSE
@@ -116,6 +155,7 @@ plot_validation <- function(df, yvar, xvar, label_n_zero_args) {
 }
 plot_validation(validation, explained_variable, estimate_variable, label_n_zero_args=TRUE)
 ```
+Despite the poor representation of costlier programs, the linear model (forgetting about the assumptions for now) is in favor of the relationship:
 
 ```{r}
 lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
@@ -128,7 +168,9 @@ lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
 }
 summary(lm_validation(validation, explained_variable, estimate_variable))
 ```
-
+We'll remove the problematic datapoints (EXP-programs and programs with zero arguments on the stack).
+The relation is much stronger now.
+We are also comparing this to the estimate driven by the current gas cost schedule:
 
 ```{r fig.width=10}
 validation_safe_subset = validation[which(validation$has_exp == 'blue' & validation$n_zero_args == 0),]
@@ -136,6 +178,8 @@ par(mfrow=c(1,2))
 plot_validation(validation_safe_subset, explained_variable, estimate_variable)
 plot_validation(validation_safe_subset, explained_variable, 'current_gas_cost')
 ```
+Continue with the subset excluding EXP and zero argument programs.
+Linear relation is much stronger:
 
 ```{r}
 model = lm_validation(validation_safe_subset, explained_variable, estimate_variable)
@@ -153,31 +197,25 @@ plot_validation(validation_problem_subset, explained_variable, estimate_variable
 ```{r}
 summary(lm_validation(validation_problem_subset, explained_variable, estimate_variable))
 ```
+Take a look at the model quality plots:
 
 ```{r}
-plot(validation_safe_subset[, estimate_variable], model$residuals)
-plot(validation_safe_subset[, explained_variable], model$residuals)
+plot(model)
 ```
-
-```{r}
-validation_resids = validation_safe_subset
-validation_resids$residuals = model$residuals
-```
-
-## Tweak the validation
+## Final validation
 
 Since the results are not very good so far, we try the following ideas to improve the fit:
 
 We adjust the program set by:
 1. Decreasing the size of stack arguments to 1-byte numbers, which mirrors the estimated costs (which used a fixed arg of 32)
-2. Reclaiming control over them, to avoid the proliferation of 0 entries on the stack
+2. Reclaiming control over the stack arguments, to avoid the proliferation of 0 entries on the stack. That is, each randomly picked OPCODE is accompanied by `PUSH`es and `POP`s which setup and teardown the required stack arguments.
 
 This improved the results greatly and allowed us to keep `EXP` programs
 
 We adjust the analysis:
 1. Remove outliers from the `measure_total` results (doesn't change much, but healthy anyway)
 2. Double-check the warmup with longer samples (seems ok, no adjustments)
-3. Check if trivial variable like program length doesn't provide a good-enough estimate for cost
+3. Check if trivial variable like program length doesn't provide a good-enough estimate for cost (it doesn't, no adjustments)
 
 ### Clean the program set
 
@@ -191,7 +229,6 @@ total_measurements_first_pass = total_measurements
 traces_first_pass = traces
 validation_first_pass = validation
 validation_problem_subset_first_pass = validation_problem_subset
-validation_resids_first_pass = validation_resids
 validation_safe_subset_first_pass = validation_safe_subset
 program_set_codename_first_pass = program_set_codename
 rm('estimated_cost', 'estimated_programs', 'model', 'ops_per_program',
@@ -219,6 +256,8 @@ setwd("~/sources/imapp/gas-cost-estimator/src")
 traces = read.csv(paste("../../local/trace_pg_arythmetic_", program_set_codename, ".csv", sep=""))
 head(traces)
 ```
+Obtained using the same measurement invocations, plus flags `--cleanStack --push=1`.
+We've also extended the program length to 30 OPCODEs to accommodate more `PUSH`es and `POP`s.
 
 ```{r}
 setwd("~/sources/imapp/gas-cost-estimator/src")
@@ -268,6 +307,15 @@ head(total_measurements_warmup)
 boxplot(measure_total_time_ns ~ run_id, data=total_measurements_warmup, las=2)
 ```
 
+### Check how much geth's results are impacted by warmup
+
+Not much, the intercept doesn't change. Scope increases insignificantly.
+
+```{r}
+# Commented out, because we've checked, and it doesn't matter
+# total_measurements = total_measurements[which(total_measurements$run_id > 25),]
+```
+
 ### Validation using improved data/method
 
 ```{r}
@@ -313,7 +361,9 @@ validation$has_exp = gapply(traces, c('op'), FUN=function(x) has_exp(x), groups=
 validation$n_zero_args = gapply(traces, c('op', 'program_id', 'stack_elem0', 'stack_elem1', 'stack_elem2'), FUN=function(x) count_zero_args(x), groups=traces$program_id)
 ```
 
-Basic inspection of data reveals strong decreasing trend for each sample (sequence of runs) and a lot of outliers.
+Basic inspection of data reveals strong decreasing trend for each sample (sequence of runs).
+The outliers have been removed, so we show what we consider outliers now in the clean sample.
+They seem under control.
 
 ```{r fig.width=15}
 # we've removed outliers so picking the right ylim / OUTLINE no longer required
@@ -370,8 +420,11 @@ trivial_variable_plots <- function(df, selection_col, selection_val) {
   subset = df[which(df[, selection_col] == selection_val), ]
   par(mfrow=c(1,3))
   plot_validation(subset, explained_variable, 'program_length')
+  title(main=selection_val)
   plot_validation(subset, explained_variable, 'n_push')
+  title(main=selection_val)
   plot_validation(subset, explained_variable, 'n_pop')
+  title(main=selection_val)
 }
 trivial_variable_plots(validation, 'env', 'geth')
 trivial_variable_plots(validation, 'env', 'evmone')
@@ -382,7 +435,9 @@ compare_current_gas_cost_plots <- function(df, selection_col, selection_val) {
   subset = df[which(df[, selection_col] == selection_val), ]
   par(mfrow=c(1,2))
   plot_validation(subset, explained_variable, estimate_variable)
+  title(main=paste(selection_val, ' estimate'))
   plot_validation(subset, explained_variable, 'current_gas_cost')
+  title(main=paste(selection_val, ' current gas'))
 }
 compare_current_gas_cost_plots(validation, 'env', 'geth')
 compare_current_gas_cost_plots(validation, 'env', 'evmone')
@@ -401,20 +456,27 @@ compare_current_gas_cost_plots(validation_no_exp, 'env', 'evmone')
 ```{r}
 model_geth = lm_validation(validation, explained_variable, estimate_variable, selection_col='env', selection_val='geth')
 model_evmone = lm_validation(validation, explained_variable, estimate_variable, selection_col='env', selection_val='evmone')
+print('geth')
 summary(model_geth)
+print('evmone')
 summary(model_evmone)
 ```
 **NOTE** the linear model for current gas cost doesn't make any sense with EXP included.
 To compare the no-EXP subset, where the current gas cost is a decent estimate:
 
 ```{r}
+print('geth, our estimate')
 summary(lm_validation(validation_no_exp, explained_variable, estimate_variable, selection_col='env', selection_val='geth'))
+print('geth, gas schedule')
 summary(lm_validation(validation_no_exp, explained_variable, 'current_gas_cost', selection_col='env', selection_val='geth'))
+print('evmone, our estimate')
 summary(lm_validation(validation_no_exp, explained_variable, estimate_variable, selection_col='env', selection_val='evmone'))
+print('evmone, gas schedule')
 summary(lm_validation(validation_no_exp, explained_variable, 'current_gas_cost', selection_col='env', selection_val='evmone'))
 ```
 
-```{r}
+```{r fig.width=15}
+par(mfrow=c(2,4))
 plot(model_geth)
 plot(model_evmone)
 ```
