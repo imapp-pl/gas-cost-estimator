@@ -51,6 +51,8 @@ docker run \
   sh -c "cd src && cat /srv/local/pg_arythmetic_c100_ops10.csv | python3 instrumentation_measurement/measurements.py measure --evm geth --mode total --sampleSize=50 --nSamples=1 > /srv/local/geth_pg_arythmetic_c100_ops10.csv"
 ```
 
+**NOTE** we're using the _old_ `geth` here, based off of `e7872729`.
+
 ```{r}
 setwd("~/sources/imapp/gas-cost-estimator/src")
 total_measurements = read.csv(paste("../../local/geth_pg_arythmetic_", program_set_codename, ".csv", sep=""))
@@ -62,6 +64,7 @@ setwd("~/sources/imapp/gas-cost-estimator/src")
 
 # the preliminary exploration still used the "roughly" exported estimated cost
 # the next section used the properly exported estimated costs for all envs
+# **NOTE** we were using the _old_ `geth` here, based off of `e7872729`.
 estimated_cost = read.csv("../../local/rough_opcode_costs_new.csv")
 current_gas_cost = read.csv("../../local/current_gas_cost.csv")
 ```
@@ -207,11 +210,13 @@ plot(model)
 
 Since the results are not very good so far, we try the following ideas to improve the fit:
 
-We adjust the program set by:
+We adjust the program and instrumentation set by:
 1. Decreasing the size of stack arguments to 1-byte numbers, which mirrors the estimated costs (which used a fixed arg of 32)
 2. Reclaiming control over the stack arguments, to avoid the proliferation of 0 entries on the stack. That is, each randomly picked OPCODE is accompanied by `PUSH`es and `POP`s which setup and teardown the required stack arguments.
 
-This improved the results greatly and allowed us to keep `EXP` programs
+This improved the results greatly and allowed us to keep `EXP` programs.
+
+We update `geth` from `e7872729` to `v1.10.13`, which also seems to improve the estimation model a lot (it fixes the "large `Intercept`" problem encountered with the estimation done on the older version).
 
 We adjust the analysis:
 1. Remove outliers from the `measure_total` results (doesn't change much, but healthy anyway)
@@ -398,6 +403,7 @@ warmup_profile_plots <- function(df, selection_col, selection_val) {
 }
 warmup_profile_plots(total_measurements, 'env', 'geth')
 warmup_profile_plots(total_measurements, 'env', 'evmone')
+print("Hide big plots")
 ```
 ### Check estimation using trivial variables
 
@@ -471,8 +477,8 @@ See later section for the model diagnostics; we're assuming here that the linear
 
 Under such assumption, the model tells us that for every nanoseconds spent when calculating the OPCODE time during the individual measurements (our estimation), a larger program spends (see **`Coefficients`** section of the above summary):
 
-1. `0.78808 ns` with `geth`
-2. `0.6682 ns` with `evmone`
+1. `0.90351 ns` with `geth`
+2. `0.60581 ns` with `evmone`
 
 It is not surprising that the larger program calculates the OPCODE more efficiently.
 It might be that the "dense" invocation of timer calls is altering the processing pipeline.
@@ -484,8 +490,14 @@ If it were, it could mean that the estimated costs are not "fair" across OPCODEs
 Another aspect to investigate is the **`Intercept`**, which could be seen as the "estimated cost of an empty program".
 
 For `evmone` it is statistically insignificant, so can assume it's zero.
+For `geth` it is larger, but on a level which can be attributed to warmup effects which `geth` exhibits.
 
-For `geth` however it is large, `930 ns`.
+##### Earlier "large" `Intercept` problem
+
+Before we updated `geth` to `v1.10.13`, the `Intercept` was much larger.
+Here's the original description of the problem noticed:
+
+For `geth` the `Intercept` was large, `930 ns`.
 It cannot be explained by warm-up, which seems to amount to maximum of around `400 ns` for a couple of first measurement runs.
 We've ran the same program set using the `measure_all` method (we measure all individual OPCODE time).
 
@@ -494,12 +506,6 @@ Quick ideas, what could contribute to this intercept:
 2. the impact of non-linearity of the data offsetting the model "upwards" (again, this shouldn't be that much)
 3. warm-up (as mentioned, not big enough)
 4. some silly error
-
-**TODO** this and next section needs revisiting
-
-##### `geth`'s intercept
-
-**TODO** I don't understand these results, needs a follow-up.
 
 ```{r}
 setwd("~/sources/imapp/gas-cost-estimator/src")
@@ -556,6 +562,9 @@ measure_all_geth_sum_stats = sqldf("SELECT
                                   ")
 head(measure_all_geth_sum_stats)
 ```
+```{r}
+measure_all_geth_sum_stats$prediction = predict(model_geth, validation[which(validation$env == 'geth'), ])
+```
 
 ```{r}
 summary(measure_all_geth_sum_stats)
@@ -580,7 +589,7 @@ summary(lm_validation(validation_no_exp, explained_variable, 'current_gas_cost',
 #### Model diagnostics
 
 The linear model metrics are reasonable. Things to watch out for:
-1. Non-linearity for `geth` (costlier programs overestimated)
+1. Slight non-linearity for `geth` (costlier programs overestimated)
 2. Non-normality for `evmone`
 
 ```{r fig.width=15}
