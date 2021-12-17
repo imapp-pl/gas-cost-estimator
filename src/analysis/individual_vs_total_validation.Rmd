@@ -60,10 +60,10 @@ head(total_measurements)
 ```{r}
 setwd("~/sources/imapp/gas-cost-estimator/src")
 
-estimated_cost = read.csv("../../local/estimated_cost.csv")
+# the preliminary exploration still used the "roughly" exported estimated cost
+# the next section used the properly exported estimated costs for all envs
+estimated_cost = read.csv("../../local/rough_opcode_costs_new.csv")
 current_gas_cost = read.csv("../../local/current_gas_cost.csv")
-head(estimated_cost)
-head(current_gas_cost)
 ```
 
 Calculate the frequencies of each OPCODE in each program:
@@ -83,7 +83,6 @@ estimated_programs = sqldf("SELECT
                               sum(ops_per_program.Freq * current_gas_cost.current_gas) as current_gas_cost
                            FROM ops_per_program
                            INNER JOIN estimated_cost, current_gas_cost ON ops_per_program.op == estimated_cost.op AND ops_per_program.op == current_gas_cost.op
-                           WHERE env = 'geth'
                            GROUP BY program_id")
 
 # ORDER BY is needed here, so that the programs are ordered by program_id numerically
@@ -223,6 +222,7 @@ We adjust the analysis:
 
 ```{r}
 # save previous results, we'll reuse the names moving forward
+estimated_cost_first_pass = estimated_cost
 estimated_programs_first_pass = estimated_programs
 model_first_pass = model
 ops_per_program_first_pass = ops_per_program
@@ -232,7 +232,7 @@ validation_first_pass = validation
 validation_problem_subset_first_pass = validation_problem_subset
 validation_safe_subset_first_pass = validation_safe_subset
 program_set_codename_first_pass = program_set_codename
-rm('estimated_programs', 'model', 'ops_per_program',
+rm('estimated_cost', 'estimated_programs', 'model', 'ops_per_program',
    'total_measurements', 'traces', 'validation', 'validation_problem_subset',
    'validation_safe_subset', 'program_set_codename')
 
@@ -241,6 +241,15 @@ program_set_codename = "c100_ops30_clean_smallpush"
 ```
 
 Redo all the calculations from the above
+
+```{r}
+setwd("~/sources/imapp/gas-cost-estimator/src")
+
+estimated_cost = read.csv("../../local/estimated_cost.csv")
+current_gas_cost = read.csv("../../local/current_gas_cost.csv")
+head(estimated_cost)
+head(current_gas_cost)
+```
 
 ```{r fig.width=20}
 setwd("~/sources/imapp/gas-cost-estimator/src")
