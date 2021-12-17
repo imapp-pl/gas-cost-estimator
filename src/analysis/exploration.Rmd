@@ -436,6 +436,7 @@ for (opcode in programs_evm$opcode_measured)
 {
   frequencies = sort(table(measurements_geth[which(measurements_geth$opcode_measured_evm==opcode), "measure_all_time_ns_raw"]), decreasing=TRUE)
   n = min(10, nrow(frequencies))
+  if (length(frequencies) == 0) next
   plot(frequencies[1:n], yaxt="n", ylab="", xlab=c(opcode, " geth"), col=geth_color)
 }
 ```

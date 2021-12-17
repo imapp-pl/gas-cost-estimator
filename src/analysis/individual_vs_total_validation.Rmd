@@ -18,13 +18,13 @@ Scroll down to Final validation section.
 
 We're using the random arithmetic program generator via:
 
-```{bash}
+```
 python3 program_generator/pg_arythmetic.py generate --count=100 --opsLimit=10 --fullCsv > ../../local/pg_arythmetic_100_10.csv`.
 ```
 
 Then tracing it using:
 
-```{bash}
+```
 docker run \
   --rm -v /home/user/sources/imapp/local:/srv/local \
   -it gas-cost-estimator/geth_all \
@@ -43,7 +43,7 @@ head(traces)
 ```
 Measure the program set in `measure_total` mode using:
 
-```{bash}
+```
 docker run \
   --rm   --privileged --security-opt seccomp:unconfined \
   -v /home/ubuntu/pdobacz/local:/srv/local \
@@ -135,8 +135,8 @@ So far this gives the best results, and is somewhat relevant to the question we'
 For actual estimation of the gas costs, we may want to switch to median, mean or some other, more "average" statistic.
 
 ```{r}
-explained_variable = 'min_measure_total_time_ns'
-estimate_variable = 'min_cost'
+explained_variable = 'avg_measure_total_time_ns'
+estimate_variable = 'q50_cost'
 ```
 
 The relation between the estimated `cost` and the measured `avg_measure_total_time_ns` is quite evident for
@@ -232,9 +232,9 @@ validation_first_pass = validation
 validation_problem_subset_first_pass = validation_problem_subset
 validation_safe_subset_first_pass = validation_safe_subset
 program_set_codename_first_pass = program_set_codename
-rm('estimated_cost', 'estimated_programs', 'model', 'ops_per_program',
+rm('estimated_programs', 'model', 'ops_per_program',
    'total_measurements', 'traces', 'validation', 'validation_problem_subset',
-   'validation_resids', 'validation_safe_subset', 'program_set_codename')
+   'validation_safe_subset', 'program_set_codename')
 
 # point to the new data set
 program_set_codename = "c100_ops30_clean_smallpush"
