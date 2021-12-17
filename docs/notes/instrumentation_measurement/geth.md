@@ -4,6 +4,8 @@
 
 A simple instrumenter (`instrumenter.go`) (to be further developed and research according to this doc) to be found [here](/src/interumentation_measurement/geth).
 
+NOTE: `instrumenter.go` has been obsoleted and removed. We use instrumentation manually injected in `go-ethereum` interpreter loop code.
+
 ### Take aways
 
 1. `Tracer` interface (and `StructLogger` being a template implementation) is a good instrumenter

@@ -14,7 +14,7 @@ pip install -r requirements.txt
 python3 program_generator.py generate --help
 ```
 
-#### Use together with `instrumenter.go`
+#### Use together with `instrumentation_measurement` geth tools
 
 From `src`
 

@@ -198,7 +198,7 @@ class ProgramGenerator(object):
   def _maybe_prepend_something(self, program):
     """
     Just prepends some operation that's as little significant as possible to avoid running the
-    measured operation as first operation (current `instrumenter.go` captures startup time there).
+    measured operation as first operation.
 
     TODO: remove when not necessary anymore
     """
