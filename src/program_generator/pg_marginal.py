@@ -85,7 +85,24 @@ class ProgramGenerator(object):
     operations = [operation for operation in self._operations if operation['Value'] != '0xfe']
     if opcode:
       operations = [operation for operation in operations if operation['Mnemonic'] == opcode]
-
+    else:
+      arithmetic_ops = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09]  # ADD MUL SUB DIV SDIV MOD SMOD ADDMOD MULMOD
+      exp_ops = [0x0a]  # EXP
+      bitwise_ops = [0x16, 0x17, 0x18, 0x19]  # AND OR XOR NOT
+      byte_ops = [0x1a, 0x0b]  # BYTE SIGNEXTEND
+      shift_ops = [0x1b, 0x1c, 0x1d]  # SHL, SHR, SAR
+      comparison_ops = [0x10, 0x11, 0x12, 0x13, 0x14]  # LT, GT, SLT, SGT, EQ
+      iszero_ops = [0x15]  # ISZERO
+      all_ops = []
+      all_ops.extend(arithmetic_ops)
+      all_ops.extend(exp_ops)
+      all_ops.extend(bitwise_ops)
+      all_ops.extend(byte_ops)
+      all_ops.extend(shift_ops)
+      all_ops.extend(comparison_ops)
+      all_ops.extend(iszero_ops)
+      operations = [operation for operation in operations if int(operation['Value'], 16) in all_ops]
+      
     programs = [self._generate_single_program(operation, op_count) for operation in operations for op_count in range(0, 200)]
 
     return programs
