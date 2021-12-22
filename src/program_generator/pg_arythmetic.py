@@ -73,7 +73,6 @@ class ProgramGenerator(object):
     cleanStack: whether to clean stack after every opcode or not, default is not
     """
 
-    print(cleanStack)
     if seed:
       random.seed(a=seed, version=2)
     if not gasLimit and not opsLimit and not bytecodeLimit:
