@@ -227,16 +227,6 @@ We adjust the analysis:
 
 ```{r}
 # save previous results, we'll reuse the names moving forward
-estimated_cost_first_pass = estimated_cost
-estimated_programs_first_pass = estimated_programs
-model_first_pass = model
-ops_per_program_first_pass = ops_per_program
-total_measurements_first_pass = total_measurements
-traces_first_pass = traces
-validation_first_pass = validation
-validation_problem_subset_first_pass = validation_problem_subset
-validation_safe_subset_first_pass = validation_safe_subset
-program_set_codename_first_pass = program_set_codename
 rm('estimated_cost', 'estimated_programs', 'model', 'ops_per_program',
    'total_measurements', 'traces', 'validation', 'validation_problem_subset',
    'validation_safe_subset', 'program_set_codename')
@@ -251,8 +241,10 @@ Redo all the calculations from the above
 setwd("~/sources/imapp/gas-cost-estimator/src")
 
 estimated_cost = read.csv("../../local/estimated_cost.csv")
+marginal_estimated_cost = read.csv("../../local/marginal_estimated_cost.csv")
 current_gas_cost = read.csv("../../local/current_gas_cost.csv")
 head(estimated_cost)
+head(marginal_estimated_cost)
 head(current_gas_cost)
 ```
 
@@ -333,11 +325,14 @@ estimated_programs = sqldf("SELECT
                               sum(ops_per_program.Freq * estimated_cost.q50) as q50_cost,
                               sum(ops_per_program.Freq * estimated_cost.min) as min_cost,
                               sum(ops_per_program.Freq * current_gas_cost.current_gas) as current_gas_cost,
-                              env
+                              sum(ops_per_program.Freq * marginal_estimated_cost.estimate_marginal_ns) as marginal_cost,
+                              estimated_cost.env
                            FROM ops_per_program
                            INNER JOIN estimated_cost ON ops_per_program.op == estimated_cost.op
                            INNER JOIN current_gas_cost ON ops_per_program.op == current_gas_cost.op
-                           GROUP BY program_id, env")
+                           LEFT JOIN marginal_estimated_cost ON ops_per_program.op == marginal_estimated_cost.op 
+                                 AND marginal_estimated_cost.env == estimated_cost.env
+                           GROUP BY program_id, estimated_cost.env")
 
 # ORDER BY is needed here, so that the programs are ordered by program_id numerically
 # this is a hacky way of ensuring we can merge it with other program data like fingerprints
@@ -350,6 +345,7 @@ validation = sqldf("SELECT
                       q50_cost,
                       min_cost,
                       current_gas_cost,
+                      marginal_cost,
                       estimated_programs.env
                     FROM estimated_programs
                     INNER JOIN total_measurements ON 
