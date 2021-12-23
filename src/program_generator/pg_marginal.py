@@ -30,7 +30,7 @@ class ProgramGenerator(object):
 
   """
 
-  def __init__(self):
+  def __init__(self, selectionFile='selection.csv'):
     opcodes_file = os.path.join(dir_path, 'data', 'opcodes.csv')
 
     with open(opcodes_file) as csvfile:
@@ -39,7 +39,7 @@ class ProgramGenerator(object):
 
     opcodes = self._fill_opcodes_push_dup_swap(opcodes)
 
-    selection_file = os.path.join(dir_path, 'data', 'selection.csv')
+    selection_file = os.path.join(dir_path, 'data', selectionFile)
 
     with open(selection_file) as csvfile:
       reader = csv.DictReader(csvfile, delimiter=' ', quotechar='"')
@@ -47,7 +47,7 @@ class ProgramGenerator(object):
 
     self._operations = [opcodes[op] for op in selection]
 
-  def generate(self, fullCsv=False, opcode=None):
+  def generate(self, fullCsv=False, opcode=None, maxOpCount=50):
     """
     Main entrypoint of the CLI tool. Should dispatch to the desired generation routine and print
     programs to STDOUT
@@ -55,9 +55,11 @@ class ProgramGenerator(object):
     Parameters:
     fullCsv (boolean): if set, will generate programs with accompanying data in CSV format
     opcode (string): if set, will only generate programs for opcode
+    maxOpCount (integer): maximum number of measured opcodes, defaults to 50
+    selectionFile (string): file name of the OPCODE selection file under `data`, defaults to `selection.csv`
     """
 
-    programs = self._generate_marginal(opcode)
+    programs = self._generate_marginal(opcode, maxOpCount)
 
     if fullCsv:
       writer = csv.writer(sys.stdout, delimiter=',', quotechar='"')
@@ -79,31 +81,16 @@ class ProgramGenerator(object):
         print(program.bytecode)
 
 
-  def _generate_marginal(self, opcode):
+  def _generate_marginal(self, opcode, max_op_count):
     """
     """
     operations = [operation for operation in self._operations if operation['Value'] != '0xfe']
     if opcode:
       operations = [operation for operation in operations if operation['Mnemonic'] == opcode]
     else:
-      arithmetic_ops = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09]  # ADD MUL SUB DIV SDIV MOD SMOD ADDMOD MULMOD
-      exp_ops = [0x0a]  # EXP
-      bitwise_ops = [0x16, 0x17, 0x18, 0x19]  # AND OR XOR NOT
-      byte_ops = [0x1a, 0x0b]  # BYTE SIGNEXTEND
-      shift_ops = [0x1b, 0x1c, 0x1d]  # SHL, SHR, SAR
-      comparison_ops = [0x10, 0x11, 0x12, 0x13, 0x14]  # LT, GT, SLT, SGT, EQ
-      iszero_ops = [0x15]  # ISZERO
-      all_ops = []
-      all_ops.extend(arithmetic_ops)
-      all_ops.extend(exp_ops)
-      all_ops.extend(bitwise_ops)
-      all_ops.extend(byte_ops)
-      all_ops.extend(shift_ops)
-      all_ops.extend(comparison_ops)
-      all_ops.extend(iszero_ops)
-      operations = [operation for operation in operations if int(operation['Value'], 16) in all_ops]
+      pass
       
-    programs = [self._generate_single_program(operation, op_count) for operation in operations for op_count in range(0, 200)]
+    programs = [self._generate_single_program(operation, op_count) for operation in operations for op_count in range(0, max_op_count)]
 
     return programs
 
@@ -111,30 +98,38 @@ class ProgramGenerator(object):
     """
     
     """
-    # valid opcodes
-    removed_from_stack = int(operation['Removed from stack'])
-    added_to_stack = int(operation['Added to stack'])
+
     # i.e. 23 from 0x23
     opcode = operation['Value'][2:4]
     popcode = "50"
 
-    pushes = ["6020"] * 1000
+    has_parameter = True if 'Parameter' in operation and operation['Parameter'] else False
+    if has_parameter:
+      opcode += operation['Parameter']
 
-    # TODO for pushes
-    # has_parameter = True if 'Parameter' in operation and operation['Parameter'] else False
+    if ("PUSH" in operation['Mnemonic'] or "DUP" in operation['Mnemonic']):
+      push_count = 200
+      total_pop_count = 200
+    else:
+      push_count = 1000
+      total_pop_count = 200
 
-    interleaved_pop_count = op_count - 1
+    interleaved_pop_count = max(op_count - 1, 0)
+    end_pop_count = total_pop_count - interleaved_pop_count
+      
+    pushes = ["6020"] * push_count
+
     if op_count == 0:
       middle = []
-      pops = [popcode] * 499
-    elif op_count == 1:
-      middle = [opcode]
-      pops = [popcode] * 499
-    elif op_count > 1:
+      pops = [popcode] * total_pop_count
+    elif op_count >= 1:
       middle = [opcode] + [popcode, opcode] * interleaved_pop_count
-      pops = [popcode] * (499 - interleaved_pop_count)
+      pops = [popcode] * end_pop_count
 
     bytecode = ''.join(pushes + middle + pops)
+
+    # just in case
+    assert interleaved_pop_count + end_pop_count == total_pop_count
 
     return Program(bytecode, operation['Mnemonic'], op_count)
         
