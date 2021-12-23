@@ -434,16 +434,16 @@ trivial_variable_plots(validation, 'env', 'evmone')
 ```
 
 ```{r}
-compare_current_gas_cost_plots <- function(df, selection_col, selection_val) {
+compare_current_gas_cost_plots <- function(df, selection_col, selection_val, estimate_var) {
   subset = df[which(df[, selection_col] == selection_val), ]
   par(mfrow=c(1,2))
-  plot_validation(subset, explained_variable, estimate_variable)
+  plot_validation(subset, explained_variable, estimate_var)
   title(main=paste(selection_val, ' estimate'))
   plot_validation(subset, explained_variable, 'current_gas_cost')
   title(main=paste(selection_val, ' current gas'))
 }
-compare_current_gas_cost_plots(validation, 'env', 'geth')
-compare_current_gas_cost_plots(validation, 'env', 'evmone')
+compare_current_gas_cost_plots(validation, 'env', 'geth', estimate_variable)
+compare_current_gas_cost_plots(validation, 'env', 'evmone', estimate_variable)
 ```
 
 Try with the safer subset (no EXP) again, to check how do we compare against the current gas cost.
@@ -452,8 +452,8 @@ Current gas cost is completely off for EXP.
 
 ```{r fig.width=10}
 validation_no_exp = validation[which(validation$has_exp == 'blue'),]
-compare_current_gas_cost_plots(validation_no_exp, 'env', 'geth')
-compare_current_gas_cost_plots(validation_no_exp, 'env', 'evmone')
+compare_current_gas_cost_plots(validation_no_exp, 'env', 'geth', estimate_variable)
+compare_current_gas_cost_plots(validation_no_exp, 'env', 'evmone', estimate_variable)
 ```
 
 ### Final validation model
@@ -502,6 +502,36 @@ Quick ideas, what could contribute to this intercept:
 2. the impact of non-linearity of the data offsetting the model "upwards" (again, this shouldn't be that much)
 3. warm-up (as mentioned, not big enough)
 4. some silly error
+
+### Validation model using marginal cost
+
+```{r}
+
+compare_current_gas_cost_plots(validation, 'env', 'geth', 'marginal_cost')
+compare_current_gas_cost_plots(validation, 'env', 'evmone', 'marginal_cost')
+compare_current_gas_cost_plots(validation_no_exp, 'env', 'geth', 'marginal_cost')
+compare_current_gas_cost_plots(validation_no_exp, 'env', 'evmone', 'marginal_cost')
+
+model_geth_marginal = lm_validation(validation, explained_variable, 'marginal_cost', selection_col='env', selection_val='geth')
+model_evmone_marginal = lm_validation(validation, explained_variable, 'marginal_cost', selection_col='env', selection_val='evmone')
+print('geth')
+summary(model_geth_marginal)
+print('evmone')
+summary(model_evmone_marginal)
+```
+Compare OPCODE estimates from both methods directly
+```{r}
+estimate_comparison = sqldf("SELECT estimated_cost.*, marginal_estimated_cost.estimate_marginal_ns
+                             FROM marginal_estimated_cost
+                             LEFT JOIN estimated_cost ON estimated_cost.op = marginal_estimated_cost.op
+                                  AND estimated_cost.env = marginal_estimated_cost.env")
+head(estimate_comparison)
+scatter.smooth(estimate_comparison$estimate_marginal_ns ~ estimate_comparison$min)
+text(estimate_comparison$estimate_marginal_ns ~ estimate_comparison$min, labels=paste(estimate_comparison$op, estimate_comparison$env), cex=0.6, pos=1, font=2)
+#points(estimate_comparison$estimate_marginal_ns)
+#text(estimate_comparison$estimate_marginal_ns, labels=paste(estimate_comparison$op, estimate_comparison$env), cex=0.6, pos=1, font=2)
+```
+
 
 ```{r}
 setwd("~/sources/imapp/gas-cost-estimator/src")
@@ -589,7 +619,9 @@ The linear model metrics are reasonable. Things to watch out for:
 2. Non-normality for `evmone`
 
 ```{r fig.width=15}
-par(mfrow=c(2,4))
+par(mfrow=c(4,4))
 plot(model_geth)
 plot(model_evmone)
+plot(model_geth_marginal)
+plot(model_evmone_marginal)
 ```
