@@ -328,19 +328,30 @@ estimated_programs = sqldf("SELECT
                               sum(ops_per_program.Freq * marginal_estimated_cost.estimate_marginal_ns) as marginal_cost,
                               estimated_cost.env
                            FROM ops_per_program
-                           INNER JOIN estimated_cost ON ops_per_program.op == estimated_cost.op
-                           INNER JOIN current_gas_cost ON ops_per_program.op == current_gas_cost.op
-                           LEFT JOIN marginal_estimated_cost ON ops_per_program.op == marginal_estimated_cost.op 
-                                 AND marginal_estimated_cost.env == estimated_cost.env
+                           INNER JOIN estimated_cost ON
+                                 ops_per_program.op == estimated_cost.op
+                           INNER JOIN current_gas_cost ON
+                                 ops_per_program.op == current_gas_cost.op
+                           LEFT JOIN marginal_estimated_cost ON
+                                ops_per_program.op == marginal_estimated_cost.op 
+                            AND marginal_estimated_cost.env == estimated_cost.env
                            GROUP BY program_id, estimated_cost.env")
+
+aggregate_measurements = sqldf("SELECT
+                                  program_id,
+                                  env,
+                                  avg(measure_total_time_ns) as avg_measure_total_time_ns,
+                                  min(measure_total_time_ns) as min_measure_total_time_ns
+                                FROM total_measurements
+                                GROUP BY env, program_id")
 
 # ORDER BY is needed here, so that the programs are ordered by program_id numerically
 # this is a hacky way of ensuring we can merge it with other program data like fingerprints
 # TODO: make this more robust
 validation = sqldf("SELECT
                       estimated_programs.program_id,
-                      avg(total_measurements.measure_total_time_ns) as avg_measure_total_time_ns,
-                      min(total_measurements.measure_total_time_ns) as min_measure_total_time_ns,
+                      avg_measure_total_time_ns,
+                      min_measure_total_time_ns,
                       avg_cost,
                       q50_cost,
                       min_cost,
@@ -348,10 +359,9 @@ validation = sqldf("SELECT
                       marginal_cost,
                       estimated_programs.env
                     FROM estimated_programs
-                    INNER JOIN total_measurements ON 
-                          total_measurements.program_id == estimated_programs.program_id
-                      AND total_measurements.env == estimated_programs.env
-                    GROUP BY estimated_programs.program_id, estimated_programs.env
+                    INNER JOIN aggregate_measurements ON 
+                          aggregate_measurements.program_id == estimated_programs.program_id
+                      AND aggregate_measurements.env == estimated_programs.env
                     ORDER BY estimated_programs.env, cast(estimated_programs.program_id AS int)")
 
 head(validation)
