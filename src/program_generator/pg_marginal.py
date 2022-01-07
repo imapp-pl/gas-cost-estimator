@@ -1,6 +1,7 @@
 import os
 import csv
 import fire
+import random
 import sys
 
 import constants
@@ -30,7 +31,10 @@ class ProgramGenerator(object):
 
   """
 
-  def __init__(self, selectionFile='selection.csv'):
+  def __init__(self, selectionFile='selection.csv', seed=0):
+    if seed:
+      random.seed(a=seed, version=2)
+
     opcodes_file = os.path.join(dir_path, 'data', 'opcodes.csv')
 
     with open(opcodes_file) as csvfile:
@@ -47,7 +51,7 @@ class ProgramGenerator(object):
 
     self._operations = [opcodes[op] for op in selection]
 
-  def generate(self, fullCsv=False, opcode=None, maxOpCount=50):
+  def generate(self, fullCsv=False, opcode=None, maxOpCount=50, shuffleCounts=False):
     """
     Main entrypoint of the CLI tool. Should dispatch to the desired generation routine and print
     programs to STDOUT
@@ -56,10 +60,13 @@ class ProgramGenerator(object):
     fullCsv (boolean): if set, will generate programs with accompanying data in CSV format
     opcode (string): if set, will only generate programs for opcode
     maxOpCount (integer): maximum number of measured opcodes, defaults to 50
+    shuffleCounts (boolean): if set, will shuffle the op counts used to generate programs for each OPCODE
+
     selectionFile (string): file name of the OPCODE selection file under `data`, defaults to `selection.csv`
+    seed: a seed for random number generator, defaults to 0
     """
 
-    programs = self._generate_marginal(opcode, maxOpCount)
+    programs = self._generate_marginal(opcode, maxOpCount, shuffleCounts)
 
     if fullCsv:
       writer = csv.writer(sys.stdout, delimiter=',', quotechar='"')
@@ -81,7 +88,7 @@ class ProgramGenerator(object):
         print(program.bytecode)
 
 
-  def _generate_marginal(self, opcode, max_op_count):
+  def _generate_marginal(self, opcode, max_op_count, shuffle_counts):
     """
     """
     operations = [operation for operation in self._operations if operation['Value'] != '0xfe']
@@ -89,8 +96,12 @@ class ProgramGenerator(object):
       operations = [operation for operation in operations if operation['Mnemonic'] == opcode]
     else:
       pass
+
+    op_counts = list(range(0, max_op_count))
+    if shuffle_counts:
+      random.shuffle(op_counts)
       
-    programs = [self._generate_single_program(operation, op_count) for operation in operations for op_count in range(0, max_op_count)]
+    programs = [self._generate_single_program(operation, op_count) for operation in operations for op_count in op_counts]
 
     return programs
 

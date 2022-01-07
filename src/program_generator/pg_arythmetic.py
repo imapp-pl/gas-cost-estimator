@@ -56,7 +56,7 @@ class ProgramGenerator(object):
 
     self._operations = {int(op, 16): opcodes[op] for op in selection}
 
-  def generate(self, fullCsv=False, count=1, gasLimit=None, opsLimit=None, bytecodeLimit=None, seed=None, dominant=None, push=32, cleanStack=False):
+  def generate(self, fullCsv=False, count=1, gasLimit=None, opsLimit=None, bytecodeLimit=None, seed=0, dominant=None, push=32, cleanStack=False):
     """
     Main entrypoint of the CLI tool. Should dispatch to the desired generation routine and print
     programs to STDOUT. If no limits given then by default opsLimit=100
@@ -67,7 +67,7 @@ class ProgramGenerator(object):
     gasLimit (int): the gas limit for a single program
     opsLimit (int): the limit operations for a single program, including pushes as one
     bytecodeLimit (int): the bytecode limit of a single program
-    seed: a seed for random number generator, if None then default behaviour for random()
+    seed: a seed for random number generator, defaults to 0
     dominant: an opcode that is picked more often then others, probability ~0.5
     push: the range of default push used in the program, values 1..32, assign ops push1..push32
     cleanStack: whether to clean stack after every opcode or not, default is not
