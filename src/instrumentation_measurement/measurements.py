@@ -4,6 +4,8 @@ import sys
 import subprocess
 import os.path
 
+CLOCKSOURCE_PATH='/sys/devices/system/clocksource/clocksource0/current_clocksource'
+
 class Program(object):
   """
   POD object for a program
@@ -39,6 +41,10 @@ class Measurements(object):
     measured_op_position = row.get('measured_op_position')
     return Program(program_id, bytecode, measured_op_position)
 
+  def _check_clocksource(self):
+    with open(CLOCKSOURCE_PATH) as clocksource:
+      return clocksource.readlines() == ['tsc\n']
+
   def __init__(self):
     reader = csv.DictReader(sys.stdin, delimiter=',', quotechar='"')
     self._programs = [self._program_from_csv_row(row) for row in reader]
@@ -65,6 +71,9 @@ class Measurements(object):
     measure_all = "all"
     trace_opcodes = "trace"
 
+    if not self._check_clocksource():
+      print("clocksource should be tsc, found something different. See docker_timer.md somewhere in the docs")
+      return
 
     if evm not in {geth, openethereum, evmone, openethereum_ewasm}:
       print("Wrong evm parameter. Allowed are: {}, {}, {}, {}".format(geth, openethereum, evmone, openethereum_ewasm))

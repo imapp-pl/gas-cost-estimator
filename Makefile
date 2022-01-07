@@ -2,7 +2,6 @@ MEASUREMENT_MODE ?= all
 IMAGE_VERSION ?= latest
 # see Dockerfile.geth
 GETH_VERSION_SHA ?= unspecified
-SKIP_CLOCKSOURCE_CHECK ?= false
 
 build: build-geth build-evmone build-openethereum
 	
@@ -11,19 +10,16 @@ build-geth:
 		--tag  "gas-cost-estimator/geth_${MEASUREMENT_MODE}:${IMAGE_VERSION}" \
 		--build-arg  MEASUREMENT_MODE=${MEASUREMENT_MODE} \
 		--build-arg  GETH_VERSION_SHA=${GETH_VERSION_SHA} \
-		--build-arg  SKIP_CLOCKSOURCE_CHECK=${SKIP_CLOCKSOURCE_CHECK} \
 		.
 
 build-evmone:
 	docker build -f Dockerfile.evmone \
 	  --tag  "gas-cost-estimator/evmone_${MEASUREMENT_MODE}:${IMAGE_VERSION}" \
-		--build-arg  SKIP_CLOCKSOURCE_CHECK=${SKIP_CLOCKSOURCE_CHECK} \
 		.
 
 build-openethereum:
 	docker build -f Dockerfile.openethereum \
 		--tag  "gas-cost-estimator/openethereum_${MEASUREMENT_MODE}:${IMAGE_VERSION}" \
-		--build-arg  SKIP_CLOCKSOURCE_CHECK=${SKIP_CLOCKSOURCE_CHECK} \
 		.
 
 measure-geth:
