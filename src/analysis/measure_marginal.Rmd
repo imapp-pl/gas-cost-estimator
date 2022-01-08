@@ -193,15 +193,19 @@ extract_opcodes <- function(program_set_codename) {
   unique(programs$opcode)
 }
 
-all_opcodes = extract_opcodes("arithmetic_c200")
+all_opcodes = extract_opcodes("arithmetic_c50")
 estimates = data.frame(matrix(ncol = 3, nrow = 0))
 colnames(estimates) <- c('op', 'estimate_marginal_ns', 'env')
 ```
+`_comb_` stands for "combined". The `EXP` measurement has been redone for the input `0xa1` instead of `0x20`, which caused the estimation to be underpriced (as seen in the `validation` notebook).
+This in turn skewed the result enough for `geth` to get a significant, negative intercept.
+After adjusting the input higher, the intercept is "less" significant, but still present.
+`EXP` looks still somewhat underpriced - we need to parametrize its arguments properly.
 
 ```{r}
 estimates = estimates[which(estimates$env != 'evmone'), ]
-programs = programs_for_compute("arithmetic_c200_shuffle")
-results = load_data_set("evmone", "arithmetic_c200_shuffle", "total_50_4")
+programs = programs_for_compute("arithmetic_comb_c50_shuffle")
+results = load_data_set("evmone", "arithmetic_comb_c50_shuffle", "total_50_4")
 for (opcode in all_opcodes) {
   estimate = compute_all(programs, results, opcode, "evmone", TRUE)
   estimates[nrow(estimates) + 1, ] = c(opcode, estimate, 'evmone')
@@ -210,8 +214,8 @@ for (opcode in all_opcodes) {
 
 ```{r}
 estimates = estimates[which(estimates$env != 'geth'), ]
-programs = programs_for_compute("arithmetic_c50_shuffle")
-results = load_data_set("geth", "arithmetic_c50_shuffle", "total_50_4")
+programs = programs_for_compute("arithmetic_comb_c50_shuffle")
+results = load_data_set("geth", "arithmetic_comb_c50_shuffle", "total_50_4")
 for (opcode in all_opcodes) {
   # for `geth` we settle for less (up to 50, as opposed to 200 for evmone), because:
   # 1. it appears to stabilize much faster (ADD results negative for `evmone` if given ony 50)

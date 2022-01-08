@@ -128,7 +128,7 @@ class ProgramGenerator(object):
     interleaved_pop_count = max(op_count - 1, 0)
     end_pop_count = total_pop_count - interleaved_pop_count
       
-    pushes = ["6020"] * push_count
+    pushes = ["60a1"] * push_count
 
     if op_count == 0:
       middle = []

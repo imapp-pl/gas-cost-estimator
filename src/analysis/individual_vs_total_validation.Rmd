@@ -528,6 +528,8 @@ print('geth')
 summary(model_geth_marginal)
 print('evmone')
 summary(model_evmone_marginal)
+summary(lm_validation(validation_no_exp, explained_variable, 'marginal_cost', selection_col='env', selection_val='geth'))
+summary(lm_validation(validation_no_exp, explained_variable, 'marginal_cost', selection_col='env', selection_val='evmone'))
 ```
 Compare OPCODE estimates from both methods directly
 ```{r}
