@@ -1,6 +1,6 @@
 # Rundown of OPCODE details
 
-This file contains a detailed rundown of all EVM OPCODEs concerned, with notes on their specifics and what to watch our for.
+This file contains a detailed rundown of all EVM OPCODEs concerned, with notes on their specifics and what to watch out for.
 
 Based on `src/program_generator/data/opcodes.csv` and `src/program_generator/data/selection.csv`.
 
@@ -64,11 +64,11 @@ They pop and push, or pop and peek and then modify stack in-place.
 
 ### Parameters
 
-2 or 3 values on the stack, [might have impact on cost](https://github.com/imapp-pl/gas-cost-estimator/pull/64/files#r744731521).
+Opcodes in this section take 2 or 3 values from the stack. The size of values on the stacek might have impact on cost, see [Formal Complexity](#formal-complexity) for further details.
 
 ## `0x0a,EXP`
 
-`0x0a,EXP,(exp == 0) ? 10 : (10 + 10 * (1 + log256(exp))),,2,1,Exponential operation.,"If exponent is 0, gas used is 10. If exponent is greater than 0, gas used is 10 plus 10 times a factor related to how large the log of the exponent is."`
+`0x0a,EXP,(exp == 0) ? 10 : (10 + 10 * (1 + log256(exp))),,2,1,Exponential operation,"If exponent is 0, gas used is 10. If exponent is greater than 0, gas used is 10 plus 10 times a factor related to how large the log of the exponent is."`
 
 ### Parameters
 
@@ -78,7 +78,7 @@ They pop and push, or pop and peek and then modify stack in-place.
 
 `0x30,ADDRESS,2,base,0,1,Get address of currently executing account.,`
 
-- **geth**: uses `uint256`'s `SetBytes`, but is setting 20 bytes always probably. The addresss is in `callContext.contract.Address()`.
+- **geth**: uses `uint256`'s `SetBytes`, but is setting 20 bytes always probably. The address is in `callContext.contract.Address()`.
 - **evmone**: uses `memcpy` dependant on the address binary size, but the latter is 20 bytes always probably. The address is in `state.msg.destination`.
 - **openethereum**: not sure, probably same as others. The address is in `self.params.address.clone()`
 
@@ -217,6 +217,20 @@ see `CALLDATACOPY`, everything is same just the data is from the code not input
 - **evmone**: Data is in `state.host.get_tx_context().block_coinbase`
 - **openethereum**: Data is in `ext.env_info().author.clone()`
 
+## `0x46 CHAINID`
+`0x46, CHAINID, 2, base, 0, 1, Get the chain ID`
+
+- **geth**: Data is in `interpreter.evm.chainConfig.ChainID`
+- **evmone**: Data is in `state.host.get_tx_context().chain_id`
+- **openethereum**: Data is in `ext.chain_id().into()`
+
+## `0x47 SELFBALANCE`
+`0x47, SELFBALANCE, 5, low, 0, 1, Get balance of currently executing account`
+
+- **geth**: Cost the same as `BALANCE`
+- **evmone**: Cost the same as `BALANCE`
+- **openethereum**: Cost the same as `BALANCE`
+
 ## `0x50,POP`
 
 `0x50,POP,2,base,1,0,Remove item from stack.,`
@@ -281,7 +295,7 @@ no comments here, I can't imagine sizing the memory variable could depend on any
 
 `0x5a,GAS,2,base,0,1,"Get the amount of available gas, including the corresponding reduction for the cost of this instruction.",`
 
-Implementation differ due to different approaches to gas tracking, but I don't see any hidden parameters to account for.
+Implementations differ due to different approaches to gas tracking, but I don't see any hidden parameters to account for.
 
 ## `0x5b,JUMPDEST`
 
@@ -289,20 +303,20 @@ Implementation differ due to different approaches to gas tracking, but I don't s
 
 - **geth** noop
 - **evmone**:
-  - (`Advanced` mode) not a noop, flushes some gas calculations for the code block. Note - JUMPDEST is rewriten to a `evmone`-specific OPX_BEGINBLOCK
+  - (`Advanced` mode) not a noop, flushes some gas calculations for the code block. Note - JUMPDEST is rewritten to a `evmone`-specific OPX_BEGINBLOCK
   - (`Baseline` mode) noop
 - **openethereum** noop
 
 ### Parameters
 
-None. The size of preceeding/following code block would be if `evmone/Advanced` was used, but we're switch to `evmone/Baseline`.
+None. The size of preceding/following code block would be if `evmone/Advanced` was used, but we're switch to `evmone/Baseline`.
 
 ## `0x60,PUSH1` and friends
 
 `0x60 -- 0x7f,PUSH*,3,verylow,0,1,Place * byte item on stack. 0 < * <= 32,`
 
 - **geth** `PUSH1` is a special case
-- **evmone** `PUSH1`-`PUSH8` are special optimized cases. Also the push contents seem to be prepared in the analysis step
+- **evmone** `PUSH1`-`PUSH8` are special optimized cases. Also, the push contents seem to be prepared in the analysis step
 - **openethereum** -
 
 ### Parameters
@@ -343,3 +357,40 @@ can be dropped
 ## Misc notes
 
 - `BEGINSUB, JUMPSUB and RETURNSUB` are implemented in `openethereum` and `geth`, but they're only proposed in a pending https://eips.ethereum.org/EIPS/eip-2315.
+
+## Formal Complexity
+The table below shows EVM OPCODEs together with their formal calculation complexity for each of the implementations. Additionally, we present estimated gas cost as per Yellow Paper. There are two curiosities that we can immediately observe:
+- There is a number of opcodes that has calculation complexity depended on the size of values on the stack.
+- For each implementation, there is a single method to handle DIV, SDIV, MOD, SMOD, ADDMOD and MULMOD opcodes. Ethereum Yellow Paper Gas Cost has increased cost for ADDMOD and MULMOD.
+
+These will be further explored during the instrumentation phase.
+
+
+| **Code** | **Mnemonic**   | **Yellow Paper General Gas Cost** | **Prompt**                          | **geth**                                                                                              | **evmone**                                                                                                                        | **openethereum**                           |
+|----------|----------------|-----------------------------------|-------------------------------------|-------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------|
+| 0x00 | STOP           | Zero    |               | O(1) | O(1) | O(1) |
+| 0x01 | ADD            | Verylow | x + y         | O(1) | O(1) | O(1) |
+| 0x02 | MUL            | Low     | x * y         | O(1) | O(num_words(x)) | O(1) |
+| 0x03 | SUB            | Verylow | x - y         | O(1) | O(1) | O(1) |
+| 0x04 | DIV            | Low     | x / y         | depends on x:<br />- x is 64bit: O(1)<br />- else: full Knuth | depends on y:<br />- y is 64 bit: O(num_words(x))<br />- y is 128 bit: (2 * num_words(x))<br />- else: full Knuth   | bitwise long division: O(length(y)^2)? |
+| 0x05 | SDIV           | Low     | x / y         | same as above | same as above | same as above |
+| 0x06 | MOD            | Low     | x % y         | same as above | same as above | same as above |
+| 0x07 | SMOD           | Low     | x % y         | same as above | same as above | same as above |
+| 0x08 | ADDMOD         | Mid     |               | same as above | same as above | same as above |
+| 0x09 | MULMOD         | Mid     |               | same as above | same as above | same as above |
+| 0x0a | EXP            |         | x ^ n         | O(num_words(n) * n * log x)? | O(n * log x)? | O(n * log x)? |
+| 0x0b | SIGNEXTEND     | Low     |               | O(1) | O(1) | O(1) |
+| 0x10 | LT             | Verylow |               | O(1) | O(1) | O(1) |
+| 0x11 | GT             | Verylow |               | O(1) | O(1) | O(1) |
+| 0x12 | SLT            | Verylow |               | O(1) | O(1) | O(1) |
+| 0x13 | SGT            | Verylow |               | O(1) | O(1) | O(1) |
+| 0x14 | EQ             | Verylow |               | O(1) | O(1) | O(1) |
+| 0x15 | ISZERO         | Verylow |               | O(1) | O(1) | O(1) |
+| 0x16 | AND            | Verylow |               | O(1) | O(1) | O(1) |
+| 0x17 | OR             | Verylow |               | O(1) | O(1) | O(1) |
+| 0x18 | XOR            | Verylow |               | O(1) | O(1) | O(1) |
+| 0x19 | NOT            | Verylow |               | O(1) | O(1) | O(1) |
+| 0x1a | BYTE           | Verylow |               | O(1) | O(1) | O(1) |
+| 0x1b | SHL            | Verylow | x << n        | depends on n:<br />- n > 192: O(1)<br />- n > 128: O(3)<br />- n > 64: O(5)<br />- else: O(7)   | depends on n:<br />- n < 64: O(1)<br />- n < 128: O(2)<br />- else: O(3) | O(num_words(x)) |
+| 0x1c | SHR            | Verylow | x >> n        | same as above | same as above | same as above |
+| 0x1d | SAR            | Verylow | x >> n        | same as above | same as above | same as above |
