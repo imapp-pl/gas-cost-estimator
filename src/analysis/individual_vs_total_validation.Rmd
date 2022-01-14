@@ -241,8 +241,10 @@ Redo all the calculations from the above
 setwd("~/sources/imapp/gas-cost-estimator/src")
 
 estimated_cost = read.csv("../../local/estimated_cost.csv")
-marginal_estimated_cost = read.csv("../../local/marginal_estimated_cost.csv")
 current_gas_cost = read.csv("../../local/current_gas_cost.csv")
+# from measure_marginal.Rmd
+marginal_estimated_cost = read.csv("../../local/marginal_estimated_cost.csv")
+
 head(estimated_cost)
 head(marginal_estimated_cost)
 head(current_gas_cost)
@@ -515,6 +517,13 @@ Quick ideas, what could contribute to this intercept:
 
 ### Validation model using marginal cost
 
+Using the results from `measure_marginal.Rmd`.
+We have a statistically significant intercept, which disappears if we exclude `EXP` (see next chunk).
+
+Also, for every nanosecond spent calculating the marginal OPCODE, we spend `3.7` and `1.7` nanoseconds calculating the random program OPCODE.
+We would be expecting it be closer to `1`, excluding `EXP` doesn't help much in this aspect.
+**TODO**: optionally, try to make it closer to `1`.
+
 ```{r}
 
 compare_current_gas_cost_plots(validation, 'env', 'geth', 'marginal_cost')
@@ -528,22 +537,32 @@ print('geth')
 summary(model_geth_marginal)
 print('evmone')
 summary(model_evmone_marginal)
+```
+
+Comparison models excluding `EXP` - no strange intercept for `geth` anymore.
+We probably must parametrize `EXP` arguments carefully.
+
+```{r}
 summary(lm_validation(validation_no_exp, explained_variable, 'marginal_cost', selection_col='env', selection_val='geth'))
 summary(lm_validation(validation_no_exp, explained_variable, 'marginal_cost', selection_col='env', selection_val='evmone'))
 ```
+
 Compare OPCODE estimates from both methods directly
-```{r}
+
+```{r fig.width=14}
 estimate_comparison = sqldf("SELECT estimated_cost.*, marginal_estimated_cost.estimate_marginal_ns
                              FROM marginal_estimated_cost
                              LEFT JOIN estimated_cost ON estimated_cost.op = marginal_estimated_cost.op
                                   AND estimated_cost.env = marginal_estimated_cost.env")
 head(estimate_comparison)
-scatter.smooth(estimate_comparison$estimate_marginal_ns ~ estimate_comparison$min)
+scatter.smooth(estimate_comparison$estimate_marginal_ns ~ estimate_comparison$min, log="xy")
 text(estimate_comparison$estimate_marginal_ns ~ estimate_comparison$min, labels=paste(estimate_comparison$op, estimate_comparison$env), cex=0.6, pos=1, font=2)
-#points(estimate_comparison$estimate_marginal_ns)
-#text(estimate_comparison$estimate_marginal_ns, labels=paste(estimate_comparison$op, estimate_comparison$env), cex=0.6, pos=1, font=2)
+abline(0, 1, col="red")
 ```
 
+## Comparison of estimated values with `measure_all` measurements
+
+We measure each and every OPCODE of the random validation programs, to see, if we can spot some differences in how the OPCODEs behave.
 
 ```{r}
 setwd("~/sources/imapp/gas-cost-estimator/src")
@@ -604,11 +623,6 @@ head(measure_all_geth_sum_stats)
 measure_all_geth_sum_stats$prediction = predict(model_geth, validation[which(validation$env == 'geth'), ])
 ```
 
-```{r}
-summary(measure_all_geth_sum_stats)
-```
-
-
 #### Compare model with current gas schedule
 
 **NOTE** the linear model for current gas cost doesn't make any sense with EXP included.
@@ -617,18 +631,24 @@ To compare the no-EXP subset, where the current gas cost is a decent estimate:
 ```{r}
 print('geth, our estimate')
 summary(lm_validation(validation_no_exp, explained_variable, estimate_variable, selection_col='env', selection_val='geth'))
+print('geth, marginal_cost')
+summary(lm_validation(validation_no_exp, explained_variable, 'marginal_cost', selection_col='env', selection_val='geth'))
 print('geth, gas schedule')
 summary(lm_validation(validation_no_exp, explained_variable, 'current_gas_cost', selection_col='env', selection_val='geth'))
 print('evmone, our estimate')
 summary(lm_validation(validation_no_exp, explained_variable, estimate_variable, selection_col='env', selection_val='evmone'))
+print('evmone, marginal_cost')
+summary(lm_validation(validation_no_exp, explained_variable, 'marginal_cost', selection_col='env', selection_val='evmone'))
 print('evmone, gas schedule')
 summary(lm_validation(validation_no_exp, explained_variable, 'current_gas_cost', selection_col='env', selection_val='evmone'))
 ```
 #### Model diagnostics
 
 The linear model metrics are reasonable. Things to watch out for:
-1. Slight non-linearity for `geth` (costlier programs overestimated)
-2. Non-normality for `evmone`
+1. ~Slight non-linearity for `geth` (costlier programs overestimated)~. EDIT: not anymore
+2. ~Non-normality for `evmone`~. EDIT: not anymore
+
+The diagnosticts look decent.
 
 ```{r fig.width=15}
 par(mfrow=c(4,4))
