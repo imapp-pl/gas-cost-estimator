@@ -60,7 +60,7 @@ head(results)
 ```
 
 ```{r fig.width=20}
-measurements = sqldf("SELECT opcode, arg1, arg2, arg3, sample_id, run_id, measure_total_time_ns, env, results.program_id
+measurements = sqldf("SELECT opcode, op_count, arg1, arg2, arg3, sample_id, run_id, measure_total_time_ns, env, results.program_id
                      FROM results
                      INNER JOIN
                        programs ON(results.program_id = programs.program_id)
@@ -99,7 +99,7 @@ ternary_opcodes = extract_opcodes(program_set_codename, 3)
 first_pass = data.frame(matrix(ncol = 3, nrow = 0))
 colnames(first_pass) <- c('opcode', 'has_significant', 'has_impacting')
 for (opcode in unary_opcodes) {
-  model = lm(measure_total_time_ns ~ arg1, data=measurements[which(measurements$opcode==opcode), ])
+  model = lm(measure_total_time_ns ~ arg1:op_count, data=measurements[which(measurements$opcode==opcode), ])
   print(opcode)
   print(summary(model))
   significant = which(summary(model)$coefficients[-1, 4] < 0.01)
@@ -114,7 +114,7 @@ for (opcode in unary_opcodes) {
   first_pass[nrow(first_pass) + 1, ] = c(opcode, has_significant, has_impacting)
 }
 for (opcode in binary_opcodes) {
-  model = lm(measure_total_time_ns ~ arg1 + arg2, data=measurements[which(measurements$opcode==opcode), ])
+  model = lm(measure_total_time_ns ~ arg1:op_count + arg2:op_count, data=measurements[which(measurements$opcode==opcode), ])
   print(opcode)
   print(summary(model))
   significant = which(summary(model)$coefficients[-1, 4] < 0.01)
@@ -128,7 +128,7 @@ for (opcode in binary_opcodes) {
   first_pass[nrow(first_pass) + 1, ] = c(opcode, has_significant, has_impacting)
 }
 for (opcode in ternary_opcodes) {
-  model = lm(measure_total_time_ns ~ arg1 + arg2 + arg3, data=measurements[which(measurements$opcode==opcode), ])
+  model = lm(measure_total_time_ns ~ arg1:op_count + arg2:op_count + arg3:op_count, data=measurements[which(measurements$opcode==opcode), ])
   print(opcode)
   print(summary(model))
   significant = which(summary(model)$coefficients[-1, 4] < 0.01)
