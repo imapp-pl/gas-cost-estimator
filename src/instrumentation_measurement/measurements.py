@@ -4,6 +4,8 @@ import sys
 import subprocess
 import os.path
 
+MAX_OPCODE_ARGS=7
+
 class Program(object):
   """
   POD object for a program
@@ -81,8 +83,8 @@ class Measurements(object):
         print(header)
     elif mode == trace_opcodes:
         header = "program_id,sample_id,instruction_id,pc,op,stack_depth"
-        for i in range(32):
-            elem = ",stack_elem{}".format(i)
+        for i in range(MAX_OPCODE_ARGS):
+            elem = ",arg_{}".format(i)
             header += elem
 
         print(header)
@@ -99,6 +101,10 @@ class Measurements(object):
           instrumenter_result = self.run_openethereum_wasm(program, sampleSize)
         elif evm == evmone:
           instrumenter_result = self.run_evmone(mode, program, sampleSize)
+
+        if mode == trace_opcodes:
+            instrumenter_result = self.sanitize_tracer_result(instrumenter_result)
+
 
         result_row = self.csv_row_append_info(instrumenter_result, program, sample_id)
 
@@ -158,6 +164,45 @@ class Measurements(object):
     # append program_id and sample_id which are not known to the instrumenter tool
     to_append = "{},{},".format(program.id, sample_id)
     return [to_append + row for row in instrumenter_result]
+
+  def sanitize_tracer_result(self, tracer_result):
+      specs = self.read_opcodes_specs()
+
+      result = []
+      for row in tracer_result:
+        row = row.split(',')
+        prefix = row[0:4] # take first columns untouched
+        opcode = row[2]
+        stack_depth = int(row[3])
+        stack = row[4:]
+
+        # stack top is stack[stack_depth - 1] and stack bottom is stack[0],
+        # so to take some deeper arguments we have to do some mysterious maths
+        args = [stack[stack_depth - arg_depth - 1] for arg_depth in specs[opcode]]
+
+        # append with empty positions to conform to CSV format
+        for i in range(len(args), MAX_OPCODE_ARGS):
+            args.append('')
+
+        parsed_line = ','.join(prefix + args)
+        result.append(parsed_line)
+
+      return result
+
+  def read_opcodes_specs(self):
+      with open('./instrumentation_measurement/data/opcodes_args.csv', newline='') as opcodes_args_file:
+        args_keys = list('arg{}_depth'.format(i) for i in range(6))
+        reader = csv.DictReader(opcodes_args_file, delimiter=',', quotechar='"')
+
+        specs = {}
+        for row in reader:
+          args = []
+          opcode = row['mnemonic']
+          for k in args_keys:
+              if row[k] != '' and row[k] != None:
+                  args.append(int(row[k]))
+          specs[opcode] = args
+        return specs
 
 
 def main():
