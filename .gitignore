@@ -6,3 +6,5 @@ src/.Rhistory
 __pycache__
 
 *.nb.html
+
+.go/**
