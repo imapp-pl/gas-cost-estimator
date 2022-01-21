@@ -2,7 +2,11 @@ import csv
 import fire
 import sys
 import subprocess
+import re
 import os.path
+
+MAX_OPCODE_ARGS=7
+DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 
 class Program(object):
   """
@@ -81,8 +85,8 @@ class Measurements(object):
         print(header)
     elif mode == trace_opcodes:
         header = "program_id,sample_id,instruction_id,pc,op,stack_depth"
-        for i in range(32):
-            elem = ",stack_elem{}".format(i)
+        for i in range(MAX_OPCODE_ARGS):
+            elem = ",arg_{}".format(i)
             header += elem
 
         print(header)
@@ -99,6 +103,10 @@ class Measurements(object):
           instrumenter_result = self.run_openethereum_wasm(program, sampleSize)
         elif evm == evmone:
           instrumenter_result = self.run_evmone(mode, program, sampleSize)
+
+        if mode == trace_opcodes:
+            instrumenter_result = self.sanitize_tracer_result(instrumenter_result)
+
 
         result_row = self.csv_row_append_info(instrumenter_result, program, sample_id)
 
@@ -158,6 +166,61 @@ class Measurements(object):
     # append program_id and sample_id which are not known to the instrumenter tool
     to_append = "{},{},".format(program.id, sample_id)
     return [to_append + row for row in instrumenter_result]
+
+  def sanitize_tracer_result(self, tracer_result):
+      specs = self.read_opcodes_specs()
+
+      result = []
+      for row in tracer_result:
+        row = row.split(',')
+        prefix = row[0:4] # take first columns untouched
+        opcode = row[2]
+        stack_depth = int(row[3])
+        stack = row[4:]
+
+        args = None
+        match_result = re.search(r'^(DUP|PUSH|SWAP)([1-9][0-9]?)$', opcode)
+        if match_result == None:
+            # stack top is stack[stack_depth - 1] and stack bottom is stack[0],
+            # so to take some deeper arguments we have to do some mysterious maths
+            arity = specs[opcode]
+            args = stack[stack_depth - (arity - 1)  - 1: stack_depth]
+        else:
+            (opcode, opcode_variant) = match_result.groups()
+            opcode_variant = int(opcode_variant)
+            if opcode == 'PUSH':
+                args = []
+            elif opcode == 'DUP':
+                args = [stack[stack_depth - (opcode_variant - 1) - 1 ]]
+            elif opcode == 'SWAP':
+                args = [stack[stack_depth - opcode_variant - 1], stack[stack_depth -  1]]
+
+        # since it is more natural to read args left->right
+        # and stack is quite the opposite
+        # lets reverse the args
+        args.reverse()
+
+
+        # append with empty positions to conform to CSV format
+        for i in range(len(args), MAX_OPCODE_ARGS):
+            args.append('')
+
+        parsed_line = ','.join(prefix + args)
+        result.append(parsed_line)
+
+      return result
+
+  def read_opcodes_specs(self):
+      opcodes_file = os.path.join(DIR_PATH, '..', 'program_generator' ,'data', 'opcodes.csv')
+      with open(opcodes_file, newline='') as opcodes_args_file:
+        reader = csv.DictReader(opcodes_args_file, delimiter=',', quotechar='"')
+        specs = dict()
+        for row in reader:
+            opcode = row['Mnemonic']
+            if re.search(r'^(SWAP|DUP|PUSH|INVALID).*$', opcode) is None:
+                # "Removed from stack" ~ opcode arity
+                specs[opcode] = int(row['Removed from stack'])
+        return specs
 
 
 def main():
