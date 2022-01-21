@@ -143,8 +143,8 @@ class ProgramGenerator(object):
     if has_parameter:
       opcode += operation['Parameter']
 
-    push_count = 60
-    total_pop_count = 20
+    push_count = 120
+    total_pop_count = 40
 
     interleaved_pop_count = max(op_count - 1, 0)
     end_pop_count = total_pop_count - interleaved_pop_count
