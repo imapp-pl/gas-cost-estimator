@@ -53,9 +53,9 @@ load_data_set <- function(env, program_set_codename, measurement_codename) {
   result$env = env
   return(result)
 }
-#result_geth = load_data_set("geth", "exp", "50_4")
+result_geth = load_data_set("geth", program_set_codename, "50_4")
 result_evmone = load_data_set("evmone", program_set_codename, "50_4")
-results = rbind(result_evmone)#, result_geth)
+results = rbind(result_evmone, result_geth)
 head(results)
 ```
 
@@ -98,48 +98,67 @@ ternary_opcodes = extract_opcodes(program_set_codename, 3)
 
 first_pass = data.frame(matrix(ncol = 3, nrow = 0))
 colnames(first_pass) <- c('opcode', 'has_significant', 'has_impacting')
+
+# Every `arg` coefficient represents the impact of the argument's byte size growing by 1.
+# We treat as impactful the arguments, where this increase will increase the cost by more than 10%
+impact_ratio = 0.1
+arg_lm <- function(df, opcode, env, arity) {
+  data = df[which(df$opcode==opcode & df$env==env), ]
+  if (arity == 1) {
+    lm(measure_total_time_ns ~ op_count + arg1:op_count, data=data)
+  } else if (arity == 2) {
+    lm(measure_total_time_ns ~ op_count + arg1:op_count + arg2:op_count, data=data)
+  } else if (arity == 3) {
+    lm(measure_total_time_ns ~ op_count + arg1:op_count + arg2:op_count + arg3:op_count, data=data)
+  }
+}
+add_arg_results <- function(model, opcode, df, arity) {
+  all_coefficients = summary(model)$coefficients
+  arg_coefficients = all_coefficients[!(row.names(all_coefficients) %in% c("op_count", "(Intercept)")),]
+    
+  if (arity == 1) {
+    # there's only one arg coefficient here, silly R forces us to take a special case path...
+    has_significant = arg_coefficients[4] < 0.01
+  
+    pure_op_count_coeff = all_coefficients["op_count", 1]
+    if (has_significant) {
+      significant_coefficients = arg_coefficients[1]
+      coefficient_impact = abs(significant_coefficients)
+      has_impacting = coefficient_impact > pure_op_count_coeff * impact_ratio
+    } else {
+      has_impacting = FALSE
+    }
+  } else {
+    significant = which(arg_coefficients[, 4] < 0.01)
+    has_significant = length(significant) > 0
+  
+    pure_op_count_coeff = all_coefficients["op_count", 1]
+    significant_coefficients = arg_coefficients[significant, 1]
+    coefficient_impact = abs(significant_coefficients)
+    can_impact = which(coefficient_impact > pure_op_count_coeff * impact_ratio)
+    has_impacting = length(can_impact) > 0
+  }
+  df[nrow(df) + 1, ] = c(opcode, has_significant, has_impacting)
+  return(df)
+}
+
 for (opcode in unary_opcodes) {
-  model = lm(measure_total_time_ns ~ arg1:op_count, data=measurements[which(measurements$opcode==opcode), ])
+  model = arg_lm(measurements, opcode, 'evmone', 1)
   print(opcode)
   print(summary(model))
-  significant = which(summary(model)$coefficients[-1, 4] < 0.01)
-  has_significant = length(significant) > 0
-
-  # THIS IS NOT GOOD! intercept contains all the pushes and pops, so comparing to that makes no sense
-  intercept = summary(model)$coefficients[1, 1]
-  significant_coefficients = summary(model)$coefficients[significant + 1, 1]
-  coefficient_impact = abs(significant_coefficients) * 32
-  can_impact = which(coefficient_impact > intercept * 0.1)
-  has_impacting = length(can_impact) > 0
-  first_pass[nrow(first_pass) + 1, ] = c(opcode, has_significant, has_impacting)
+  first_pass = add_arg_results(model, opcode, first_pass, 1)
 }
 for (opcode in binary_opcodes) {
-  model = lm(measure_total_time_ns ~ arg1:op_count + arg2:op_count, data=measurements[which(measurements$opcode==opcode), ])
+  model = arg_lm(measurements, opcode, 'evmone', 2)
   print(opcode)
   print(summary(model))
-  significant = which(summary(model)$coefficients[-1, 4] < 0.01)
-  has_significant = length(significant) > 0
-
-  intercept = summary(model)$coefficients[1, 1]
-  significant_coefficients = summary(model)$coefficients[significant + 1, 1]
-  coefficient_impact = abs(significant_coefficients) * 32
-  can_impact = which(coefficient_impact > intercept * 0.1)
-  has_impacting = length(can_impact) > 0
-  first_pass[nrow(first_pass) + 1, ] = c(opcode, has_significant, has_impacting)
+  first_pass = add_arg_results(model, opcode, first_pass, 2)
 }
 for (opcode in ternary_opcodes) {
-  model = lm(measure_total_time_ns ~ arg1:op_count + arg2:op_count + arg3:op_count, data=measurements[which(measurements$opcode==opcode), ])
+  model = arg_lm(measurements, opcode, 'evmone', 3)
   print(opcode)
   print(summary(model))
-  significant = which(summary(model)$coefficients[-1, 4] < 0.01)
-  has_significant = length(significant) > 0
-
-  intercept = summary(model)$coefficients[1, 1]
-  significant_coefficients = summary(model)$coefficients[significant + 1, 1]
-  coefficient_impact = abs(significant_coefficients) * 32
-  can_impact = which(coefficient_impact > intercept * 0.1)
-  has_impacting = length(can_impact) > 0
-  first_pass[nrow(first_pass) + 1, ] = c(opcode, has_significant, has_impacting)
+  first_pass = add_arg_results(model, opcode, first_pass, 3)
 }
 
 first_pass[which(first_pass$has_impacting == 'TRUE'), 'opcode']
