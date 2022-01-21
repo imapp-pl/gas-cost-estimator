@@ -120,7 +120,7 @@ class Measurements(object):
   def run_openethereum(self, mode, program, sampleSize):
     openethereum_build_path = './instrumentation_measurement/openethereum/target/release/'
     openethereum_main = [openethereum_build_path + 'openethereum-evm']
-    args = ['--code', program.bytecode, "--repeat", "{}".format(sampleSize)]
+    args = ['--measure-mode', mode, '--code', program.bytecode, "--repeat", "{}".format(sampleSize)]
     invocation = openethereum_main + args
     result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
     assert result.returncode == 0
