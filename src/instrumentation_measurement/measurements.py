@@ -2,9 +2,11 @@ import csv
 import fire
 import sys
 import subprocess
+import re
 import os.path
 
 MAX_OPCODE_ARGS=7
+DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 
 class Program(object):
   """
@@ -176,9 +178,28 @@ class Measurements(object):
         stack_depth = int(row[3])
         stack = row[4:]
 
-        # stack top is stack[stack_depth - 1] and stack bottom is stack[0],
-        # so to take some deeper arguments we have to do some mysterious maths
-        args = [stack[stack_depth - arg_depth - 1] for arg_depth in specs[opcode]]
+        args = None
+        match_result = re.search(r'^(DUP|PUSH|SWAP)([1-9][0-9]?)$', opcode)
+        if match_result == None:
+            # stack top is stack[stack_depth - 1] and stack bottom is stack[0],
+            # so to take some deeper arguments we have to do some mysterious maths
+            arity = specs[opcode]
+            args = stack[stack_depth - (arity - 1)  - 1: stack_depth]
+        else:
+            (opcode, opcode_variant) = match_result.groups()
+            opcode_variant = int(opcode_variant)
+            if opcode == 'PUSH':
+                args = []
+            elif opcode == 'DUP':
+                args = [stack[stack_depth - (opcode_variant - 1) - 1 ]]
+            elif opcode == 'SWAP':
+                args = [stack[stack_depth - opcode_variant - 1], stack[stack_depth -  1]]
+
+        # since it is more natural to read args left->right
+        # and stack is quite the opposite
+        # lets reverse the args
+        args.reverse()
+
 
         # append with empty positions to conform to CSV format
         for i in range(len(args), MAX_OPCODE_ARGS):
@@ -190,18 +211,15 @@ class Measurements(object):
       return result
 
   def read_opcodes_specs(self):
-      with open('./instrumentation_measurement/data/opcodes_args.csv', newline='') as opcodes_args_file:
-        args_keys = list('arg{}_depth'.format(i) for i in range(6))
+      opcodes_file = os.path.join(DIR_PATH, '..', 'program_generator' ,'data', 'opcodes.csv')
+      with open(opcodes_file, newline='') as opcodes_args_file:
         reader = csv.DictReader(opcodes_args_file, delimiter=',', quotechar='"')
-
-        specs = {}
+        specs = dict()
         for row in reader:
-          args = []
-          opcode = row['mnemonic']
-          for k in args_keys:
-              if row[k] != '' and row[k] != None:
-                  args.append(int(row[k]))
-          specs[opcode] = args
+            opcode = row['Mnemonic']
+            if re.search(r'^(SWAP|DUP|PUSH|INVALID).*$', opcode) is None:
+                # "Removed from stack" ~ opcode arity
+                specs[opcode] = int(row['Removed from stack'])
         return specs
 
 
