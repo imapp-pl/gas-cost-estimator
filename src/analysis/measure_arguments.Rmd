@@ -100,8 +100,12 @@ first_pass = data.frame(matrix(ncol = 3, nrow = 0))
 colnames(first_pass) <- c('opcode', 'has_significant', 'has_impacting')
 
 # Every `arg` coefficient represents the impact of the argument's byte size growing by 1.
-# We treat as impactful the arguments, where this increase will increase the cost by more than 10%
-impact_ratio = 0.1
+# We treat as impactful the arguments, where:
+# 1. The estimate is significant with confidence 0.1
+# 2. The increase of arg's byte size by 1 will increase the cost by more than 5%
+impact_ratio = 0.01
+p_value_thresh = 0.1
+
 arg_lm <- function(df, opcode, env, arity) {
   data = df[which(df$opcode==opcode & df$env==env), ]
   if (arity == 1) {
@@ -118,7 +122,7 @@ add_arg_results <- function(model, opcode, df, arity) {
     
   if (arity == 1) {
     # there's only one arg coefficient here, silly R forces us to take a special case path...
-    has_significant = arg_coefficients[4] < 0.01
+    has_significant = arg_coefficients[4] < p_value_thresh
   
     pure_op_count_coeff = all_coefficients["op_count", 1]
     if (has_significant) {
@@ -129,7 +133,7 @@ add_arg_results <- function(model, opcode, df, arity) {
       has_impacting = FALSE
     }
   } else {
-    significant = which(arg_coefficients[, 4] < 0.01)
+    significant = which(arg_coefficients[, 4] < p_value_thresh)
     has_significant = length(significant) > 0
   
     pure_op_count_coeff = all_coefficients["op_count", 1]
