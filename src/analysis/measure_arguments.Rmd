@@ -117,8 +117,8 @@ Notes:
 
 ```{r}
 
-first_pass = data.frame(matrix(ncol = 8, nrow = 0))
-colnames(first_pass) <- c('opcode', 'env', 'has_significant', 'has_impacting', 'estimate_ns', 'arg1_ns', 'arg2_ns', 'arg3_ns')
+estimates = data.frame(matrix(ncol = 8, nrow = 0))
+colnames(estimates) <- c('opcode', 'env', 'has_significant', 'has_impacting', 'estimate_marginal_ns', 'arg1_ns', 'arg2_ns', 'arg3_ns')
 
 # Every `arg` coefficient represents the impact of the argument's byte size growing by 1.
 # We treat as impactful the arguments, where:
@@ -193,12 +193,12 @@ analyze_for_env <- function(df, results_df, env) {
   return(results_df)
 }
 
-first_pass = analyze_for_env(measurements, first_pass, 'geth')
-first_pass = analyze_for_env(measurements, first_pass, 'evmone')
+estimates = analyze_for_env(measurements, estimates, 'geth')
+estimates = analyze_for_env(measurements, estimates, 'evmone')
 
-proceed_with_opcodes = unique(first_pass[which(first_pass$has_impacting == 'TRUE'), 'opcode'])
+proceed_with_opcodes = unique(estimates[which(estimates$has_impacting == 'TRUE'), 'opcode'])
 
-first_pass[which(first_pass$has_impacting == 'TRUE'), ]
+estimates[which(estimates$has_impacting == 'TRUE'), ]
 ```
 
 ### Model with all variables ever
@@ -247,6 +247,7 @@ for (opcode in proceed_with_opcodes) {
 ### Producing the final estimates
 
 ```{r}
-
+setwd("~/sources/imapp/gas-cost-estimator/src")
+write.csv(estimates, "../../local/argument_estimated_cost.csv", quote=FALSE, row.names=FALSE)
 ```
 
