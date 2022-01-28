@@ -117,8 +117,8 @@ Notes:
 
 ```{r}
 
-estimates = data.frame(matrix(ncol = 8, nrow = 0))
-colnames(estimates) <- c('opcode', 'env', 'has_significant', 'has_impacting', 'estimate_marginal_ns', 'arg0_ns', 'arg1_ns', 'arg2_ns')
+first_pass = data.frame(matrix(ncol = 8, nrow = 0))
+colnames(first_pass) <- c('opcode', 'env', 'has_significant', 'has_impacting', 'estimate_marginal_ns', 'arg0_ns', 'arg1_ns', 'arg2_ns')
 
 # Every `arg` coefficient represents the impact of the argument's byte size growing by 1.
 # We treat as impactful the arguments, where:
@@ -127,15 +127,9 @@ colnames(estimates) <- c('opcode', 'env', 'has_significant', 'has_impacting', 'e
 impact_ratio = 0.05
 p_value_thresh = 0.1
 
-arg_lm <- function(df, opcode, env, arity) {
+arg_lm <- function(df, opcode, env, formula) {
   data = df[which(df$opcode==opcode & df$env==env), ]
-  if (arity == 1) {
-    lm(measure_total_time_ns ~ op_count + arg0 + arg0:op_count, data=data)
-  } else if (arity == 2) {
-    lm(measure_total_time_ns ~ op_count + arg0 + arg1 + arg0:op_count + arg1:op_count, data=data)
-  } else if (arity == 3) {
-    lm(measure_total_time_ns ~ op_count + arg0 + arg1 + arg2 + arg0:op_count + arg1:op_count + arg2:op_count, data=data)
-  }
+  lm(formula, data=data)
 }
 
 add_arg_results <- function(model, opcode, env, results_df, arity) {
@@ -173,19 +167,19 @@ add_arg_results <- function(model, opcode, env, results_df, arity) {
 
 analyze_for_env <- function(df, results_df, env) {
   for (opcode in unary_opcodes) {
-    model = arg_lm(df, opcode, env, 1)
+    model = arg_lm(df, opcode, env, measure_total_time_ns ~ op_count + arg0 + arg0:op_count)
     print(c(opcode, env))
     print(summary(model))
     results_df = add_arg_results(model, opcode, env, results_df, 1)
   }
   for (opcode in binary_opcodes) {
-    model = arg_lm(df, opcode, env, 2)
+    model = arg_lm(df, opcode, env, measure_total_time_ns ~ op_count + arg0 + arg1 + arg0:op_count + arg1:op_count)
     print(c(opcode, env))
     print(summary(model))
     results_df = add_arg_results(model, opcode, env, results_df, 2)
   }
   for (opcode in ternary_opcodes) {
-    model = arg_lm(df, opcode, env, 3)
+    model = arg_lm(df, opcode, env, measure_total_time_ns ~ op_count + arg0 + arg1 + arg2 + arg0:op_count + arg1:op_count + arg2:op_count)
     print(c(opcode, env))
     print(summary(model))
     results_df = add_arg_results(model, opcode, env, results_df, 3)
@@ -193,12 +187,16 @@ analyze_for_env <- function(df, results_df, env) {
   return(results_df)
 }
 
-estimates = analyze_for_env(measurements, estimates, 'geth')
-estimates = analyze_for_env(measurements, estimates, 'evmone')
+first_pass = analyze_for_env(measurements, first_pass, 'geth')
+first_pass = analyze_for_env(measurements, first_pass, 'evmone')
 
-proceed_with_opcodes = unique(estimates[which(estimates$has_impacting == 'TRUE'), 'opcode'])
+proceed_with_opcodes = unique(first_pass[which(first_pass$has_impacting == 'TRUE'), 'opcode'])
 
-estimates[which(estimates$has_impacting == 'TRUE'), ]
+models_with_args = first_pass[which(first_pass$has_impacting == 'TRUE'), c('opcode', 'env')]
+```
+
+```{r}
+first_pass[which(first_pass$has_impacting == 'TRUE'), ]
 ```
 
 ### Model with all variables ever
@@ -216,9 +214,9 @@ Not immediately useful - commented out because it has too many params
 # if other than binary OPCODEs end up being selected we must expand the code
 stopifnot(proceed_with_opcodes %in% binary_opcodes)
 measurements_mean = aggregate(measure_total_time_ns ~ op_count * env * opcode * arg0 * arg1, measurements[which(measurements$opcode %in% proceed_with_opcodes), ], mean, na.action=na.pass)
-env = 'evmone'
+
 plot_model <- function(df, opcode, env) {
-  model = arg_lm(df, opcode, env, 2)
+  model = arg_lm(df, opcode, env, measure_total_time_ns ~ op_count + arg0 + arg1 + arg0:op_count + arg1:op_count)
   print(c(opcode, env))
   print(summary(model))
   
@@ -245,6 +243,108 @@ for (opcode in proceed_with_opcodes) {
 ```
 
 ### Producing the final estimates
+
+We'd like to only estimate using the arg-variables in models, where this actually matters to avoid spurious impact of insignificant variables.
+
+We'll estimate a model with only those argument variables, where they turned out impacting.
+For those were no argument variable was impacting, we'll only estimate the marginal increase (corresponding to the constant cost of an OPCODE).
+
+```{r}
+make_non_arg_model <- function(model, results_df, env, opcode) {
+  print(c(opcode, env))
+  print(summary(model))
+  pure_op_count_coeff = summary(model)$coefficients["op_count", 1]
+  args_ns = c(NA, NA, NA)
+  results_df[nrow(results_df) + 1, ] = c(opcode, env, FALSE, FALSE, pure_op_count_coeff, args_ns)
+  return(results_df)
+}
+add_arg_model_estimates <- function(model, opcode, env, results_df, arg_variables, arg_names) {
+  all_coefficients = summary(model)$coefficients
+  arg_coefficients = all_coefficients[!(row.names(all_coefficients) %in% c("op_count", "(Intercept)", "arg0", "arg1", "arg2")),]
+  pure_op_count_coeff = all_coefficients["op_count", 1]
+  # will be filled if any is impacting
+  args_ns = c(NA, NA, NA)
+  args_ns[arg_variables] = all_coefficients[arg_names, 'Estimate']
+  results_df[nrow(results_df) + 1, ] = c(opcode, env, TRUE, TRUE, pure_op_count_coeff, args_ns)
+  return(results_df)
+}
+```
+
+```{r}
+estimates = data.frame(matrix(ncol = ncol(first_pass), nrow = 0))
+colnames(estimates) <- colnames(first_pass)
+
+for (env in c('evmone', 'geth')) {
+  for (opcode in unary_opcodes) {
+    row_to_find <- data.frame(opcode=opcode, env=env)
+    is_modeled_with_args = duplicated(rbind(models_with_args, row_to_find))[nrow(models_with_args)+1]
+    if (!is_modeled_with_args) {
+      model = arg_lm(measurements, opcode, env, measure_total_time_ns ~ op_count + arg0)
+      estimates = make_non_arg_model(model, estimates, env, opcode)
+    }
+  }
+  for (opcode in binary_opcodes) {
+    row_to_find <- data.frame(opcode=opcode, env=env)
+    is_modeled_with_args = duplicated(rbind(models_with_args, row_to_find))[nrow(models_with_args)+1]
+    if (!is_modeled_with_args) {
+      model = arg_lm(measurements, opcode, env, measure_total_time_ns ~ op_count + arg0 + arg1)
+      estimates = make_non_arg_model(model, estimates, env, opcode)
+    }
+  }
+  for (opcode in ternary_opcodes) {
+    row_to_find <- data.frame(opcode=opcode, env=env)
+    is_modeled_with_args = duplicated(rbind(models_with_args, row_to_find))[nrow(models_with_args)+1]
+    if (!is_modeled_with_args) {
+      model = arg_lm(measurements, opcode, env, measure_total_time_ns ~ op_count + arg0 + arg1 + arg2)
+      estimates = make_non_arg_model(model, estimates, env, opcode)
+    }
+  }
+}
+
+# TODO: when changing this, refactor the selectors of variables, this is very error prone
+opcode = 'EXP'
+env = 'evmone'
+model = arg_lm(measurements, opcode, env, measure_total_time_ns ~ op_count + arg0 + arg1 + op_count:arg1)
+print(c(opcode, env))
+print(summary(model))
+estimates = add_arg_model_estimates(model, opcode, env, estimates, c(2), c('op_count:arg1'))
+
+opcode = 'EXP'
+env = 'geth'
+model = arg_lm(measurements, opcode, env, measure_total_time_ns ~ op_count + arg0 + arg1 + op_count:arg1)
+print(c(opcode, env))
+print(summary(model))
+estimates = add_arg_model_estimates(model, opcode, env, estimates, c(2), c('op_count:arg1'))
+
+opcode = 'MOD'
+env = 'geth'
+model = arg_lm(measurements, opcode, env, measure_total_time_ns ~ op_count + arg0 + arg1 + op_count:arg0 + op_count:arg1)
+print(c(opcode, env))
+print(summary(model))
+estimates = add_arg_model_estimates(model, opcode, env, estimates, c(1, 2), c('op_count:arg0', 'op_count:arg1'))
+
+opcode = 'DIV'
+env = 'geth'
+model = arg_lm(measurements, opcode, env, measure_total_time_ns ~ op_count + arg0 + arg1 + op_count:arg0)
+print(c(opcode, env))
+print(summary(model))
+estimates = add_arg_model_estimates(model, opcode, env, estimates, c(1), c('op_count:arg0'))
+
+opcode = 'SDIV'
+env = 'geth'
+model = arg_lm(measurements, opcode, env, measure_total_time_ns ~ op_count + arg0 + arg1 + op_count:arg0)
+print(c(opcode, env))
+print(summary(model))
+estimates = add_arg_model_estimates(model, opcode, env, estimates, c(1), c('op_count:arg0'))
+
+opcode = 'SMOD'
+env = 'geth'
+model = arg_lm(measurements, opcode, env, measure_total_time_ns ~ op_count + arg0 + arg1 + op_count:arg0)
+print(c(opcode, env))
+print(summary(model))
+estimates = add_arg_model_estimates(model, opcode, env, estimates, c(1), c('op_count:arg0'))
+
+```
 
 ```{r}
 setwd("~/sources/imapp/gas-cost-estimator/src")
