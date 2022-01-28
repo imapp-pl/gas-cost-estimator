@@ -95,7 +95,7 @@ func TraceBytecode(cfg *runtime.Config, bytecode []byte, printCSV bool, sampleId
 			// let's print only 32 elems of the stack
 			for i, elem := range log.Stack {
 				if i < 32 {
-					fmt.Fprintf(os.Stdout, ",%d", elem)
+					fmt.Fprintf(os.Stdout, ",%d", elem.ToBig())
 				}
 			}
 			// if there are not 32 elems, append the csv with empty columns
