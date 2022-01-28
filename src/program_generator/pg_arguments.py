@@ -104,7 +104,7 @@ class ProgramGenerator(object):
     else:
       pass
 
-    programs = [self._generate_program_pair(operation, op_count) for operation in operations for _ in range(0, count)]
+    programs = [self._generate_program_triplet(operation, op_count) for operation in operations for _ in range(0, count)]
     programs = [item for sublist in programs for item in sublist]
 
     return programs
@@ -120,14 +120,15 @@ class ProgramGenerator(object):
     op = hex(op_num)[2:]
     return op + value
 
-  def _generate_program_pair(self, operation, op_count):
+  def _generate_program_triplet(self, operation, op_count):
     arity = int(operation['Removed from stack'])
     arg_bit_sizes = [random.randint(1, 32) for _ in range(0, arity)]
     single_op_pushes = [self._random_push(size) for size in arg_bit_sizes]
     # the arguments are popped from the stack
     single_op_pushes.reverse()
     return [self._generate_single_program(single_op_pushes, arg_bit_sizes, operation, 0),
-            self._generate_single_program(single_op_pushes, arg_bit_sizes, operation, op_count)]
+            self._generate_single_program(single_op_pushes, arg_bit_sizes, operation, op_count),
+            self._generate_single_program(single_op_pushes, arg_bit_sizes, operation, op_count * 2)]
 
   def _generate_single_program(self, single_op_pushes, arg_bit_sizes, operation, op_count):
     """
