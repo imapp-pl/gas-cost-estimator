@@ -47,10 +47,5 @@ COPY ./src/ /srv/app/src/
 
 WORKDIR /srv/app/
 
-# check correct host configuration
-ARG SKIP_CLOCKSOURCE_CHECK=false
-RUN chmod a+x ./src/check_clocksource.sh
-RUN ./src/check_clocksource.sh
-
 # our runtime config
 ENV GOGC=off

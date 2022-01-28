@@ -22,8 +22,3 @@ RUN cargo build --release
 COPY ./src/ /srv/app/src/
 
 WORKDIR /srv/app/
-
-# check correct host configuration
-ARG SKIP_CLOCKSOURCE_CHECK=false
-RUN chmod a+x /srv/app/src/check_clocksource.sh
-RUN /srv/app/src/check_clocksource.sh
