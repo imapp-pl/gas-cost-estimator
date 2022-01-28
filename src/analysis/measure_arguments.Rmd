@@ -63,7 +63,7 @@ head(results)
 ```
 
 ```{r fig.width=20}
-measurements = sqldf("SELECT opcode, op_count, arg1, arg2, arg3, sample_id, run_id, measure_total_time_ns, env, results.program_id
+measurements = sqldf("SELECT opcode, op_count, arg0, arg1, arg2, sample_id, run_id, measure_total_time_ns, env, results.program_id
                      FROM results
                      INNER JOIN
                        programs ON(results.program_id = programs.program_id)
@@ -91,13 +91,13 @@ extract_opcodes <- function(program_set_codename, arity) {
   programs = clean_programs(programs)
   if (!missing(arity)) {
     if (arity == 1) {
-      programs = programs[which(is.na(programs$arg2) & is.na(programs$arg3)), ]
+      programs = programs[which(is.na(programs$arg1) & is.na(programs$arg2)), ]
     }
     if (arity == 2) {
-      programs = programs[which(!is.na(programs$arg2) & is.na(programs$arg3)), ]
+      programs = programs[which(!is.na(programs$arg1) & is.na(programs$arg2)), ]
     }
     if (arity == 3) {
-      programs = programs[which(!is.na(programs$arg2) & !is.na(programs$arg3)), ]
+      programs = programs[which(!is.na(programs$arg1) & !is.na(programs$arg2)), ]
     }
   }
   unique(programs$opcode)
@@ -118,7 +118,7 @@ Notes:
 ```{r}
 
 estimates = data.frame(matrix(ncol = 8, nrow = 0))
-colnames(estimates) <- c('opcode', 'env', 'has_significant', 'has_impacting', 'estimate_marginal_ns', 'arg1_ns', 'arg2_ns', 'arg3_ns')
+colnames(estimates) <- c('opcode', 'env', 'has_significant', 'has_impacting', 'estimate_marginal_ns', 'arg0_ns', 'arg1_ns', 'arg2_ns')
 
 # Every `arg` coefficient represents the impact of the argument's byte size growing by 1.
 # We treat as impactful the arguments, where:
@@ -130,17 +130,17 @@ p_value_thresh = 0.1
 arg_lm <- function(df, opcode, env, arity) {
   data = df[which(df$opcode==opcode & df$env==env), ]
   if (arity == 1) {
-    lm(measure_total_time_ns ~ op_count + arg1 + arg1:op_count, data=data)
+    lm(measure_total_time_ns ~ op_count + arg0 + arg0:op_count, data=data)
   } else if (arity == 2) {
-    lm(measure_total_time_ns ~ op_count + arg1 + arg2 + arg1:op_count + arg2:op_count, data=data)
+    lm(measure_total_time_ns ~ op_count + arg0 + arg1 + arg0:op_count + arg1:op_count, data=data)
   } else if (arity == 3) {
-    lm(measure_total_time_ns ~ op_count + arg1 + arg2 + arg3 + arg1:op_count + arg2:op_count + arg3:op_count, data=data)
+    lm(measure_total_time_ns ~ op_count + arg0 + arg1 + arg2 + arg0:op_count + arg1:op_count + arg2:op_count, data=data)
   }
 }
 
 add_arg_results <- function(model, opcode, env, results_df, arity) {
   all_coefficients = summary(model)$coefficients
-  arg_coefficients = all_coefficients[!(row.names(all_coefficients) %in% c("op_count", "(Intercept)", "arg1", "arg2", "arg3")),]
+  arg_coefficients = all_coefficients[!(row.names(all_coefficients) %in% c("op_count", "(Intercept)", "arg0", "arg1", "arg2")),]
   pure_op_count_coeff = all_coefficients["op_count", 1]
   # will be filled if any is impacting
   args_ns = c(NA, NA, NA)
@@ -206,7 +206,7 @@ estimates[which(estimates$has_impacting == 'TRUE'), ]
 Not immediately useful - commented out because it has too many params
 
 ```{r}
-# mega_model = lm(measure_total_time_ns ~ arg1 + arg2 + env + op_count:env:opcode + arg1:op_count:env:opcode + arg2:op_count:env:opcode, data=measurements[which(measurements$opcode %in% binary_opcodes), ])
+# mega_model = lm(measure_total_time_ns ~ arg0 + arg1 + env + op_count:env:opcode + arg0:op_count:env:opcode + arg1:op_count:env:opcode, data=measurements[which(measurements$opcode %in% binary_opcodes), ])
 # summary(mega_model)
 ```
 
@@ -215,7 +215,7 @@ Not immediately useful - commented out because it has too many params
 ```{r}
 # if other than binary OPCODEs end up being selected we must expand the code
 stopifnot(proceed_with_opcodes %in% binary_opcodes)
-measurements_mean = aggregate(measure_total_time_ns ~ op_count * env * opcode * arg1 * arg2, measurements[which(measurements$opcode %in% proceed_with_opcodes), ], mean, na.action=na.pass)
+measurements_mean = aggregate(measure_total_time_ns ~ op_count * env * opcode * arg0 * arg1, measurements[which(measurements$opcode %in% proceed_with_opcodes), ], mean, na.action=na.pass)
 env = 'evmone'
 plot_model <- function(df, opcode, env) {
   model = arg_lm(df, opcode, env, 2)
@@ -227,13 +227,13 @@ plot_model <- function(df, opcode, env) {
   
   plot_data = df[which(df$env == env & df$opcode == opcode & df$op_count != 0), ]
   par(mfrow=c(1,1))
+  boxplot(measure_total_time_ns ~ arg0, data=plot_data, las=2, outline=removed_outliers)
   boxplot(measure_total_time_ns ~ arg1, data=plot_data, las=2, outline=removed_outliers)
-  boxplot(measure_total_time_ns ~ arg2, data=plot_data, las=2, outline=removed_outliers)
   
-  plot_data=plot_data[order(plot_data$arg1, plot_data$arg2), ]
+  plot_data=plot_data[order(plot_data$arg0, plot_data$arg1), ]
   decreasing_colors = heat.colors(nrow(plot_data))
   plot_data=plot_data[order(plot_data$measure_total_time_ns, decreasing=TRUE), ]
-  with(plot_data, plot(arg1, arg2, col=decreasing_colors, pch=19))
+  with(plot_data, plot(arg0, arg1, col=decreasing_colors, pch=19))
   title(main=paste(opcode, env))
 }
 for (opcode in proceed_with_opcodes) {
