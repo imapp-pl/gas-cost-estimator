@@ -22,7 +22,7 @@ has_exp <- function(x) {
   if ('EXP' %in% x$op) 'red' else 'blue'
 }
 count_zero_args <- function(x) {
-  sum(!is.na(x$stack_elem0) & x$stack_elem0 == 0 | !is.na(x$stack_elem1) & x$stack_elem1 == 0 | !is.na(x$stack_elem2) & x$stack_elem2 == 0)
+  sum(!is.na(x$arg_0) & x$arg_0 == 0 | !is.na(x$arg_1) & x$arg_1 == 0 | !is.na(x$arg_2) & x$arg_2 == 0)
 }
 ```
 
@@ -195,7 +195,7 @@ head(validation)
 ```{r}
 validation$fingerprint = gapply(traces, c('op', 'program_id'), FUN=function(x) fingerprint(x), groups=traces$program_id)
 validation$has_exp = gapply(traces, c('op'), FUN=function(x) has_exp(x), groups=traces$program_id)
-validation$n_zero_args = gapply(traces, c('op', 'program_id', 'stack_elem0', 'stack_elem1', 'stack_elem2'), FUN=function(x) count_zero_args(x), groups=traces$program_id)
+validation$n_zero_args = gapply(traces, c('op', 'program_id', 'arg_0', 'arg_1', 'arg_2'), FUN=function(x) count_zero_args(x), groups=traces$program_id)
 ```
 
 Basic inspection of data reveals strong decreasing trend for each sample (sequence of runs).
