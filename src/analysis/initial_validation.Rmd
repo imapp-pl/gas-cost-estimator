@@ -1,0 +1,255 @@
+---
+title: "R Notebook: exploration of validation by comparing individual and total measurements; for Gas Cost Estimator"
+output: html_notebook
+---
+
+```{r include=FALSE, fig.width=20}
+library(sqldf)
+library(nlme)
+```
+
+## First pass validation
+
+In this pass we discover some adjustments needed to the validation process.
+Keeping this version of the script for future reference.
+Scroll down to Final validation section.
+
+### Data preparations
+
+We're using the random arithmetic program generator via:
+
+```
+python3 program_generator/pg_arythmetic.py generate --count=100 --opsLimit=10 --fullCsv > ../../local/pg_arythmetic_100_10.csv`.
+```
+
+Then tracing it using:
+
+```
+docker run \
+  --rm -v /home/user/sources/imapp/local:/srv/local \
+  -it gas-cost-estimator/geth_all \
+  sh -c "cd src && cat /srv/local/pg_arythmetic_100_10.csv | python3 instrumentation_measurement/measurements.py measure --evm geth --mode trace --sampleSize 1 > /srv/local/trace_pg_arythmetic_100_10.csv"`.
+```
+
+This gives us the first analyzed program set `c100_ops10`. We'll learn that it needs to be improved and change later.
+
+```{r fig.width=20}
+setwd("~/sources/imapp/gas-cost-estimator/src")
+
+program_set_codename = "c100_ops10"
+
+traces = read.csv(paste("../../local/trace_pg_arythmetic_", program_set_codename, ".csv", sep=""))
+head(traces)
+```
+Measure the program set in `measure_total` mode using:
+
+```
+docker run \
+  --rm   --privileged --security-opt seccomp:unconfined \
+  -v /home/ubuntu/pdobacz/local:/srv/local \
+  -it gas-cost-estimator/geth_total \
+  sh -c "cd src && cat /srv/local/pg_arythmetic_c100_ops10.csv | python3 instrumentation_measurement/measurements.py measure --evm geth --mode total --sampleSize=50 --nSamples=1 > /srv/local/geth_pg_arythmetic_c100_ops10.csv"
+```
+
+**NOTE** we're using the _old_ `geth` here, based off of `e7872729`.
+
+```{r}
+setwd("~/sources/imapp/gas-cost-estimator/src")
+total_measurements = read.csv(paste("../../local/geth_pg_arythmetic_", program_set_codename, ".csv", sep=""))
+head(total_measurements)
+```
+
+```{r}
+setwd("~/sources/imapp/gas-cost-estimator/src")
+
+# the preliminary exploration still used the "roughly" exported estimated cost
+# the next section used the properly exported estimated costs for all envs
+# **NOTE** we were using the _old_ `geth` here, based off of `e7872729`.
+estimated_cost = read.csv("../../local/rough_opcode_costs_new.csv")
+current_gas_cost = read.csv("../../local/current_gas_cost.csv")
+```
+
+Calculate the frequencies of each OPCODE in each program:
+
+```{r}
+ops_per_program = data.frame(table(traces$program_id, traces$op, dnn=c("program_id", "op")))
+```
+
+Join the data to obtain figures about the estimated costs and a full validation data frame for programs:
+
+```{r}
+estimated_programs = sqldf("SELECT
+                              program_id,
+                              sum(ops_per_program.Freq * estimated_cost.mean) as avg_cost,
+                              sum(ops_per_program.Freq * estimated_cost.q50) as q50_cost,
+                              sum(ops_per_program.Freq * estimated_cost.min) as min_cost,
+                              sum(ops_per_program.Freq * current_gas_cost.current_gas) as current_gas_cost
+                           FROM ops_per_program
+                           INNER JOIN estimated_cost, current_gas_cost ON ops_per_program.op == estimated_cost.op AND ops_per_program.op == current_gas_cost.op
+                           GROUP BY program_id")
+
+# ORDER BY is needed here, so that the programs are ordered by program_id numerically
+# this is a hacky way of ensuring we can merge it with other program data like fingerprints
+# TODO: make this more robust
+validation = sqldf("SELECT
+                      estimated_programs.program_id,
+                      avg(total_measurements.measure_total_time_ns) as avg_measure_total_time_ns,
+                      min(total_measurements.measure_total_time_ns) as min_measure_total_time_ns,
+                      avg_cost,
+                      q50_cost,
+                      min_cost,
+                      current_gas_cost
+                    FROM estimated_programs
+                    INNER JOIN total_measurements ON total_measurements.program_id == estimated_programs.program_id
+                    GROUP BY estimated_programs.program_id
+                    ORDER BY cast(estimated_programs.program_id AS int)")
+
+head(validation)
+```
+
+We need an additional simple (plottable) "fingerprint" of the OPCODEs included in the program, to evaluate the validation plot at a glance.
+
+```{r}
+fingerprint <- function(x) {
+  paste(x[which(!(x$op %in% c('PUSH32', 'PUSH1', 'STOP', 'POP'))),'op'], collapse=' ')
+}
+has_exp <- function(x) {
+  if ('EXP' %in% x$op) 'red' else 'blue'
+}
+count_zero_args <- function(x) {
+  sum(!is.na(x$stack_elem0) & x$stack_elem0 == 0 | !is.na(x$stack_elem1) & x$stack_elem1 == 0 | !is.na(x$stack_elem2) & x$stack_elem2 == 0)
+}
+validation$fingerprint = gapply(traces, c('op', 'program_id'), FUN=function(x) fingerprint(x), groups=traces$program_id)
+validation$has_exp = gapply(traces, c('op'), FUN=function(x) has_exp(x), groups=traces$program_id)
+validation$n_zero_args = gapply(traces, c('op', 'program_id', 'stack_elem0', 'stack_elem1', 'stack_elem2'), FUN=function(x) count_zero_args(x), groups=traces$program_id)
+```
+
+Basic inspection of data reveals strong decreasing trend for each sample (sequence of runs) and a lot of outliers.
+
+```{r fig.width=20}
+plot(total_measurements$measure_total_time_ns, ylim=c(0,3200))
+boxplot(total_measurements$measure_total_time_ns)
+boxplot(measure_total_time_ns ~ program_id, data=total_measurements, outline=FALSE)
+```
+At the first pass we are going to use minimum as the statistic to estimate and estimate with.
+So far this gives the best results, and is somewhat relevant to the question we're asking: "Is the individual measurement resolution and precision good enough to estimate costs?".
+
+For actual estimation of the gas costs, we may want to switch to median, mean or some other, more "average" statistic.
+
+```{r}
+explained_variable = 'avg_measure_total_time_ns'
+estimate_variable = 'q50_cost'
+```
+
+The relation between the estimated `cost` and the measured `avg_measure_total_time_ns` is quite evident for
+"cheap" programs, but not anymore for "expensive" program in the set.
+Educated guess was it is because of `EXP`, which has been measured individually with smallest argument in the Stage I, and those measurements led to the estimated `cost`.
+Thereby the `EXP` programs are consistently badly estimated.
+
+```{r}
+plot_validation <- function(df, yvar, xvar, label_n_zero_args) {
+  if (missing(label_n_zero_args)) {
+    label_n_zero_args = FALSE
+  }
+  scatter.smooth(df[,xvar], df[,yvar], col=df$has_exp)
+  text(df[,yvar] ~ df[,xvar], data=df, labels=program_id, cex=0.6, pos=4, font=2)
+  if (label_n_zero_args) {
+    text(df[,yvar] ~ df[,xvar], data=df, labels=n_zero_args, cex=0.6, pos=1, font=2)
+  }
+}
+plot_validation(validation, explained_variable, estimate_variable, label_n_zero_args=TRUE)
+```
+Despite the poor representation of costlier programs, the linear model (forgetting about the assumptions for now) is in favor of the relationship:
+
+```{r}
+lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
+  if (! missing(selection_col) & ! missing(selection_val)) {
+    subset = df[which(df[, selection_col] == selection_val), ]
+  } else {
+    subset = df
+  }
+  lm(subset[, yvar] ~ subset[,xvar], data=subset)
+}
+summary(lm_validation(validation, explained_variable, estimate_variable))
+```
+We'll remove the problematic datapoints (EXP-programs and programs with zero arguments on the stack).
+The relation is much stronger now.
+We are also comparing this to the estimate driven by the current gas cost schedule:
+
+```{r fig.width=10}
+validation_safe_subset = validation[which(validation$has_exp == 'blue' & validation$n_zero_args == 0),]
+par(mfrow=c(1,2))
+plot_validation(validation_safe_subset, explained_variable, estimate_variable)
+plot_validation(validation_safe_subset, explained_variable, 'current_gas_cost')
+```
+Continue with the subset excluding EXP and zero argument programs.
+Linear relation is much stronger:
+
+```{r}
+model = lm_validation(validation_safe_subset, explained_variable, estimate_variable)
+summary(model)
+print("-------------------")
+summary(lm_validation(validation_safe_subset, explained_variable, 'current_gas_cost'))
+```
+Here, for comparison the programs that currently turn out to be problematic:
+
+```{r}
+validation_problem_subset = validation[which(validation$has_exp == 'red' | validation$n_zero_args != 0),]
+plot_validation(validation_problem_subset, explained_variable, estimate_variable, label_n_zero_args=TRUE)
+```
+
+```{r}
+summary(lm_validation(validation_problem_subset, explained_variable, estimate_variable))
+```
+Take a look at the model quality plots:
+
+```{r}
+plot(model)
+```
+## Final validation
+
+Since the results are not very good so far, we try the following ideas to improve the fit:
+
+We adjust the program and instrumentation set by:
+1. Decreasing the size of stack arguments to 1-byte numbers, which mirrors the estimated costs (which used a fixed arg of 32)
+2. Reclaiming control over the stack arguments, to avoid the proliferation of 0 entries on the stack. That is, each randomly picked OPCODE is accompanied by `PUSH`es and `POP`s which setup and teardown the required stack arguments.
+
+This improved the results greatly and allowed us to keep `EXP` programs.
+
+We update `geth` from `e7872729` to `v1.10.13`, which also seems to improve the estimation model a lot (it fixes the "large `Intercept`" problem encountered with the estimation done on the older version).
+
+We adjust the analysis:
+1. Remove outliers from the `measure_total` results (doesn't change much, but healthy anyway)
+2. Double-check the warmup with longer samples (seems ok, no adjustments)
+3. Check if trivial variable like program length doesn't provide a good-enough estimate for cost (it doesn't, no adjustments)
+
+See `validation.Rmd` for the final validation
+
+
+### Check the warmup using longer samples
+
+This data set was generated like the "normal" one, but with `--sampleSize=500`.
+
+We check the long-term warm-up, but it seems to stabilize after ~40 runs and remain stable.
+More details on the usual program set below.
+
+**NOTE** we're using a different program set for this.
+
+```{r}
+setwd("~/sources/imapp/gas-cost-estimator/src")
+total_measurements_warmup = read.csv(paste("../../local/geth_pg_arythmetic_", "c100_ops30_clean_smallpush", "_checkwarmup", ".csv", sep=""))
+head(total_measurements_warmup)
+total_measurements_warmup = remove_outliers(total_measurements_warmup, "measure_total_time_ns")
+head(total_measurements_warmup)
+
+boxplot(measure_total_time_ns ~ run_id, data=total_measurements_warmup, las=2)
+```
+
+### Check how much geth's results are impacted by warmup
+
+Not much, the intercept doesn't change. Scope increases insignificantly.
+
+```{r}
+# Commented out, because we've checked, and it doesn't matter
+# total_measurements = total_measurements[which(total_measurements$run_id > 25),]
+```
