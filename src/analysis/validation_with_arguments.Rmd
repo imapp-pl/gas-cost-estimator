@@ -53,8 +53,6 @@ lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
 }
 ```
 
-### Clean the program set
-
 ```{r}
 program_set_codename = "c100_ops30_clean_smallpush"
 
@@ -75,6 +73,23 @@ for (opcode in c('PUSH1', 'POP')) {
     estimated_cost[nrow(estimated_cost), 5:8] = c(marginal[which(marginal$op==opcode & marginal$env==env), 'estimate_marginal_ns'], NA, NA, NA)
   }
 }
+```
+
+#### Mix marginal and argument measurements
+
+We originally used only the results coming from the "arguments" measurements. This means that the programs used featured running the OPCODEs with varying arguments (spanning the entire space of uint256).
+For the constant cost of an OPCODE, we'd take the `op_count` variable estimation.
+This turned out to give very coarse estimate of the constant cost (clustered estimations for evmone, grossly overestimated constant cost of MOD and friends).
+
+We therefore "mix" the two results. Take the constant cost estimated via "measure marginal" (simple, constant arguments, varying length of a series of OPCODEs) and take the estimation of the argument impact from the "measure argument" approach.
+
+**TODO** is it possible to do all with arguments measurements? the mixed approach might be OPCODE-unfair. Maybe if we pick `op_count`s away from 0?
+**NOTE** that the validation coefficients were very close to 1, which was good, when doing "arguments" only. With mixed we're back to ~2.
+
+```{r}
+order1 = order(estimated_cost$opcode, estimated_cost$env)
+order2 = order(marginal$op, marginal$env)
+estimated_cost[order1, 'estimate_marginal_ns'] = marginal[order2, 'estimate_marginal_ns']
 
 head(estimated_cost)
 head(marginal_estimated_cost)
@@ -249,6 +264,9 @@ print('geth')
 summary(model_geth)
 print('evmone')
 summary(model_evmone)
+```
+
+```{r}
 compare_plots(validation, 'env', 'geth', 'cost_ns')
 compare_plots(validation, 'env', 'evmone', 'cost_ns')
 ```
