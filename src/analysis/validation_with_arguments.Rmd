@@ -1,0 +1,253 @@
+---
+title: "R Notebook: exploration of validation of measurements - with varying arguments; for Gas Cost Estimator"
+output: html_notebook
+---
+
+```{r include=FALSE, fig.width=20}
+library(sqldf)
+library(nlme)
+```
+
+### Data preparations
+
+We need an additional simple (plottable) "fingerprint" of the OPCODEs included in the program, to evaluate the validation plot at a glance.
+
+```{r}
+fingerprint <- function(x) {
+  paste(x[which(!(x$op %in% c('PUSH32', 'PUSH1', 'STOP', 'POP'))),'op'], collapse=' ')
+}
+has_exp <- function(x) {
+  if ('EXP' %in% x$op) 'red' else 'blue'
+}
+count_zero_args <- function(x) {
+  sum(!is.na(x$arg_0) & x$arg_0 == 0 | !is.na(x$arg_1) & x$arg_1 == 0 | !is.na(x$arg_2) & x$arg_2 == 0)
+}
+```
+
+```{r}
+explained_variable = 'avg_measure_total_time_ns'
+estimate_variable = 'q50_cost'
+```
+
+```{r}
+plot_validation <- function(df, yvar, xvar, label_n_zero_args) {
+  if (missing(label_n_zero_args)) {
+    label_n_zero_args = FALSE
+  }
+  scatter.smooth(df[,xvar], df[,yvar], col=df$has_exp)
+  text(df[,yvar] ~ df[,xvar], data=df, labels=program_id, cex=0.6, pos=4, font=2)
+  if (label_n_zero_args) {
+    text(df[,yvar] ~ df[,xvar], data=df, labels=n_zero_args, cex=0.6, pos=1, font=2)
+  }
+}
+```
+
+```{r}
+lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
+  if (! missing(selection_col) & ! missing(selection_val)) {
+    subset = df[which(df[, selection_col] == selection_val), ]
+  } else {
+    subset = df
+  }
+  lm(subset[, yvar] ~ subset[,xvar], data=subset)
+}
+```
+
+### Clean the program set
+
+```{r}
+program_set_codename = "c100_ops30_clean_smallpush"
+
+setwd("~/sources/imapp/gas-cost-estimator/src")
+
+estimated_cost = read.csv("../../local/argument_estimated_cost.csv")
+# from measure_marginal.Rmd
+# TODO we need this to fill in missing PUSHes and POP, to be rectified later# from measure_marginal.Rmd
+marginal_estimated_cost = read.csv("../../local/marginal_estimated_cost.csv")
+
+head(estimated_cost)
+head(marginal_estimated_cost)
+```
+
+See `individual_vs_total_validation.Rmd` for invocations to generate/trace/measure programs.
+
+We've extended the program length to 30 OPCODEs to accommodate more `PUSH`es and `POP`s.
+
+```{r fig.width=20}
+setwd("~/sources/imapp/gas-cost-estimator/src")
+
+traces = read.csv(paste("../../local/trace_pg_arythmetic_", program_set_codename, ".csv", sep=""))
+head(traces)
+total_measurements_geth = read.csv(paste("../../local/geth_pg_arythmetic_", program_set_codename, ".csv", sep=""))
+head(total_measurements_geth)
+total_measurements_evmone = read.csv(paste("../../local/evmone_pg_arythmetic_", program_set_codename, ".csv", sep=""))
+head(total_measurements_evmone)
+```
+
+### Remove outliers
+
+```{r}
+remove_outliers <- function(df, col) {
+  # we don't have subsets, so the entire df is a subset
+  subset = df
+  outliers = boxplot(subset[, col], plot=FALSE)$out
+  # NOTE here we're also not filtering by the subset
+  no_outliers = df[-which(df[, col] %in% outliers), ]
+  return(no_outliers)
+}
+
+total_measurements_geth = remove_outliers(total_measurements_geth, "measure_total_time_ns")
+head(total_measurements_geth)
+total_measurements_evmone = remove_outliers(total_measurements_evmone, "measure_total_time_ns")
+head(total_measurements_evmone)
+```
+
+```{r}
+total_measurements_geth$env = 'geth'
+total_measurements_evmone$env = 'evmone'
+total_measurements = rbind(total_measurements_geth, total_measurements_evmone)
+head(total_measurements)
+```
+
+```{r}
+estimated_cost$arg0_ns[which(is.na(estimated_cost$arg0_ns))] = 0
+estimated_cost$arg1_ns[which(is.na(estimated_cost$arg1_ns))] = 0
+estimated_cost$arg2_ns[which(is.na(estimated_cost$arg2_ns))] = 0
+
+estimated_traces = sqldf("SELECT
+                            program_id, sample_id, instruction_id, op,
+                            arg_0 as arg0, arg_1 as arg1, arg_2 as arg2,
+                            env,
+                            arg0_ns, arg1_ns, arg2_ns, estimate_marginal_ns
+                          FROM traces
+                          INNER JOIN estimated_cost ON
+                            traces.op == estimated_cost.opcode")
+
+# TODO: very crude, how can this be made more robust?
+
+estimated_traces$arg0[which(is.na(estimated_traces$arg0))] = 0
+estimated_traces$arg1[which(is.na(estimated_traces$arg1))] = 0
+estimated_traces$arg2[which(is.na(estimated_traces$arg2))] = 0
+
+estimated_traces$cost_ns = estimated_traces$estimate_marginal_ns + 
+                           estimated_traces$arg0_ns * log(estimated_traces$arg0 + 1, 256) +
+                           estimated_traces$arg1_ns * log(estimated_traces$arg1 + 1, 256) +
+                           estimated_traces$arg2_ns * log(estimated_traces$arg2 + 1, 256)
+```
+
+```{r}
+estimated_programs = sqldf("SELECT
+                              program_id,
+                              sum(cost_ns) as cost_ns,
+                              env
+                           FROM estimated_traces
+                           GROUP BY program_id, env")
+
+aggregate_measurements = sqldf("SELECT
+                                  program_id,
+                                  env,
+                                  avg(measure_total_time_ns) as avg_measure_total_time_ns,
+                                  min(measure_total_time_ns) as min_measure_total_time_ns
+                                FROM total_measurements
+                                GROUP BY env, program_id")
+
+# ORDER BY is needed here, so that the programs are ordered by program_id numerically
+# this is a hacky way of ensuring we can merge it with other program data like fingerprints
+# TODO: make this more robust
+validation = sqldf("SELECT
+                      estimated_programs.program_id,
+                      avg_measure_total_time_ns,
+                      min_measure_total_time_ns,
+                      cost_ns,
+                      estimated_programs.env
+                    FROM estimated_programs
+                    INNER JOIN aggregate_measurements ON 
+                          aggregate_measurements.program_id == estimated_programs.program_id
+                      AND aggregate_measurements.env == estimated_programs.env
+                    ORDER BY estimated_programs.env, cast(estimated_programs.program_id AS int)")
+
+head(validation)
+```
+
+```{r}
+validation$fingerprint = gapply(traces, c('op', 'program_id'), FUN=function(x) fingerprint(x), groups=traces$program_id)
+validation$has_exp = gapply(traces, c('op'), FUN=function(x) has_exp(x), groups=traces$program_id)
+validation$n_zero_args = gapply(traces, c('op', 'program_id', 'arg_0', 'arg_1', 'arg_2'), FUN=function(x) count_zero_args(x), groups=traces$program_id)
+```
+
+Basic inspection of data reveals strong decreasing trend for each sample (sequence of runs).
+The outliers have been removed, so we show what we consider outliers now in the clean sample.
+They seem under control.
+
+```{r fig.width=15}
+# we've removed outliers so picking the right ylim / OUTLINE no longer required
+
+overview_plots <- function(df, selection_col, selection_val) {
+  subset = df[which(df[, selection_col] == selection_val), ]
+  plot(subset$measure_total_time_ns, main=selection_val)
+  boxplot(measure_total_time_ns ~ program_id, data=subset, main=selection_val)
+  boxplot(measure_total_time_ns ~ run_id, data=subset, las=2, main=selection_val)
+}
+overview_plots(total_measurements, 'env', 'geth')
+overview_plots(total_measurements, 'env', 'evmone')
+```
+
+### Check estimation using trivial variables
+
+Based on the plots alone, it does not appear like our estimation only relies on trivial variables.
+
+```{r}
+program_length <- function(x) {
+  max(x$instruction_id)
+}
+count_op <- function(x, op) {
+  sum(x$op == op)
+}
+# the "trivial" variables to check if we are not doing trivial estimation
+validation$program_length = gapply(traces, c('program_id', 'instruction_id'), FUN=function(x) program_length(x), groups=traces$program_id)
+validation$n_push = gapply(traces, c('program_id', 'op'), FUN=function(x) count_op(x, 'PUSH1'), groups=traces$program_id)
+validation$n_pop = gapply(traces, c('program_id', 'op'), FUN=function(x) count_op(x, 'POP'), groups=traces$program_id)
+```
+
+```{r}
+trivial_variable_plots <- function(df, selection_col, selection_val) {
+  subset = df[which(df[, selection_col] == selection_val), ]
+  par(mfrow=c(1,3))
+  plot_validation(subset, explained_variable, 'program_length')
+  title(main=selection_val)
+  plot_validation(subset, explained_variable, 'n_push')
+  title(main=selection_val)
+  plot_validation(subset, explained_variable, 'n_pop')
+  title(main=selection_val)
+}
+trivial_variable_plots(validation, 'env', 'geth')
+trivial_variable_plots(validation, 'env', 'evmone')
+```
+### Final validation model
+
+```{r}
+compare_plots <- function(df, selection_col, selection_val, estimate_var) {
+  subset = df[which(df[, selection_col] == selection_val), ]
+  plot_validation(subset, explained_variable, estimate_var)
+  title(main=paste(selection_val, ' estimate'))
+}
+
+model_geth = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
+model_evmone = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
+print('geth')
+summary(model_geth)
+print('evmone')
+summary(model_evmone)
+compare_plots(validation, 'env', 'geth', 'cost_ns')
+compare_plots(validation, 'env', 'evmone', 'cost_ns')
+```
+
+## Model diagnostics
+
+
+
+```{r fig.width=15}
+par(mfrow=c(2,4))
+plot(model_geth)
+plot(model_evmone)
+```
