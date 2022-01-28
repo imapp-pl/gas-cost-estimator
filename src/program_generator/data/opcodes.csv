@@ -47,6 +47,8 @@ Value,Mnemonic,Gas Used,Subset,Removed from stack,Added to stack,Notes,Formula N
 0x43,NUMBER,2,base,0,1,Get the block’s number.,
 0x44,DIFFICULTY,2,base,0,1,Get the block’s difficulty.,
 0x45,GASLIMIT,2,base,0,1,Get the block’s gas limit.,
+0x46,CHAINID,2,base,0,1,Get the chain ID
+0x47,SELFBALANCE,5,low,0,1,Get balance of currently executing account
 0x50,POP,2,base,1,0,Remove item from stack.,
 0x51,MLOAD,3,verylow,1,1,Load word from memory.,
 0x52,MSTORE,3,verylow,2,0,Save word to memory,
