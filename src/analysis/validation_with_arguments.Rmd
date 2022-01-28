@@ -62,8 +62,19 @@ setwd("~/sources/imapp/gas-cost-estimator/src")
 
 estimated_cost = read.csv("../../local/argument_estimated_cost.csv")
 # from measure_marginal.Rmd
-# TODO we need this to fill in missing PUSHes and POP, to be rectified later# from measure_marginal.Rmd
-marginal_estimated_cost = read.csv("../../local/marginal_estimated_cost.csv")
+# TODO we need this to fill in missing PUSHes and POP, to be rectified later
+marginal = read.csv("../../local/marginal_estimated_cost.csv")
+
+# TODO remove when rectified
+for (opcode in c('PUSH1', 'POP')) {
+  for (env in c('geth', 'evmone')) {
+    print(c(FALSE, FALSE, marginal[which(marginal$op==opcode & marginal$env==env), 'estimate_marginal_ns'], NA, NA, NA))
+    # working around the ridiculous type coercion of `c()`
+    estimated_cost[nrow(estimated_cost) + 1, 1:2] = c(opcode, env)
+    estimated_cost[nrow(estimated_cost), 3:4] = c(FALSE, FALSE)
+    estimated_cost[nrow(estimated_cost), 5:8] = c(marginal[which(marginal$op==opcode & marginal$env==env), 'estimate_marginal_ns'], NA, NA, NA)
+  }
+}
 
 head(estimated_cost)
 head(marginal_estimated_cost)
