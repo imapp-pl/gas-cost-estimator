@@ -103,8 +103,9 @@ We've extended the program length to 30 OPCODEs to accommodate more `PUSH`es and
 ```{r fig.width=20}
 setwd("~/sources/imapp/gas-cost-estimator/src")
 
+# we have tried `c900_ops300_clean` too, but it is a bit overkill. No surprises there.
 program_set_codename = "c100_ops300_clean"
-measurement_codename = "50_4"
+measurement_codename = "200_8"
 
 traces = read.csv(paste("../../local/trace_pg_arythmetic_", program_set_codename, ".csv", sep=""))
 head(traces)
