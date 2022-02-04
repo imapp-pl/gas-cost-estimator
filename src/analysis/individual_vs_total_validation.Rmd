@@ -6,6 +6,9 @@ output: html_notebook
 ```{r include=FALSE, fig.width=20}
 library(sqldf)
 library(nlme)
+
+# prevent scientific notation
+options(scipen = 100)
 ```
 
 ## Final validation

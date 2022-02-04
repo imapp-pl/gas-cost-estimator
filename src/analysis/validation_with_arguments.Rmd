@@ -6,6 +6,9 @@ output: html_notebook
 ```{r include=FALSE, fig.width=20}
 library(sqldf)
 library(nlme)
+
+# prevent scientific notation
+options(scipen = 100)
 ```
 
 ### Data preparations
@@ -26,7 +29,6 @@ count_zero_args <- function(x) {
 
 ```{r}
 explained_variable = 'avg_measure_total_time_ns'
-estimate_variable = 'q50_cost'
 ```
 
 ```{r}
@@ -54,8 +56,6 @@ lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
 ```
 
 ```{r}
-program_set_codename = "c100_ops30_clean_smallpush"
-
 setwd("~/sources/imapp/gas-cost-estimator/src")
 
 estimated_cost = read.csv("../../local/argument_estimated_cost.csv")
@@ -66,7 +66,6 @@ marginal = read.csv("../../local/marginal_estimated_cost.csv")
 # TODO remove when rectified
 for (opcode in c('PUSH1', 'POP')) {
   for (env in c('geth', 'evmone')) {
-    print(c(FALSE, FALSE, marginal[which(marginal$op==opcode & marginal$env==env), 'estimate_marginal_ns'], NA, NA, NA))
     # working around the ridiculous type coercion of `c()`
     estimated_cost[nrow(estimated_cost) + 1, 1:2] = c(opcode, env)
     estimated_cost[nrow(estimated_cost), 3:4] = c(FALSE, FALSE)
@@ -101,6 +100,8 @@ We've extended the program length to 30 OPCODEs to accommodate more `PUSH`es and
 
 ```{r fig.width=20}
 setwd("~/sources/imapp/gas-cost-estimator/src")
+
+program_set_codename = "c100_ops30_clean_smallpush"
 
 traces = read.csv(paste("../../local/trace_pg_arythmetic_", program_set_codename, ".csv", sep=""))
 head(traces)
@@ -200,10 +201,6 @@ validation$fingerprint = gapply(traces, c('op', 'program_id'), FUN=function(x) f
 validation$has_exp = gapply(traces, c('op'), FUN=function(x) has_exp(x), groups=traces$program_id)
 validation$n_zero_args = gapply(traces, c('op', 'program_id', 'arg_0', 'arg_1', 'arg_2'), FUN=function(x) count_zero_args(x), groups=traces$program_id)
 ```
-
-Basic inspection of data reveals strong decreasing trend for each sample (sequence of runs).
-The outliers have been removed, so we show what we consider outliers now in the clean sample.
-They seem under control.
 
 ```{r fig.width=15}
 # we've removed outliers so picking the right ylim / OUTLINE no longer required
