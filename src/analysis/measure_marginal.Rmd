@@ -78,20 +78,31 @@ This effectively "leverages" the estimated slope downwards, pretending `EXP`'s `
 
 Switch `removed_outliers` to `FALSE` to see the comparison.
 
-```{r}
+```{r fig.width=15}
 remove_outliers <- function(df, col) {
-  outliers = boxplot(df[, col] ~ df[, 'op_count'] + df[, 'env'] + df[, 'opcode'], plot=FALSE)$out
-  no_outliers = df[-which(df[, col] %in% outliers), ]
+  boxplot_result = boxplot(df[, col] ~ df[, 'op_count'] + df[, 'env'] + df[, 'opcode'], plot=FALSE)
+  outliers = boxplot_result$out
+  names = boxplot_result$names[boxplot_result$group]
+  all_row_identifiers = paste(df[, col], df[, 'op_count'], df[, 'env'], df[, 'opcode'], sep='.')
+  outlier_row_identifiers = paste(outliers, names, sep='.')
+  no_outliers = df[-which(all_row_identifiers %in% outlier_row_identifiers), ]
   return(no_outliers)
 }
 
 removed_outliers = TRUE
 
 if (removed_outliers) {
+  # before
+  boxplot(measure_total_time_ns ~ op_count, data=measurements[which(measurements$env == 'geth'), ], las=2, outline=TRUE)
+  boxplot(measure_total_time_ns ~ op_count, data=measurements[which(measurements$env == 'evmone'), ], las=2, outline=TRUE)
+
   measurements = remove_outliers(measurements, 'measure_total_time_ns')
+  
+  # after
+  boxplot(measure_total_time_ns ~ op_count, data=measurements[which(measurements$env == 'geth'), ], las=2, outline=TRUE)
+  boxplot(measure_total_time_ns ~ op_count, data=measurements[which(measurements$env == 'evmone'), ], las=2, outline=TRUE)
 }
 
-head(measurements)
 ```
 
 ### Trim the initial values
@@ -100,12 +111,6 @@ Commented out because not necessary.
 
 ```{r}
 # measurements = measurements[-(which(measurements$op_count < 15)), ]
-```
-
-
-```{r fig.width=15}
-boxplot(measure_total_time_ns ~ op_count, data=measurements[which(measurements$env == 'geth'), ], las=2, outline=removed_outliers)
-boxplot(measure_total_time_ns ~ op_count, data=measurements[which(measurements$env == 'evmone'), ], las=2, outline=removed_outliers)
 ```
 
 ```{r}
