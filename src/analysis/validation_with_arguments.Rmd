@@ -87,13 +87,15 @@ We therefore "mix" the two results. Take the constant cost estimated via "measur
 
 **NOTE** currently, this bit is commented out - we're using only the "arguments" measurements, as the mixed approach yields much noisier results, after we switched to the `c100_ops300_clean` validation set (which mainly doesn't limit args to `PUSH1`-size).
 
+**TODO** we really should mix. The results for OPCODEs which have "some" dependancy on the argument size, will be way off.
+
 ```{r}
 order1 = order(estimated_cost$opcode, estimated_cost$env)
 order2 = order(marginal$op, marginal$env)
 # estimated_cost[order1, 'estimate_marginal_ns'] = marginal[order2, 'estimate_marginal_ns']
 
 head(estimated_cost)
-head(marginal_estimated_cost)
+head(marginal)
 ```
 
 See `individual_vs_total_validation.Rmd` for invocations to generate/trace/measure programs.
