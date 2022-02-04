@@ -85,10 +85,12 @@ We therefore "mix" the two results. Take the constant cost estimated via "measur
 **TODO** is it possible to do all with arguments measurements? the mixed approach might be OPCODE-unfair. Maybe if we pick `op_count`s away from 0?
 **NOTE** that the validation coefficients were very close to 1, which was good, when doing "arguments" only. With mixed we're back to ~2.
 
+**NOTE** currently, this bit is commented out - we're using only the "arguments" measurements, as the mixed approach yields much noisier results, after we switched to the `c100_ops300_clean` validation set (which mainly doesn't limit args to `PUSH1`-size).
+
 ```{r}
 order1 = order(estimated_cost$opcode, estimated_cost$env)
 order2 = order(marginal$op, marginal$env)
-estimated_cost[order1, 'estimate_marginal_ns'] = marginal[order2, 'estimate_marginal_ns']
+# estimated_cost[order1, 'estimate_marginal_ns'] = marginal[order2, 'estimate_marginal_ns']
 
 head(estimated_cost)
 head(marginal_estimated_cost)
@@ -101,13 +103,14 @@ We've extended the program length to 30 OPCODEs to accommodate more `PUSH`es and
 ```{r fig.width=20}
 setwd("~/sources/imapp/gas-cost-estimator/src")
 
-program_set_codename = "c100_ops30_clean_smallpush"
+program_set_codename = "c100_ops300_clean"
+measurement_codename = "50_4"
 
 traces = read.csv(paste("../../local/trace_pg_arythmetic_", program_set_codename, ".csv", sep=""))
 head(traces)
-total_measurements_geth = read.csv(paste("../../local/geth_pg_arythmetic_", program_set_codename, ".csv", sep=""))
+total_measurements_geth = read.csv(paste("../../local/geth_pg_arythmetic_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
 head(total_measurements_geth)
-total_measurements_evmone = read.csv(paste("../../local/evmone_pg_arythmetic_", program_set_codename, ".csv", sep=""))
+total_measurements_evmone = read.csv(paste("../../local/evmone_pg_arythmetic_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
 head(total_measurements_evmone)
 ```
 
