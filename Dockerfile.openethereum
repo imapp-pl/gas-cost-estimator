@@ -1,4 +1,4 @@
-FROM rust:1.55.0
+FROM rust:1.52.0
 
 # RUN apk update && apk add rust cargo yasm cmake
 RUN apt update
