@@ -62,7 +62,8 @@ measurement_codename = "50_1"
 
 result_geth = load_data_set("geth", program_set_codename, measurement_codename)
 result_evmone = load_data_set("evmone", program_set_codename, measurement_codename)
-results = rbind(result_evmone, result_geth)
+result_openethereum = load_data_set("openethereum", program_set_codename, measurement_codename)
+results = rbind(result_evmone, result_geth, result_openethereum)
 head(results)
 ```
 
@@ -74,6 +75,7 @@ measurements = sqldf("SELECT opcode, op_count, arg0, arg1, arg2, sample_id, run_
                      ")
 head(measurements)
 ```
+
 ```{r}
 remove_outliers <- function(df, col) {
   boxplot_result = boxplot(df[, col] ~ df[, 'op_count'] + df[, 'env'] + df[, 'opcode'], plot=FALSE)
@@ -91,12 +93,14 @@ if (removed_outliers) {
   # before
   boxplot(measure_total_time_ns ~ opcode, data=measurements[which(measurements$env == 'geth'), ], las=2, outline=TRUE, log='y')
   boxplot(measure_total_time_ns ~ opcode, data=measurements[which(measurements$env == 'evmone'), ], las=2, outline=TRUE, log='y')
+  boxplot(measure_total_time_ns ~ opcode, data=measurements[which(measurements$env == 'openethereum'), ], las=2, outline=TRUE, log='y')
 
   measurements = remove_outliers(measurements, 'measure_total_time_ns')
   
   # after
   boxplot(measure_total_time_ns ~ opcode, data=measurements[which(measurements$env == 'geth'), ], las=2, outline=TRUE, log='y')
   boxplot(measure_total_time_ns ~ opcode, data=measurements[which(measurements$env == 'evmone'), ], las=2, outline=TRUE, log='y')
+  boxplot(measure_total_time_ns ~ opcode, data=measurements[which(measurements$env == 'openethereum'), ], las=2, outline=TRUE, log='y')
 }
 ```
 
@@ -124,7 +128,7 @@ unary_opcodes = extract_opcodes(program_set_codename, 1)
 binary_opcodes = extract_opcodes(program_set_codename, 2)
 ternary_opcodes = extract_opcodes(program_set_codename, 3)
 
-all_envs = c('geth', 'evmone')
+all_envs = c('geth', 'evmone', 'openethereum')
 ```
 ### Models
 
@@ -207,6 +211,7 @@ analyze_for_env <- function(df, results_df, env) {
 
 first_pass = analyze_for_env(measurements, first_pass, 'geth')
 first_pass = analyze_for_env(measurements, first_pass, 'evmone')
+first_pass = analyze_for_env(measurements, first_pass, 'openethereum')
 
 proceed_with_opcodes = unique(first_pass[which(first_pass$has_impacting == 'TRUE'), 'opcode'])
 
@@ -234,9 +239,6 @@ validation_plot <- function(df, opcode, env, argcol) {
   par(mfrow=c(1,1))
   boxplot(as.formula(paste('measure_total_time_ns ~ ', argcol, sep='')), data=df[which(df$opcode==opcode & df$env==env & df$op_count==max(df$op_count)), ])
 }
-
-# just an example, will use more further down below
-validation_plot(measurements, 'DIV', 'geth', 'arg1')
 ```
 
 ### Model with all variables ever
