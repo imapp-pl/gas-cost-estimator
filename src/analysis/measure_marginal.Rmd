@@ -145,9 +145,19 @@ programs_for_compute <- function(program_set_codename) {
   clean_programs(programs)
 }
 
-compute_all <- function(programs, results, opcode, env, removed_outliers, plots) {
+compute_all <- function(programs, results, opcode, env, removed_outliers, max_op_count, mod_op_count, plots) {
   if (missing(plots)) {
-    plots = FALSE
+    plots = "scatter"
+  }
+  if (missing(max_op_count)) {
+    max_op_count_condition = ""
+  } else {
+    max_op_count_condition = paste(" AND op_count < ", max_op_count, sep="")
+  }
+  if (missing(mod_op_count)) {
+    mod_op_count_condition = ""
+  } else {
+    mod_op_count_condition = paste(" AND op_count % ", mod_op_count, " = 0", sep="")
   }
   print(c(opcode, env))
   
@@ -155,7 +165,8 @@ compute_all <- function(programs, results, opcode, env, removed_outliers, plots)
                        FROM results
                        INNER JOIN
                          programs ON(results.program_id = programs.program_id)
-                       WHERE opcode = '", opcode, "'", sep=""))
+                       WHERE opcode = '", opcode, "'",
+                       max_op_count_condition, mod_op_count_condition, sep=""))
   if (removed_outliers) {
     measurements = remove_outliers(measurements, 'measure_total_time_ns')
   }
@@ -168,13 +179,14 @@ compute_all <- function(programs, results, opcode, env, removed_outliers, plots)
   # model = lm(measure_total_time_ns ~ op_count, data=measurements)
   # print(summary(model))
   
-  par(mfrow=c(1,2))
-  boxplot(measure_total_time_ns ~ op_count, data=measurements, las=2, outline=removed_outliers)
-  title(main=env)
-  scatter.smooth(measurements_mean[, 'op_count'], measurements_mean[, 'measure_total_time_ns'])
-  title(main=opcode)
-  
-  if (plots) {
+  if (plots == "scatter" | plots == "all") {
+    par(mfrow=c(1,2))
+    boxplot(measure_total_time_ns ~ op_count, data=measurements, las=2, outline=removed_outliers)
+    title(main=env)
+    scatter.smooth(measurements_mean[, 'op_count'], measurements_mean[, 'measure_total_time_ns'])
+    title(main=opcode)
+  }
+  if (plots == "diagnostics" | plots == "all") {
     par(mfrow=c(2,2))
     plot(model_mean)
     
@@ -190,7 +202,7 @@ compute_all <- function(programs, results, opcode, env, removed_outliers, plots)
 ```
 
 ```{r fig.width=12}
-compute_all(programs_for_compute("exp"), load_data_set("evmone", "exp", "total_50_4"), "EXP", "evmone", TRUE)
+compute_all(programs_for_compute("exp"), load_data_set("evmone", "exp", "total_50_4"), "EXP", "evmone", TRUE, mod_op_count=10)
 ```
 
 ```{r fig.width=12}
@@ -230,7 +242,7 @@ estimates = estimates[which(estimates$env != 'geth'), ]
 programs = programs_for_compute("arithmetic_comb_c50_shuffle")
 results = load_data_set("geth", "arithmetic_comb_c50_shuffle", "total_50_4")
 for (opcode in all_opcodes) {
-  estimate = compute_all(programs, results, opcode, "geth", TRUE)
+  estimate = compute_all(programs, results, opcode, "geth", TRUE, mod_op_count=5)
   estimates[nrow(estimates) + 1, ] = c(opcode, estimate, 'geth')
 }
 ```
