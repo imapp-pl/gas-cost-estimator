@@ -62,6 +62,8 @@ estimated_cost = read.csv("../../local/argument_estimated_cost.csv")
 # from measure_marginal.Rmd
 # TODO we need this to fill in missing PUSHes and POP, to be rectified later
 marginal = read.csv("../../local/marginal_estimated_cost.csv")
+# FIXME we drop the openethereum measurements which are not yet ready
+estimated_cost = estimated_cost[-which(estimated_cost$env=='openethereum'), ]
 
 # TODO remove when rectified
 for (opcode in c('PUSH1', 'POP')) {
@@ -74,24 +76,27 @@ for (opcode in c('PUSH1', 'POP')) {
 }
 ```
 
-#### Mix marginal and argument measurements
+#### Mix marginal and argument measurements?
 
 We originally used only the results coming from the "arguments" measurements. This means that the programs used featured running the OPCODEs with varying arguments (spanning the entire space of uint256).
 For the constant cost of an OPCODE, we'd take the `op_count` variable estimation.
 This turned out to give very coarse estimate of the constant cost (clustered estimations for evmone, grossly overestimated constant cost of MOD and friends).
 
-We therefore "mix" the two results. Take the constant cost estimated via "measure marginal" (simple, constant arguments, varying length of a series of OPCODEs) and take the estimation of the argument impact from the "measure argument" approach.
+We next tried to "mix" the two results. Take the constant cost estimated via "measure marginal" (simple, constant arguments, varying length of a series of OPCODEs) and take the estimation of the argument impact from the "measure argument" approach.
 
-**TODO** is it possible to do all with arguments measurements? the mixed approach might be OPCODE-unfair. Maybe if we pick `op_count`s away from 0?
-**NOTE** that the validation coefficients were very close to 1, which was good, when doing "arguments" only. With mixed we're back to ~2.
-
-**NOTE** currently, this bit is commented out - we're using only the "arguments" measurements, as the mixed approach yields much noisier results, after we switched to the `c100_ops300_clean` validation set (which mainly doesn't limit args to `PUSH1`-size).
-
-**TODO** we really should mix. The results for OPCODEs which have "some" dependancy on the argument size, will be way off.
+The drawbacks of the mixed approach are:
+  - might be OPCODE-unfair
+  - give slightly less healthy results (with the only-"arguments", the slope coefficients are closer to 1)
+  - is more complicated
+  - after the fixes to the "arguments" measurement routine, as well as switching to the `c100_ops300_clean` validation set (which doesn't limit args to `PUSH1`-size), the only-"arguments" method doesn't give bad results anymore
+  
+Therefore, in the end, we stick with only-"arguments" measurements, and leave "marginal" measurements for cross validation only.
 
 ```{r}
 order1 = order(estimated_cost$opcode, estimated_cost$env)
 order2 = order(marginal$op, marginal$env)
+
+# commented out - we **don't** mix
 # estimated_cost[order1, 'estimate_marginal_ns'] = marginal[order2, 'estimate_marginal_ns']
 
 head(estimated_cost)
