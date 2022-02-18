@@ -19,16 +19,16 @@ Scroll down to Final validation section.
 We're using the random arithmetic program generator via:
 
 ```
-python3 program_generator/pg_arythmetic.py generate --count=100 --opsLimit=10 --fullCsv > ../../local/pg_arythmetic_100_10.csv`.
+python3 program_generator/pg_arythmetic.py generate --count=100 --opsLimit=10 --fullCsv > ../../local/pg_arythmetic_c100_ops10.csv
 ```
 
 Then tracing it using:
 
 ```
 docker run \
-  --rm -v /home/user/sources/imapp/local:/srv/local \
+  --rm -v ~/sources/imapp/local:/srv/local \
   -it gas-cost-estimator/geth_all \
-  sh -c "cd src && cat /srv/local/pg_arythmetic_100_10.csv | python3 instrumentation_measurement/measurements.py measure --evm geth --mode trace --sampleSize 1 > /srv/local/trace_pg_arythmetic_100_10.csv"`.
+  sh -c "cd src && cat /srv/local/pg_arythmetic_c100_ops10.csv | python3 instrumentation_measurement/measurements.py measure --evm geth --mode trace --sampleSize 1 > /srv/local/trace_pg_arythmetic_c100_ops10.csv"
 ```
 
 This gives us the first analyzed program set `c100_ops10`. We'll learn that it needs to be improved and change later.
@@ -46,7 +46,7 @@ Measure the program set in `measure_total` mode using:
 ```
 docker run \
   --rm   --privileged --security-opt seccomp:unconfined \
-  -v /home/ubuntu/pdobacz/local:/srv/local \
+  -v ~/sources/imapp/local:/srv/local \
   -it gas-cost-estimator/geth_total \
   sh -c "cd src && cat /srv/local/pg_arythmetic_c100_ops10.csv | python3 instrumentation_measurement/measurements.py measure --evm geth --mode total --sampleSize=50 --nSamples=1 > /srv/local/geth_pg_arythmetic_c100_ops10.csv"
 ```
