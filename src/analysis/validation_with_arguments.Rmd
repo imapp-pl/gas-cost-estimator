@@ -311,9 +311,15 @@ Results for `geth` and `evmone` look promising, the correlation is clearly there
 
 The worrying part is the intercept coefficient which is far away from zero (should be the cost of an empty EVM program). **NOTE** if we use a validation set with only small arguments (`smallpush`), then the intercept problem goes away, so it seems that it might be coming from the estimates of the arguments impact.
 
+#### `openethereum` problem
+
+**NOTE** this has been solved, see last paragraph.
+
 `openethereum` has very bad results, the slope coefficient isn't even significant. If we use `smallpush` it becomes significant around 0.55. `marginal` and `individual` measurements actually yield much better validation models (see `individual_vs_total_validation.Rmd` which explores that) than `arguments` measurement. It is likely up to the problems identified during the `arguments` measurement analysis for `openethereum`, namely:
 1. The `OPCODE`s which turn out to have significant and impactful arguments are "weird", e.g. `BYTE` is impacted by both it's arguments, `DIV`-like OPCODEs have surprisingly small impact, `XOR` etc.
 
 There's an interesting phenomenon on the `openethereum` validation, if you use `smallpush` - the validation time seems to be very "bimodal" - there's a gap between two clusters of points - one cluster is overestimated and the other cluster is underestimated. Very few points estimate "on point". It is also observable during manual trials of the measurements - some complete much faster than the others.
 
 Another note is that increasing sample size and/or number of samples for the validation set, improves the validation model. It might be that we're brute-forcing over the problem of the unstability of `openethereum`'s performance (see above).
+
+Lastly, increasing the sample size on the estimation set (`marginal/arguments`), improves the validation model further, and also makes the estimates much "less weird". Only `SHR` remains weird.
