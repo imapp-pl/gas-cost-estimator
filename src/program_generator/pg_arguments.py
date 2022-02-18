@@ -21,9 +21,9 @@ class Program(object):
     self.bytecode = bytecode
     self.opcode = opcode
     self.op_count = op_count
-    self.arg1 = get(args, 0)
-    self.arg2 = get(args, 1)
-    self.arg3 = get(args, 2)
+    self.arg0 = get(args, 0)
+    self.arg1 = get(args, 1)
+    self.arg2 = get(args, 2)
 
 
 class ProgramGenerator(object):
@@ -32,7 +32,7 @@ class ProgramGenerator(object):
 
   If used with `--fullCsv`, will print out a CSV in the following format:
   ```
-  | program_id | opcode | op_count | arg1 | arg2 | arg3 | bytecode |
+  | program_id | opcode | op_count | arg0 | arg1 | arg2 | bytecode |
   ```
 
   """
@@ -78,16 +78,16 @@ class ProgramGenerator(object):
 
       opcodes = [program.opcode for program in programs]
       op_counts = [program.op_count for program in programs]
+      arg0s = [program.arg0 for program in programs]
       arg1s = [program.arg1 for program in programs]
       arg2s = [program.arg2 for program in programs]
-      arg3s = [program.arg3 for program in programs]
       program_ids = [program.opcode + '_' + str(idx) for idx, program in enumerate(programs)]
       bytecodes = [program.bytecode for program in programs]
 
-      header = ['program_id', 'opcode', 'op_count', 'arg1', 'arg2', 'arg3', 'bytecode']
+      header = ['program_id', 'opcode', 'op_count', 'arg0', 'arg1', 'arg2', 'bytecode']
       writer.writerow(header)
 
-      rows = zip(program_ids, opcodes, op_counts, arg1s, arg2s, arg3s, bytecodes)
+      rows = zip(program_ids, opcodes, op_counts, arg0s, arg1s, arg2s, bytecodes)
       for row in rows:
         writer.writerow(row)
     else:
