@@ -29,6 +29,7 @@ count_zero_args <- function(x) {
 
 ```{r}
 explained_variable = 'avg_measure_total_time_ns'
+all_envs = c('geth', 'evmone', 'openethereum')
 ```
 
 ```{r}
@@ -62,12 +63,10 @@ estimated_cost = read.csv("../../local/argument_estimated_cost.csv")
 # from measure_marginal.Rmd
 # TODO we need this to fill in missing PUSHes and POP, to be rectified later
 marginal = read.csv("../../local/marginal_estimated_cost.csv")
-# FIXME we drop the openethereum measurements which are not yet ready
-estimated_cost = estimated_cost[-which(estimated_cost$env=='openethereum'), ]
 
 # TODO remove when rectified
 for (opcode in c('PUSH1', 'POP')) {
-  for (env in c('geth', 'evmone')) {
+  for (env in all_envs) {
     # working around the ridiculous type coercion of `c()`
     estimated_cost[nrow(estimated_cost) + 1, 1:2] = c(opcode, env)
     estimated_cost[nrow(estimated_cost), 3:4] = c(FALSE, FALSE)
@@ -114,12 +113,18 @@ setwd("~/sources/imapp/gas-cost-estimator/src")
 program_set_codename = "c100_ops300_clean"
 measurement_codename = "200_8"
 
+# this is the data set without varying argument size. 
+# program_set_codename = "c100_ops30_clean_smallpush"
+# measurement_codename = "50_1"
+
 traces = read.csv(paste("../../local/trace_pg_arythmetic_", program_set_codename, ".csv", sep=""))
 head(traces)
 total_measurements_geth = read.csv(paste("../../local/geth_pg_arythmetic_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
 head(total_measurements_geth)
 total_measurements_evmone = read.csv(paste("../../local/evmone_pg_arythmetic_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
 head(total_measurements_evmone)
+total_measurements_openethereum = read.csv(paste("../../local/openethereum_pg_arythmetic_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
+head(total_measurements_openethereum)
 ```
 
 ### Remove outliers
@@ -138,12 +143,15 @@ total_measurements_geth = remove_outliers(total_measurements_geth, "measure_tota
 head(total_measurements_geth)
 total_measurements_evmone = remove_outliers(total_measurements_evmone, "measure_total_time_ns")
 head(total_measurements_evmone)
+total_measurements_openethereum = remove_outliers(total_measurements_openethereum, "measure_total_time_ns")
+head(total_measurements_openethereum)
 ```
 
 ```{r}
 total_measurements_geth$env = 'geth'
 total_measurements_evmone$env = 'evmone'
-total_measurements = rbind(total_measurements_geth, total_measurements_evmone)
+total_measurements_openethereum$env = 'openethereum'
+total_measurements = rbind(total_measurements_geth, total_measurements_evmone, total_measurements_openethereum)
 head(total_measurements)
 ```
 
@@ -224,6 +232,7 @@ overview_plots <- function(df, selection_col, selection_val) {
 }
 overview_plots(total_measurements, 'env', 'geth')
 overview_plots(total_measurements, 'env', 'evmone')
+overview_plots(total_measurements, 'env', 'openethereum')
 ```
 
 ### Check estimation using trivial variables
@@ -256,6 +265,7 @@ trivial_variable_plots <- function(df, selection_col, selection_val) {
 }
 trivial_variable_plots(validation, 'env', 'geth')
 trivial_variable_plots(validation, 'env', 'evmone')
+trivial_variable_plots(validation, 'env', 'openethereum')
 ```
 ### Final validation model
 
@@ -268,15 +278,19 @@ compare_plots <- function(df, selection_col, selection_val, estimate_var) {
 
 model_geth = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
 model_evmone = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
+model_openethereum = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='openethereum')
 print('geth')
 summary(model_geth)
 print('evmone')
 summary(model_evmone)
+print('openethereum')
+summary(model_openethereum)
 ```
 
 ```{r}
 compare_plots(validation, 'env', 'geth', 'cost_ns')
 compare_plots(validation, 'env', 'evmone', 'cost_ns')
+compare_plots(validation, 'env', 'openethereum', 'cost_ns')
 ```
 
 ## Model diagnostics
@@ -284,7 +298,8 @@ compare_plots(validation, 'env', 'evmone', 'cost_ns')
 
 
 ```{r fig.width=15}
-par(mfrow=c(2,4))
+par(mfrow=c(3,4))
 plot(model_geth)
 plot(model_evmone)
+plot(model_openethereum)
 ```
