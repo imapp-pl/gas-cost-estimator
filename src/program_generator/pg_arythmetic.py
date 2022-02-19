@@ -156,14 +156,9 @@ class ProgramGenerator(object):
       needed_pushes = int(operation['Removed from stack']) - 1
       # i.e. 23 from 0x23
       opcode = operation['Value'][2:4]
-      if op in arithmetic_ops or op in bitwise_ops or op in comparison_ops:
+      if op in arithmetic_ops or op in bitwise_ops or op in comparison_ops or op in exp_ops:
         for i in range(needed_pushes):
           bytecode += self._random_push(push)
-      elif op in exp_ops:
-        bytecode += self._random_push(1)  # the exponent less than 256
-        bytecode += '90'  # SWAP1 so the exponent is first on the stack
-        ops_count += 1   # additional SWAP1 cost
-        gas += 3   # additional SWAP1 cost
       elif op in byte_ops:  # BYTE SIGNEXTEND needs 0-31 value on the stack
         bytecode += self._random_push_less_32()
       elif op in shift_ops:  # SHL, SHR, SAR need 0-255 value on the stack
