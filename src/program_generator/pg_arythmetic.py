@@ -56,16 +56,17 @@ class ProgramGenerator(object):
 
     self._operations = {int(op, 16): opcodes[op] for op in selection}
 
-  def generate(self, fullCsv=False, count=1, gasLimit=None, opsLimit=None, bytecodeLimit=None, seed=0, dominant=None, push=32, cleanStack=False, randomizePush=False):
+  def generate(self, fullCsv=False, count=1, gasLimit=None, opsLimit=None, bytecodeLimit=None, seed=0, dominant=None, push=32, cleanStack=False, randomizePush=False, randomizeOpsLimit=False):
     """
     Main entrypoint of the CLI tool. Should dispatch to the desired generation routine and print
     programs to STDOUT. If no limits given then by default opsLimit=100
 
     Parameters:
     fullCsv (boolean): if set, will generate programs with accompanying data in CSV format
-    count (int): the number of programs
+    count (int): the number of programs 
     gasLimit (int): the gas limit for a single program
     opsLimit (int): the limit operations for a single program, including pushes as one
+    randomizeOpsLimit (boolean): whether the limit of operations should be randomized, up to the value of opsLimit
     bytecodeLimit (int): the bytecode limit of a single program
     seed: a seed for random number generator, defaults to 0
     dominant: an opcode that is picked more often then others, probability ~0.5
@@ -79,8 +80,15 @@ class ProgramGenerator(object):
     if not gasLimit and not opsLimit and not bytecodeLimit:
       opsLimit = 100
 
+    opsLimitMax = opsLimit
+
     programs = []
     for i in range(count):
+      if randomizeOpsLimit:
+        opsLimit = random.randint(1, opsLimitMax)
+      else:
+        opsLimit = opsLimitMax
+
       program = self._generate_random_arithmetic(gasLimit, opsLimit, bytecodeLimit, dominant, push, cleanStack, randomizePush)
       programs.append(program)
 
