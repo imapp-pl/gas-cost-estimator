@@ -39,7 +39,7 @@ plot_validation <- function(df, yvar, xvar, label_n_zero_args) {
   if (missing(label_n_zero_args)) {
     label_n_zero_args = FALSE
   }
-  scatter.smooth(df[,xvar], df[,yvar], col=df$has_exp)
+  scatter.smooth(df[,xvar], df[,yvar], col=df$has_exp, asp=1)
   text(df[,yvar] ~ df[,xvar], data=df, labels=program_id, cex=0.6, pos=4, font=2)
   if (label_n_zero_args) {
     text(df[,yvar] ~ df[,xvar], data=df, labels=n_zero_args, cex=0.6, pos=1, font=2)

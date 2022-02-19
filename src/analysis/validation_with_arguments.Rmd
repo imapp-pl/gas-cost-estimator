@@ -33,11 +33,16 @@ all_envs = c('geth', 'evmone', 'openethereum')
 ```
 
 ```{r}
-plot_validation <- function(df, yvar, xvar, label_n_zero_args) {
+plot_validation <- function(df, yvar, xvar, label_n_zero_args, set_asp) {
   if (missing(label_n_zero_args)) {
     label_n_zero_args = FALSE
   }
-  scatter.smooth(df[,xvar], df[,yvar], col=df$has_exp)
+  if (missing(set_asp) || set_asp == FALSE) {
+    asp=NULL
+  } else {
+    asp = 1
+  }
+  scatter.smooth(df[,xvar], df[,yvar], col=df$has_exp, asp=asp)
   text(df[,yvar] ~ df[,xvar], data=df, labels=program_id, cex=0.6, pos=4, font=2)
   if (label_n_zero_args) {
     text(df[,yvar] ~ df[,xvar], data=df, labels=n_zero_args, cex=0.6, pos=1, font=2)
@@ -273,7 +278,7 @@ trivial_variable_plots(validation, 'env', 'openethereum')
 ```{r}
 compare_plots <- function(df, selection_col, selection_val, estimate_var) {
   subset = df[which(df[, selection_col] == selection_val), ]
-  plot_validation(subset, explained_variable, estimate_var)
+  plot_validation(subset, explained_variable, estimate_var, set_asp=TRUE)
   title(main=paste(selection_val, ' estimate'))
 }
 
