@@ -247,10 +247,36 @@ estimates = estimates[which(estimates$env != 'geth'), ]
 programs = programs_for_compute("arithmetic_comb_c50_shuffle")
 results = load_data_set("geth", "arithmetic_comb_c50_shuffle", "total_50_4")
 for (opcode in all_opcodes) {
-  estimate = compute_all(programs, results, opcode, "geth", TRUE, mod_op_count=5)
+  estimate = compute_all(programs, results, opcode, "geth", TRUE)
   estimates[nrow(estimates) + 1, ] = c(opcode, estimate, 'geth')
 }
 ```
+**NOTE** for `openethereum` we need to use programs with 0-200 increasing `op_count`, otherwise the model doesn't capture the trend.
+
+**TODO** To be fully fair, we should do the same for `geth` and `evmone`.
+
+```{r}
+estimates = estimates[which(estimates$env != 'openethereum'), ]
+programs = programs_for_compute("arithmetic_comb_c200_shuffle")
+results = load_data_set("openethereum", "arithmetic_comb_c200_shuffle", "total_50_4")
+for (opcode in all_opcodes) {
+  estimate = compute_all(programs, results, opcode, "openethereum", TRUE)
+  estimates[nrow(estimates) + 1, ] = c(opcode, estimate, 'openethereum')
+}
+```
+Some extra validation tools for `openethereum`. Optional so commented out.
+
+```{r fig.width=20}
+# measurements = sqldf("SELECT opcode, op_count, sample_id, run_id, measure_total_time_ns, env, results.program_id
+#                      FROM results
+#                      INNER JOIN
+#                        programs ON(results.program_id = programs.program_id)")
+# boxplot(measure_total_time_ns ~ op_count + opcode, data=measurements, outline=FALSE)
+# if (removed_outliers) {
+#   measurements = remove_outliers(measurements, 'measure_total_time_ns')
+# }
+```
+
 
 ```{r}
 print(all_opcodes)
