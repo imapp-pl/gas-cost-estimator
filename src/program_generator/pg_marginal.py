@@ -5,19 +5,9 @@ import random
 import sys
 
 import constants
+from common import generate_single_marginal
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-
-
-class Program(object):
-  """
-  POD object for a program
-  """
-
-  def __init__(self, bytecode, opcode, op_count):
-    self.bytecode = bytecode
-    self.opcode = opcode
-    self.op_count = op_count
 
 
 class ProgramGenerator(object):
@@ -65,7 +55,7 @@ class ProgramGenerator(object):
     seed: a seed for random number generator, defaults to 0
     """
 
-    programs = self._generate_marginal(opcode, maxOpCount, shuffleCounts)
+    programs = self._do_generate(opcode, maxOpCount, shuffleCounts)
 
     if fullCsv:
       writer = csv.writer(sys.stdout, delimiter=',', quotechar='"')
@@ -87,7 +77,7 @@ class ProgramGenerator(object):
         print(program.bytecode)
 
 
-  def _generate_marginal(self, opcode, max_op_count, shuffle_counts):
+  def _do_generate(self, opcode, max_op_count, shuffle_counts):
     """
     """
     operations = [operation for operation in self._operations if operation['Value'] != '0xfe']
@@ -105,44 +95,12 @@ class ProgramGenerator(object):
     return programs
 
   def _generate_single_program(self, operation, op_count):
-    """
-    
-    """
+    arity = int(operation['Removed from stack'])
+    # for compatibility with the common function
+    arg_bit_sizes = [1] * arity
+    single_op_pushes = ["60a1"] * arity
 
-    # i.e. 23 from 0x23
-    opcode = operation['Value'][2:4]
-    popcode = "50"
-
-    has_parameter = True if 'Parameter' in operation and operation['Parameter'] else False
-    if has_parameter:
-      opcode += operation['Parameter']
-
-    if ("PUSH" in operation['Mnemonic'] or "DUP" in operation['Mnemonic']):
-      push_count = 200
-      total_pop_count = 200
-    else:
-      push_count = 1000
-      total_pop_count = 200
-
-    interleaved_pop_count = max(op_count - 1, 0)
-    end_pop_count = total_pop_count - interleaved_pop_count
-      
-    pushes = ["60a1"] * push_count
-
-    if op_count == 0:
-      middle = []
-      pops = [popcode] * total_pop_count
-    elif op_count >= 1:
-      middle = [opcode] + [popcode, opcode] * interleaved_pop_count
-      pops = [popcode] * end_pop_count
-
-    bytecode = ''.join(pushes + middle + pops)
-
-    # just in case
-    assert interleaved_pop_count + end_pop_count == total_pop_count
-    assert end_pop_count > 0
-
-    return Program(bytecode, operation['Mnemonic'], op_count)
+    return generate_single_marginal(single_op_pushes, arg_bit_sizes, operation, op_count)
         
   def _fill_opcodes_push_dup_swap(self, opcodes):
     pushes = constants.EVM_PUSHES

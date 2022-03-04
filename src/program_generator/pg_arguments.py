@@ -1,4 +1,3 @@
-from math import ceil
 import os
 import csv
 import fire
@@ -6,25 +5,9 @@ import random
 import sys
 
 import constants
+from common import generate_single_marginal
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-
-def get(l, index, default=None):
-  return l[index] if -len(l) <= index < len(l) else default
-
-class Program(object):
-  """
-  POD object for a program
-  """
-
-  def __init__(self, bytecode, opcode, op_count, args):
-    self.bytecode = bytecode
-    self.opcode = opcode
-    self.op_count = op_count
-    self.arg0 = get(args, 0)
-    self.arg1 = get(args, 1)
-    self.arg2 = get(args, 2)
-
 
 class ProgramGenerator(object):
   """
@@ -71,7 +54,7 @@ class ProgramGenerator(object):
     seed: a seed for random number generator, defaults to 0
     """
 
-    programs = self._generate_marginal(opcode, count, opCount)
+    programs = self._do_generate(opcode, count, opCount)
 
     if fullCsv:
       writer = csv.writer(sys.stdout, delimiter=',', quotechar='"')
@@ -95,7 +78,7 @@ class ProgramGenerator(object):
         print(program.bytecode)
 
 
-  def _generate_marginal(self, opcode, count, op_count):
+  def _do_generate(self, opcode, count, op_count):
     """
     """
     operations = [operation for operation in self._operations if operation['Value'] != '0xfe']
@@ -126,46 +109,9 @@ class ProgramGenerator(object):
     single_op_pushes = [self._random_push(size) for size in arg_bit_sizes]
     # the arguments are popped from the stack
     single_op_pushes.reverse()
-    return [self._generate_single_program(single_op_pushes, arg_bit_sizes, operation, 0),
-            self._generate_single_program(single_op_pushes, arg_bit_sizes, operation, op_count),
-            self._generate_single_program(single_op_pushes, arg_bit_sizes, operation, op_count * 2)]
-
-  def _generate_single_program(self, single_op_pushes, arg_bit_sizes, operation, op_count):
-    """
-    
-    """
-    arity = int(operation['Removed from stack'])
-
-    # i.e. 23 from 0x23
-    opcode = operation['Value'][2:4]
-    popcode = "50"
-
-    has_parameter = True if 'Parameter' in operation and operation['Parameter'] else False
-    if has_parameter:
-      opcode += operation['Parameter']
-
-    push_count = 120
-    total_pop_count = 40
-
-    interleaved_pop_count = max(op_count - 1, 0)
-    end_pop_count = total_pop_count - interleaved_pop_count
-      
-    pushes = single_op_pushes * ceil(push_count / arity)
-
-    if op_count == 0:
-      middle = []
-      pops = [popcode] * total_pop_count
-    elif op_count >= 1:
-      middle = [opcode] + [popcode, opcode] * interleaved_pop_count
-      pops = [popcode] * end_pop_count
-
-    bytecode = ''.join(pushes + middle + pops)
-
-    # just in case
-    assert interleaved_pop_count + end_pop_count == total_pop_count
-    assert end_pop_count > 0
-
-    return Program(bytecode, operation['Mnemonic'], op_count, arg_bit_sizes)
+    return [generate_single_marginal(single_op_pushes, arg_bit_sizes, operation, 0),
+            generate_single_marginal(single_op_pushes, arg_bit_sizes, operation, op_count),
+            generate_single_marginal(single_op_pushes, arg_bit_sizes, operation, op_count * 2)]
         
   def _fill_opcodes_push_dup_swap(self, opcodes):
     pushes = constants.EVM_PUSHES
