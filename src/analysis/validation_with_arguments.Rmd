@@ -13,20 +13,6 @@ options(scipen = 100)
 
 ### Data preparations
 
-We need an additional simple (plottable) "fingerprint" of the OPCODEs included in the program, to evaluate the validation plot at a glance.
-
-```{r}
-fingerprint <- function(x) {
-  paste(x[which(!(x$op %in% c('PUSH32', 'PUSH1', 'STOP', 'POP'))),'op'], collapse=' ')
-}
-has_exp <- function(x) {
-  if ('EXP' %in% x$op) 'red' else 'blue'
-}
-count_zero_args <- function(x) {
-  sum(!is.na(x$arg_0) & x$arg_0 == 0 | !is.na(x$arg_1) & x$arg_1 == 0 | !is.na(x$arg_2) & x$arg_2 == 0)
-}
-```
-
 ```{r}
 explained_variable = 'avg_measure_total_time_ns'
 all_envs = c('geth', 'evmone', 'openethereum')
@@ -115,8 +101,17 @@ We've extended the program length to 30 OPCODEs to accommodate more `PUSH`es and
 setwd("~/sources/imapp/gas-cost-estimator/src")
 
 # we have tried `c900_ops300_clean` too, but it is a bit overkill. No surprises there.
-program_set_codename = "c100_ops300_clean"
+# program_set_codename = "c100_ops300_clean"
+# measurement_codename = "200_8"
+
+# we randomize the number of instructions in the random programs to capture program length impact on OPCODE performance
+program_set_codename = "c100_randOps500_clean"
 measurement_codename = "200_8"
+
+# this dataset (tiny programs) has a radically highler slope coefficient and lower Intercept
+# this prompt us to vary the opsLimit for the validation program generation
+# program_set_codename = "c100_ops10_clean"
+# measurement_codename = "200_8"
 
 # this is the data set without varying argument size. 
 # program_set_codename = "c100_ops30_clean_smallpush"
@@ -131,34 +126,44 @@ head(total_measurements_evmone)
 # TODO: at this point, for openethereum we are getting much better (acceptable) results for the sample size 16, nsamples 400, see Discussion section below
 total_measurements_openethereum = read.csv(paste("../../local/openethereum_pg_arythmetic_", program_set_codename, "_", "16_400", ".csv", sep=""))
 head(total_measurements_openethereum)
+
+total_measurements_geth$env = 'geth'
+total_measurements_evmone$env = 'evmone'
+total_measurements_openethereum$env = 'openethereum'
+measurements = rbind(total_measurements_geth, total_measurements_evmone, total_measurements_openethereum)
+head(measurements)
 ```
 
 ### Remove outliers
 
 ```{r}
 remove_outliers <- function(df, col) {
-  # we don't have subsets, so the entire df is a subset
-  subset = df
-  outliers = boxplot(subset[, col], plot=FALSE)$out
-  # NOTE here we're also not filtering by the subset
-  no_outliers = df[-which(df[, col] %in% outliers), ]
+  boxplot_result = boxplot(df[, col] ~ df[, 'program_id'] + df[, 'env'], plot=FALSE)
+  outliers = boxplot_result$out
+  names = boxplot_result$names[boxplot_result$group]
+  all_row_identifiers = paste(df[, col], df[, 'program_id'], df[, 'env'], sep='.')
+  outlier_row_identifiers = paste(outliers, names, sep='.')
+  no_outliers = df[-which(all_row_identifiers %in% outlier_row_identifiers), ]
   return(no_outliers)
 }
 
-total_measurements_geth = remove_outliers(total_measurements_geth, "measure_total_time_ns")
-head(total_measurements_geth)
-total_measurements_evmone = remove_outliers(total_measurements_evmone, "measure_total_time_ns")
-head(total_measurements_evmone)
-total_measurements_openethereum = remove_outliers(total_measurements_openethereum, "measure_total_time_ns")
-head(total_measurements_openethereum)
-```
+removed_outliers = TRUE
 
-```{r}
-total_measurements_geth$env = 'geth'
-total_measurements_evmone$env = 'evmone'
-total_measurements_openethereum$env = 'openethereum'
-total_measurements = rbind(total_measurements_geth, total_measurements_evmone, total_measurements_openethereum)
-head(total_measurements)
+if (removed_outliers) {
+  # before
+  par(mfrow=c(1,3))
+  boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'geth'), ], las=2, outline=TRUE, log='y')
+  boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'evmone'), ], las=2, outline=TRUE, log='y')
+  boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'openethereum'), ], las=2, outline=TRUE, log='y')
+
+  measurements = remove_outliers(measurements, 'measure_total_time_ns')
+  
+  # after
+  par(mfrow=c(1,3))
+  boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'geth'), ], las=2, outline=TRUE, log='y')
+  boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'evmone'), ], las=2, outline=TRUE, log='y')
+  boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'openethereum'), ], las=2, outline=TRUE, log='y')
+}
 ```
 
 ```{r}
@@ -200,7 +205,7 @@ aggregate_measurements = sqldf("SELECT
                                   env,
                                   avg(measure_total_time_ns) as avg_measure_total_time_ns,
                                   min(measure_total_time_ns) as min_measure_total_time_ns
-                                FROM total_measurements
+                                FROM measurements
                                 GROUP BY env, program_id")
 
 # ORDER BY is needed here, so that the programs are ordered by program_id numerically
@@ -221,7 +226,18 @@ validation = sqldf("SELECT
 head(validation)
 ```
 
+We need an additional simple (plottable) "fingerprint" of the OPCODEs included in the program, to evaluate the validation plot at a glance.
+
 ```{r}
+fingerprint <- function(x) {
+  paste(x[which(!(x$op %in% c('PUSH32', 'PUSH1', 'STOP', 'POP'))),'op'], collapse=' ')
+}
+has_exp <- function(x) {
+  if ('EXP' %in% x$op) 'red' else 'blue'
+}
+count_zero_args <- function(x) {
+  sum(!is.na(x$arg_0) & x$arg_0 == 0 | !is.na(x$arg_1) & x$arg_1 == 0 | !is.na(x$arg_2) & x$arg_2 == 0)
+}
 validation$fingerprint = gapply(traces, c('op', 'program_id'), FUN=function(x) fingerprint(x), groups=traces$program_id)
 validation$has_exp = gapply(traces, c('op'), FUN=function(x) has_exp(x), groups=traces$program_id)
 validation$n_zero_args = gapply(traces, c('op', 'program_id', 'arg_0', 'arg_1', 'arg_2'), FUN=function(x) count_zero_args(x), groups=traces$program_id)
@@ -229,16 +245,15 @@ validation$n_zero_args = gapply(traces, c('op', 'program_id', 'arg_0', 'arg_1', 
 
 ```{r fig.width=15}
 # we've removed outliers so picking the right ylim / OUTLINE no longer required
-
+par(mfrow=c(2,3))
 overview_plots <- function(df, selection_col, selection_val) {
   subset = df[which(df[, selection_col] == selection_val), ]
-  plot(subset$measure_total_time_ns, main=selection_val)
   boxplot(measure_total_time_ns ~ program_id, data=subset, main=selection_val)
   boxplot(measure_total_time_ns ~ run_id, data=subset, las=2, main=selection_val)
 }
-overview_plots(total_measurements, 'env', 'geth')
-overview_plots(total_measurements, 'env', 'evmone')
-overview_plots(total_measurements, 'env', 'openethereum')
+overview_plots(measurements, 'env', 'geth')
+overview_plots(measurements, 'env', 'evmone')
+overview_plots(measurements, 'env', 'openethereum')
 ```
 
 ### Check estimation using trivial variables
@@ -258,22 +273,35 @@ validation$n_push = gapply(traces, c('program_id', 'op'), FUN=function(x) count_
 validation$n_pop = gapply(traces, c('program_id', 'op'), FUN=function(x) count_op(x, 'POP'), groups=traces$program_id)
 ```
 
+We divide the validation data into classes with respect to the length of the program:
+
 ```{r}
+validation_long = validation[which(validation$program_length > 400), ]
+validation_short = validation[which(validation$program_length <= 100), ]
+```
+
+```{r fig.width=15}
+par(mfrow=c(3,3))
 trivial_variable_plots <- function(df, selection_col, selection_val) {
   subset = df[which(df[, selection_col] == selection_val), ]
-  par(mfrow=c(1,3))
   plot_validation(subset, explained_variable, 'program_length')
-  title(main=selection_val)
+  title(main=paste(selection_val, 'program_length'))
   plot_validation(subset, explained_variable, 'n_push')
-  title(main=selection_val)
+  title(main=paste(selection_val, 'n_push'))
   plot_validation(subset, explained_variable, 'n_pop')
-  title(main=selection_val)
+  title(main=paste(selection_val, 'n_pop'))
 }
 trivial_variable_plots(validation, 'env', 'geth')
 trivial_variable_plots(validation, 'env', 'evmone')
 trivial_variable_plots(validation, 'env', 'openethereum')
 ```
+Trivial variable plots are interesting, after we have introduced varying program length. `openethereum` in particular has a good correlation there, which is caused by the large, constant cost of running an instruction (~250ns, regardless of OPCODE).
+
+Nevertheless, neither of the models is comparable with the model including the estimated `cost_ns`, see below.
+
 ### Final validation model
+
+We explore the models in two classes of program lengths. We keep the model for the long programs.
 
 ```{r}
 compare_plots <- function(df, selection_col, selection_val, estimate_var) {
@@ -285,24 +313,46 @@ compare_plots <- function(df, selection_col, selection_val, estimate_var) {
 model_geth = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
 model_evmone = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
 model_openethereum = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='openethereum')
-print('geth')
+print('geth all')
 summary(model_geth)
-print('evmone')
+print('evmone all')
 summary(model_evmone)
-print('openethereum')
+print('openethereum all')
+summary(model_openethereum)
+model_geth = lm_validation(validation_short, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
+model_evmone = lm_validation(validation_short, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
+model_openethereum = lm_validation(validation_short, explained_variable, 'cost_ns', selection_col='env', selection_val='openethereum')
+print('geth short')
+summary(model_geth)
+print('evmone short')
+summary(model_evmone)
+print('openethereum short')
+summary(model_openethereum)
+model_geth = lm_validation(validation_long, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
+model_evmone = lm_validation(validation_long, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
+model_openethereum = lm_validation(validation_long, explained_variable, 'cost_ns', selection_col='env', selection_val='openethereum')
+print('geth long')
+summary(model_geth)
+print('evmone long')
+summary(model_evmone)
+print('openethereum long')
 summary(model_openethereum)
 ```
 
-```{r fig.width=12, fig.height=5}
-par(mfrow=c(1,3))
+```{r fig.width=15}
+par(mfrow=c(3,3))
 compare_plots(validation, 'env', 'geth', 'cost_ns')
 compare_plots(validation, 'env', 'evmone', 'cost_ns')
 compare_plots(validation, 'env', 'openethereum', 'cost_ns')
+compare_plots(validation_short, 'env', 'geth', 'cost_ns')
+compare_plots(validation_short, 'env', 'evmone', 'cost_ns')
+compare_plots(validation_short, 'env', 'openethereum', 'cost_ns')
+compare_plots(validation_long, 'env', 'geth', 'cost_ns')
+compare_plots(validation_long, 'env', 'evmone', 'cost_ns')
+compare_plots(validation_long, 'env', 'openethereum', 'cost_ns')
 ```
 
 ## Model diagnostics
-
-
 
 ```{r fig.width=15}
 par(mfrow=c(3,4))
@@ -313,9 +363,17 @@ plot(model_openethereum)
 
 ### Discussion of results so far
 
-Results for `geth` and `evmone` look promising, the correlation is clearly there, the slope coefficient is very close to 1 (so there's a good correspondence between a nanosecond of measurement and the nanosecond of validation).
+Results for `geth` and `evmone` look promising, the correlation is clearly there, the slope coefficient is close to 1 (so there's a good correspondence between a nanosecond of measurement and the nanosecond of validation).
 
-The worrying part is the intercept coefficient which is far away from zero (should be the cost of an empty EVM program). **NOTE** if we use a validation set with only small arguments (`smallpush`), then the intercept problem goes away, so it seems that it might be coming from the estimates of the arguments impact.
+#### Intercept problem
+
+**NOTE** this has been solved, see last paragrapsh
+
+The worrying part is the intercept coefficient which is far away from zero (should be the cost of an empty EVM program). If we use a validation set with only small arguments (`smallpush`), then the intercept problem goes away, so it seems that it might be coming from the estimates of the arguments impact.
+
+The intercept problem has been explained by randomizing the length of the random program. We can see on the plots of the entire program set, that the relation between estimated cost and actual program execution time is non-linear (the longer the program, the more efficient the execution and the slope coefficient approaches 1.0). At the same time, the shorter the program, the smaller the intercept.
+
+**TODO** increase the upper bound for the program length even further, to cover the area where the slope is steadily 1.0. Also increase the total count of program samples to have a good representation in all lengths.
 
 #### `openethereum` problem
 
@@ -328,4 +386,4 @@ There's an interesting phenomenon on the `openethereum` validation, if you use `
 
 Another note is that increasing sample size and/or number of samples for the validation set, improves the validation model. It might be that we're brute-forcing over the problem of the unstability of `openethereum`'s performance (see above).
 
-Lastly, increasing the sample size on the estimation set (`marginal/arguments`), improves the validation model further, and also makes the estimates much "less weird". Only `SHR` remains weird.
+Lastly, increasing the sample size on the estimation set (`marginal/arguments`), improves the validation model further, and also makes the estimates much more reasonable.
