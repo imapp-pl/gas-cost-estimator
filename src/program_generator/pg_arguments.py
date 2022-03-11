@@ -4,8 +4,7 @@ import fire
 import random
 import sys
 
-import constants
-from common import generate_single_marginal
+from common import generate_single_marginal, prepare_opcodes, get_selection
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -40,19 +39,8 @@ class ProgramGenerator(object):
   def __init__(self, selectionFile='selection.csv', seed=0):
     random.seed(a=seed, version=2)
 
-    opcodes_file = os.path.join(dir_path, 'data', 'opcodes.csv')
-
-    with open(opcodes_file) as csvfile:
-      reader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
-      opcodes = {i['Value']: i for i in reader}
-
-    opcodes = self._fill_opcodes_push_dup_swap(opcodes)
-
-    selection_file = os.path.join(dir_path, 'data', selectionFile)
-
-    with open(selection_file) as csvfile:
-      reader = csv.DictReader(csvfile, delimiter=' ', quotechar='"')
-      selection = [i['Opcode'] for i in reader]
+    opcodes = prepare_opcodes(os.path.join(dir_path, 'data', 'opcodes.csv'))
+    selection = get_selection(os.path.join(dir_path, 'data', selectionFile))
 
     self._operations = [opcodes[op] for op in selection]
 
@@ -131,37 +119,6 @@ class ProgramGenerator(object):
     op_counts = [0, op_count, op_count * 2]
 
     return [Program(generate_single_marginal(single_op_pushes, operation, o), operation['Mnemonic'], o, arg_bit_sizes) for o in op_counts]
-        
-  def _fill_opcodes_push_dup_swap(self, opcodes):
-    pushes = constants.EVM_PUSHES
-    dups = constants.EVM_DUPS
-    swaps = constants.EVM_SWAPS
-
-    pushes = self._opcodes_dict_push_dup_swap(pushes, [0] * len(pushes), [1] * len(pushes), parameter='00')
-    opcodes = {**opcodes, **pushes}
-    # For dups and swaps the removeds/addeds aren't precise. "removed" is how much is required to be on stack
-    # so it must be pushed there once. "added" is how much is really added "extra"
-    dups = self._opcodes_dict_push_dup_swap(dups, range(1, len(dups)), [1] * len(dups))
-    opcodes = {**opcodes, **dups}
-    swaps = self._opcodes_dict_push_dup_swap(swaps, range(2, len(swaps)+1), [0] * len(swaps))
-    opcodes = {**opcodes, **swaps}
-    return opcodes
-
-  def _opcodes_dict_push_dup_swap(self, source, removeds, addeds, parameter=None):
-    source_list = source.split()
-    opcodes = source_list[::2]
-    names = source_list[1::2]
-    new_part = {
-      opcode: {
-        'Value': opcode,
-        'Mnemonic': name,
-        'Removed from stack': removed,
-        'Added to stack': added,
-        'Parameter': parameter
-      } for opcode, name, removed, added in zip(opcodes, names, removeds, addeds)
-    }
-
-    return new_part
 
 def main():
   fire.Fire(ProgramGenerator, name='generate')
