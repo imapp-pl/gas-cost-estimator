@@ -9,6 +9,23 @@ from common import generate_single_marginal
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
+def get(l, index, default=None):
+  return l[index] if -len(l) <= index < len(l) else default
+
+class Program(object):
+  """
+  POD object for a program
+  """
+
+  def __init__(self, bytecode, opcode, op_count, args):
+    self.bytecode = bytecode
+    self.opcode = opcode
+    self.op_count = op_count
+    self.arg0 = get(args, 0)
+    self.arg1 = get(args, 1)
+    self.arg2 = get(args, 2)
+
+
 class ProgramGenerator(object):
   """
   Sample program generator for EVM instrumentation
@@ -109,10 +126,12 @@ class ProgramGenerator(object):
     single_op_pushes = [self._random_push(size) for size in arg_bit_sizes]
     # the arguments are popped from the stack
     single_op_pushes.reverse()
-    return [generate_single_marginal(single_op_pushes, arg_bit_sizes, operation, 0),
-            generate_single_marginal(single_op_pushes, arg_bit_sizes, operation, op_count),
-            generate_single_marginal(single_op_pushes, arg_bit_sizes, operation, op_count * 2)]
-        
+
+    # the program triplet will be for the following number of measured OPCODEs
+    op_counts = [0, op_count, op_count * 2]
+
+    return [Program(generate_single_marginal(single_op_pushes, arg_bit_sizes, operation, o), operation['Mnemonic'], o, arg_bit_sizes) for o in op_counts]
+    
   def _fill_opcodes_push_dup_swap(self, opcodes):
     pushes = constants.EVM_PUSHES
     dups = constants.EVM_DUPS

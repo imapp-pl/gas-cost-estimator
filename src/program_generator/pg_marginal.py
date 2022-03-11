@@ -10,6 +10,17 @@ from common import generate_single_marginal
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
+class Program(object):
+  """
+  POD object for a program
+  """
+
+  def __init__(self, bytecode, opcode, op_count):
+    self.bytecode = bytecode
+    self.opcode = opcode
+    self.op_count = op_count
+
+
 class ProgramGenerator(object):
   """
   Sample program generator for EVM instrumentation
@@ -101,7 +112,7 @@ class ProgramGenerator(object):
     arg_bit_sizes = [1] * arity
     single_op_pushes = ["60a1"] * arity
 
-    return generate_single_marginal(single_op_pushes, arg_bit_sizes, operation, op_count)
+    return Program(generate_single_marginal(single_op_pushes, arg_bit_sizes, operation, op_count), operation['Mnemonic'], op_count)
         
   def _fill_opcodes_push_dup_swap(self, opcodes):
     pushes = constants.EVM_PUSHES

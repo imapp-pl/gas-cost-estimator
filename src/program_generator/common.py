@@ -3,24 +3,6 @@ from math import ceil
 """
 Common tools for program generation. To be organized if needed, for now just bag of functions.
 """
-
-
-class Program(object):
-  """
-  POD object for a program
-  """
-
-  def __init__(self, bytecode, opcode, op_count, args):
-    self.bytecode = bytecode
-    self.opcode = opcode
-    self.op_count = op_count
-    self.arg0 = get(args, 0)
-    self.arg1 = get(args, 1)
-    self.arg2 = get(args, 2)
-
-
-def get(l, index, default=None):
-  return l[index] if -len(l) <= index < len(l) else default
     
 
 def generate_single_marginal(single_op_pushes, arg_bit_sizes, operation, op_count):
@@ -66,4 +48,4 @@ def generate_single_marginal(single_op_pushes, arg_bit_sizes, operation, op_coun
   assert interleaved_op_and_pops_count >= 0
   assert end_pop_count >= 0
 
-  return Program(bytecode, operation['Mnemonic'], op_count, arg_bit_sizes)
+  return bytecode
