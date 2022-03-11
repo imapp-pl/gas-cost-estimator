@@ -138,7 +138,8 @@ extract_opcodes <- function(program_set_codename) {
 # We use 50 growing programs, instead of the initial 200:
 # 1. it appears to stabilize fast enough, after we have begun randomizing the order of programs to avoid impact of periodic slowness
 # 2. `geth` is very slow to calculate and blows the CPU allowance on our AWS machine, if we do 200
-all_opcodes = extract_opcodes("arithmetic_c50")
+# 3. for `openethereum` we should be using use programs with 0-200 increasing `op_count`, otherwise the model doesn't capture the trend. Possibly, this will be resolved by dropping `openethereum`
+all_opcodes = extract_opcodes("full1_c50_step5_shuffle")
 estimates = data.frame(matrix(ncol = 3, nrow = 0))
 colnames(estimates) <- c('op', 'estimate_marginal_ns', 'env')
 ```
@@ -151,8 +152,8 @@ After adjusting the input higher, the intercept is "less" significant, but still
 
 ```{r}
 estimates = estimates[which(estimates$env != 'evmone'), ]
-programs = programs_for_compute("arithmetic_comb_c50_shuffle")
-results = load_data_set("evmone", "arithmetic_comb_c50_shuffle", "total_50_4")
+programs = programs_for_compute("full1_c50_step5_shuffle")
+results = load_data_set("evmone", "full1_c50_step5_shuffle", "total_50_4")
 for (opcode in all_opcodes) {
   estimate = compute_all(programs, results, opcode, "evmone", TRUE)
   estimates[nrow(estimates) + 1, ] = c(opcode, estimate, 'evmone')
@@ -161,21 +162,17 @@ for (opcode in all_opcodes) {
 
 ```{r}
 estimates = estimates[which(estimates$env != 'geth'), ]
-programs = programs_for_compute("arithmetic_comb_c50_shuffle")
-results = load_data_set("geth", "arithmetic_comb_c50_shuffle", "total_50_4")
+programs = programs_for_compute("full1_c50_step5_shuffle")
+results = load_data_set("geth", "full1_c50_step5_shuffle", "total_50_4")
 for (opcode in all_opcodes) {
   estimate = compute_all(programs, results, opcode, "geth", TRUE)
   estimates[nrow(estimates) + 1, ] = c(opcode, estimate, 'geth')
 }
 ```
-**NOTE** for `openethereum` we need to use programs with 0-200 increasing `op_count`, otherwise the model doesn't capture the trend.
-
-**TODO** To be fully fair, we should do the same for `geth` and `evmone`.
-
 ```{r}
 estimates = estimates[which(estimates$env != 'openethereum'), ]
-programs = programs_for_compute("arithmetic_comb_c200_shuffle")
-results = load_data_set("openethereum", "arithmetic_comb_c200_shuffle", "total_50_4")
+programs = programs_for_compute("full1_c50_step5_shuffle")
+results = load_data_set("openethereum", "full1_c50_step5_shuffle", "total_50_4")
 for (opcode in all_opcodes) {
   estimate = compute_all(programs, results, opcode, "openethereum", TRUE)
   estimates[nrow(estimates) + 1, ] = c(opcode, estimate, 'openethereum')
