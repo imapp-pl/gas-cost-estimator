@@ -40,7 +40,7 @@ class ProgramGenerator(object):
 
     self._operations = [opcodes[op] for op in selection]
 
-  def generate(self, fullCsv=False, opcode=None, maxOpCount=50, shuffleCounts=False):
+  def generate(self, fullCsv=False, opcode=None, maxOpCount=50, shuffleCounts=False, stepOpCount=5):
     """
     Main entrypoint of the CLI tool. Should dispatch to the desired generation routine and print
     programs to STDOUT
@@ -49,13 +49,14 @@ class ProgramGenerator(object):
     fullCsv (boolean): if set, will generate programs with accompanying data in CSV format
     opcode (string): if set, will only generate programs for opcode
     maxOpCount (integer): maximum number of measured opcodes, defaults to 50
+    stepOpCount (integer): by how much the number of measured opcodes should increase, defaults to 5
     shuffleCounts (boolean): if set, will shuffle the op counts used to generate programs for each OPCODE
 
     selectionFile (string): file name of the OPCODE selection file under `data`, defaults to `selection.csv`
     seed: a seed for random number generator, defaults to 0
     """
 
-    programs = self._do_generate(opcode, maxOpCount, shuffleCounts)
+    programs = self._do_generate(opcode, maxOpCount, shuffleCounts, stepOpCount)
 
     if fullCsv:
       writer = csv.writer(sys.stdout, delimiter=',', quotechar='"')
@@ -77,7 +78,7 @@ class ProgramGenerator(object):
         print(program.bytecode)
 
 
-  def _do_generate(self, opcode, max_op_count, shuffle_counts):
+  def _do_generate(self, opcode, max_op_count, shuffle_counts, step_op_count):
     """
     """
     operations = [operation for operation in self._operations if operation['Value'] != '0xfe']
@@ -86,7 +87,7 @@ class ProgramGenerator(object):
     else:
       pass
 
-    op_counts = list(range(0, max_op_count + 1))
+    op_counts = list(range(0, max_op_count + 1, step_op_count))
     if shuffle_counts:
       random.shuffle(op_counts)
       
