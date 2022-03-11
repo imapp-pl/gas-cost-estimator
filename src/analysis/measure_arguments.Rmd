@@ -62,7 +62,7 @@ measurement_codename = "50_1"
 
 result_geth = load_data_set("geth", program_set_codename, measurement_codename)
 result_evmone = load_data_set("evmone", program_set_codename, measurement_codename)
-result_openethereum = load_data_set("openethereum", program_set_codename, "200_2")
+result_openethereum = load_data_set("openethereum", program_set_codename, "400_4")
 results = rbind(result_evmone, result_geth, result_openethereum)
 head(results)
 ```
