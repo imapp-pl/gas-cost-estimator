@@ -116,6 +116,15 @@ class ProgramGenerator(object):
     shift_ops = [0x1b, 0x1c, 0x1d]  # SHL, SHR, SAR
     comparison_ops = [0x10, 0x11, 0x12, 0x13, 0x14]  # LT, GT, SLT, SGT, EQ
     iszero_ops = [0x15]  # ISZERO
+    # ADDRESS, ORIGIN, CALLER, CALLVALUE, CODESIZE, GASPRICE, COINBASE, TIMESTAMP, NUMBER
+    # DIFFICULTY, GASLIMIT, CHAINID, SELFBALANCE, PC, MSIZE, GAS
+    simple_nullary_ops = [0x30, 0x32, 0x33, 0x34, 0x38, 0x3a, 0x41, 0x42, 0x43,
+                          0x44, 0x45, 0x46, 0x47, 0x58, 0x59, 0x5a]
+    pop_ops = [0x50]
+    jumpdest_ops = [0x5b]  # JUMPDEST
+    dup_ops = [0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f]
+    swap_ops = [0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f]
+
     all_ops = []
     all_ops.extend(arithmetic_ops)
     all_ops.extend(exp_ops)
@@ -124,6 +133,11 @@ class ProgramGenerator(object):
     all_ops.extend(shift_ops)
     all_ops.extend(comparison_ops)
     all_ops.extend(iszero_ops)
+    all_ops.extend(simple_nullary_ops)
+    all_ops.extend(pop_ops)
+    all_ops.extend(jumpdest_ops)
+    all_ops.extend(dup_ops)
+    all_ops.extend(swap_ops)
 
     if dominant and dominant not in all_ops:
       raise ValueError(dominant)
