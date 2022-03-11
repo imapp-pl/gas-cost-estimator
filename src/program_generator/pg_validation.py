@@ -2,12 +2,11 @@ import os
 import csv
 import fire
 import sys
-import subprocess
-import tempfile
-import binascii
 import random
 
 import constants
+from common import prepare_opcodes, get_selection
+
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -31,32 +30,22 @@ class ProgramGenerator(object):
   | program_id | opcode_measured | measured_op_position | bytecode |
   ```
 
-  A sample usage `python3 program_generator/pg_arythmetic.py generate --count=2 --opsLimit=100 --seed=123123123`
+  A sample usage `python3 program_generator/pg_validation.py generate --count=2 --opsLimit=100 --seed=123123123`
 
   NOTE: `measured_op_position` doesn't take into account the specific instructions fired before the
   generated part starts executing. It is relative to the first instruction of the _generated_ part
   of the program. E.g.: `evmone` prepends `JUMPDESTI`, `openethereum_ewasm` prepends many instructions
   """
 
-  def __init__(self):
+  def __init__(self, seed=0):
+    random.seed(a=seed, version=2)
 
-    opcodes_file = os.path.join(dir_path, 'data', 'opcodes.csv')
-
-    with open(opcodes_file) as csvfile:
-      reader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
-      opcodes = {i['Value']: i for i in reader}
-
-    opcodes = self._fill_opcodes_push_dup_swap(opcodes)
-
-    selection_file = os.path.join(dir_path, 'data', 'selection.csv')
-
-    with open(selection_file) as csvfile:
-      reader = csv.DictReader(csvfile, delimiter=' ', quotechar='"')
-      selection = [i['Opcode'] for i in reader]
+    opcodes = prepare_opcodes(os.path.join(dir_path, 'data', 'opcodes.csv'))
+    selection = get_selection(os.path.join(dir_path, 'data', 'selection.csv'))
 
     self._operations = {int(op, 16): opcodes[op] for op in selection}
 
-  def generate(self, fullCsv=False, count=1, opsLimit=None, bytecodeLimit=None, seed=0, dominant=None, push=32, cleanStack=False, randomizePush=False, randomizeOpsLimit=False):
+  def generate(self, fullCsv=False, count=1, opsLimit=None, bytecodeLimit=None, dominant=None, push=32, cleanStack=False, randomizePush=False, randomizeOpsLimit=False):
     """
     Main entrypoint of the CLI tool. Should dispatch to the desired generation routine and print
     programs to STDOUT. If no limits given then by default opsLimit=100
@@ -73,8 +62,6 @@ class ProgramGenerator(object):
     randomizePush: whether size of arguments should be randomized, up to the value of push
     cleanStack: whether to clean stack after every opcode or not, default is not
     """
-
-    random.seed(a=seed, version=2)
     
     if not opsLimit and not bytecodeLimit:
       opsLimit = 100
@@ -120,9 +107,7 @@ class ProgramGenerator(object):
     # number of operations including pushes
     ops_count = 0
     if not cleanStack:
-      # one value should be always on the stack
-      bytecode += self._random_push(pushMax, randomizePush)
-      ops_count += 1
+      previous_nreturns = 0
     # constant list of arithmetic operations
     arithmetic_ops = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09]  # ADD MUL SUB DIV SDIV MOD SMOD ADDMOD MULMOD
     exp_ops = [0x0a]  # EXP
@@ -152,28 +137,37 @@ class ProgramGenerator(object):
       else:
         op = random.choice(all_ops)
       operation = self._operations[op]
-      if cleanStack:
-        # the stack is empty, put one value there
-        bytecode += self._random_push(pushMax, randomizePush)
-        ops_count += 1
-      # one value is always on the stack
-      needed_pushes = int(operation['Removed from stack']) - 1
+      arity = int(operation['Removed from stack'])
+      nreturns = int(operation['Added to stack'])
+
+      # determine how many args we need to push on the stack and push
+      # some value have remained on the stack, unless we're in `cleanStack` mode, whereby they had been popped
+      needed_pushes = arity if cleanStack else (arity - previous_nreturns)
       # i.e. 23 from 0x23
       opcode = operation['Value'][2:4]
-      if op in arithmetic_ops or op in bitwise_ops or op in comparison_ops or op in exp_ops:
-        for i in range(needed_pushes):
-          bytecode += self._random_push(pushMax, randomizePush)
-      elif op in byte_ops:  # BYTE SIGNEXTEND needs 0-31 value on the stack
+      if op in byte_ops:  # BYTE SIGNEXTEND needs 0-31 value on the top of the stack
+        bytecode += self._random_push(pushMax, randomizePush)
         bytecode += self._random_push_less_32()
-      elif op in shift_ops:  # SHL, SHR, SAR need 0-255 value on the stack
+      elif op in shift_ops:  # SHL, SHR, SAR need 0-255 value on the top of the stack
+        bytecode += self._random_push(pushMax, randomizePush)
         bytecode += self._random_push(1, False)
+      else:
+        bytecode += ''.join([self._random_push(pushMax, randomizePush) for _ in range(needed_pushes)])
+      ops_count += needed_pushes
+
+      # push the current random opcode
       bytecode += opcode
-      ops_count += needed_pushes + 1
-      # push goes for 3
+      ops_count += 1
+
+      # Pop any results to keep the stack clean for the next iteration. Otherwise mark how many returns remain on
+      # the stack after the OPCODE executed.
       if cleanStack:
         # empty the stack
-        bytecode += '50'  # POP
-        ops_count += 1
+        bytecode += '50' * nreturns  # POP
+        ops_count += nreturns
+      else:
+        previous_nreturns = nreturns
+
     return Program(bytecode, ops_count)
 
   def _random_push(self, pushMax, randomizePush):
