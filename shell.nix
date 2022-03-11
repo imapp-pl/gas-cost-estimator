@@ -5,7 +5,11 @@ let
   python = pkgs.python39.withPackages python-packages;
 in
 mkShell {
-  buildInputs = [ python pkgs.go_1_17 ];
+  buildInputs = [
+    python
+    pkgs.go_1_17
+    pkgs.cmake
+];
 
   shellHook = ''
     mkdir -p ".go/src/github.com/ethereum/"
