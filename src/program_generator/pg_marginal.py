@@ -108,11 +108,10 @@ class ProgramGenerator(object):
 
   def _generate_single_program(self, operation, op_count):
     arity = int(operation['Removed from stack'])
-    # for compatibility with the common function
-    arg_bit_sizes = [1] * arity
+    # for compatibility with the generate_single_marginal function
     single_op_pushes = ["60a1"] * arity
 
-    return Program(generate_single_marginal(single_op_pushes, arg_bit_sizes, operation, op_count), operation['Mnemonic'], op_count)
+    return Program(generate_single_marginal(single_op_pushes, operation, op_count), operation['Mnemonic'], op_count)
         
   def _fill_opcodes_push_dup_swap(self, opcodes):
     pushes = constants.EVM_PUSHES

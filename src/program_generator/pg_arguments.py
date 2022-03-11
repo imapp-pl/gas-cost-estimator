@@ -130,8 +130,8 @@ class ProgramGenerator(object):
     # the program triplet will be for the following number of measured OPCODEs
     op_counts = [0, op_count, op_count * 2]
 
-    return [Program(generate_single_marginal(single_op_pushes, arg_bit_sizes, operation, o), operation['Mnemonic'], o, arg_bit_sizes) for o in op_counts]
-    
+    return [Program(generate_single_marginal(single_op_pushes, operation, o), operation['Mnemonic'], o, arg_bit_sizes) for o in op_counts]
+        
   def _fill_opcodes_push_dup_swap(self, opcodes):
     pushes = constants.EVM_PUSHES
     dups = constants.EVM_DUPS

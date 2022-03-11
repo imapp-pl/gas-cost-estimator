@@ -5,7 +5,7 @@ Common tools for program generation. To be organized if needed, for now just bag
 """
     
 
-def generate_single_marginal(single_op_pushes, arg_bit_sizes, operation, op_count):
+def generate_single_marginal(single_op_pushes, operation, op_count):
   """
   
   """
