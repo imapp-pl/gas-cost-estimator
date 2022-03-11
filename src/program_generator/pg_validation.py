@@ -31,7 +31,7 @@ class ProgramGenerator(object):
   | program_id | opcode_measured | measured_op_position | bytecode |
   ```
 
-  A sample usage `python3 program_generator/pg_arythmetic.py generate --count=2 --gasLimit=100 --seed=123123123`
+  A sample usage `python3 program_generator/pg_arythmetic.py generate --count=2 --opsLimit=100 --seed=123123123`
 
   NOTE: `measured_op_position` doesn't take into account the specific instructions fired before the
   generated part starts executing. It is relative to the first instruction of the _generated_ part
@@ -56,7 +56,7 @@ class ProgramGenerator(object):
 
     self._operations = {int(op, 16): opcodes[op] for op in selection}
 
-  def generate(self, fullCsv=False, count=1, gasLimit=None, opsLimit=None, bytecodeLimit=None, seed=0, dominant=None, push=32, cleanStack=False, randomizePush=False, randomizeOpsLimit=False):
+  def generate(self, fullCsv=False, count=1, opsLimit=None, bytecodeLimit=None, seed=0, dominant=None, push=32, cleanStack=False, randomizePush=False, randomizeOpsLimit=False):
     """
     Main entrypoint of the CLI tool. Should dispatch to the desired generation routine and print
     programs to STDOUT. If no limits given then by default opsLimit=100
@@ -64,7 +64,6 @@ class ProgramGenerator(object):
     Parameters:
     fullCsv (boolean): if set, will generate programs with accompanying data in CSV format
     count (int): the number of programs 
-    gasLimit (int): the gas limit for a single program
     opsLimit (int): the limit operations for a single program, including pushes as one
     randomizeOpsLimit (boolean): whether the limit of operations should be randomized, up to the value of opsLimit
     bytecodeLimit (int): the bytecode limit of a single program
@@ -77,7 +76,7 @@ class ProgramGenerator(object):
 
     random.seed(a=seed, version=2)
     
-    if not gasLimit and not opsLimit and not bytecodeLimit:
+    if not opsLimit and not bytecodeLimit:
       opsLimit = 100
 
     opsLimitMax = opsLimit
@@ -89,7 +88,7 @@ class ProgramGenerator(object):
       else:
         opsLimit = opsLimitMax
 
-      program = self._generate_random_arithmetic(gasLimit, opsLimit, bytecodeLimit, dominant, push, cleanStack, randomizePush)
+      program = self._generate_random_arithmetic(opsLimit, bytecodeLimit, dominant, push, cleanStack, randomizePush)
       programs.append(program)
 
     if fullCsv:
@@ -108,7 +107,7 @@ class ProgramGenerator(object):
       for program in programs:
         print(program.bytecode)
 
-  def _generate_random_arithmetic(self, gasLimit, opsLimit, bytecodeLimit, dominant, pushMax, cleanStack, randomizePush):
+  def _generate_random_arithmetic(self, opsLimit, bytecodeLimit, dominant, pushMax, cleanStack, randomizePush):
     """
     Generates one large programs with multiple arithmetic operations
     """
@@ -120,13 +119,10 @@ class ProgramGenerator(object):
     bytecode = ''
     # number of operations including pushes
     ops_count = 0
-    # gas used
-    gas = 0
     if not cleanStack:
       # one value should be always on the stack
       bytecode += self._random_push(pushMax, randomizePush)
       ops_count += 1
-      gas += 3
     # constant list of arithmetic operations
     arithmetic_ops = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09]  # ADD MUL SUB DIV SDIV MOD SMOD ADDMOD MULMOD
     exp_ops = [0x0a]  # EXP
@@ -147,7 +143,7 @@ class ProgramGenerator(object):
     if dominant and dominant not in all_ops:
       raise ValueError(dominant)
 
-    while (not gasLimit or gas < gasLimit) and (not opsLimit or ops_count < opsLimit) and (not bytecodeLimit or len(bytecode)<2*bytecodeLimit):
+    while (not opsLimit or ops_count < opsLimit) and (not bytecodeLimit or len(bytecode)<2*bytecodeLimit):
       if dominant:
         if random.random() < 0.5:
           op = dominant
@@ -160,7 +156,6 @@ class ProgramGenerator(object):
         # the stack is empty, put one value there
         bytecode += self._random_push(pushMax, randomizePush)
         ops_count += 1
-        gas += 3
       # one value is always on the stack
       needed_pushes = int(operation['Removed from stack']) - 1
       # i.e. 23 from 0x23
@@ -175,16 +170,10 @@ class ProgramGenerator(object):
       bytecode += opcode
       ops_count += needed_pushes + 1
       # push goes for 3
-      gas += 3 * needed_pushes
-      if op in exp_ops:
-        gas += 60  # gas cost of EXP with the exponent 0<exponent<256
-      else:
-        gas += int(operation['Gas Used'])
       if cleanStack:
         # empty the stack
         bytecode += '50'  # POP
         ops_count += 1
-        gas += 2
     return Program(bytecode, ops_count)
 
   def _random_push(self, pushMax, randomizePush):
