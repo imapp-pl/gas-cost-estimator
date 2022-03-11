@@ -48,7 +48,7 @@ class ProgramGenerator(object):
     fullCsv (boolean): if set, will generate programs with accompanying data in CSV format
     count (int): the number of programs
     opcode (string): if set, will only generate programs for opcode
-    opCount (integer): number of measured opcodes, defaults to 10
+    opCount (integer): number of measured opcodes, defaults to 10. In total, programs with 0, `opCount` and `2 * opCount` will be generated.
 
     selectionFile (string): file name of the OPCODE selection file under `data`, defaults to `selection.csv`
     seed: a seed for random number generator, defaults to 0

@@ -29,7 +29,6 @@ def generate_single_marginal(single_op_pushes, arg_bit_sizes, operation, op_coun
   """
   arity = int(operation['Removed from stack'])
   nreturns = int(operation['Added to stack'])
-  assert nreturns <= 1
 
   # i.e. 23 from 0x23
   opcode = operation['Value'][2:4]
