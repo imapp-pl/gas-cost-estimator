@@ -6,3 +6,4 @@ src/.Rhistory
 __pycache__
 
 *.nb.html
+/src/instrumentation_measurement/bin/geth_main
