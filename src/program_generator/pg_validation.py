@@ -135,8 +135,10 @@ class ProgramGenerator(object):
     all_ops.extend(simple_nullary_ops)
     all_ops.extend(pop_ops)
     all_ops.extend(jumpdest_ops)
-    all_ops.extend(dup_ops)
-    all_ops.extend(swap_ops)
+    # PUSHes DUPs and SWAPs overwhelm the others if treated equally. We pick the class with probability as any
+    # other OPCODE, and then the variant is drawn in a subsequent `random.choice` with equal probability.
+    all_ops.append("DUPclass")
+    all_ops.append("SWAPclass")
 
     if dominant and dominant not in all_ops:
       raise ValueError(dominant)
@@ -149,6 +151,12 @@ class ProgramGenerator(object):
           op = random.choice(all_ops)
       else:
         op = random.choice(all_ops)
+
+      if op == "DUPclass":
+        op = random.choice(dup_ops)
+      elif op == "SWAPclass":
+        op = random.choice(swap_ops)
+
       operation = self._operations[op]
       arity = int(operation['Removed from stack'])
       nreturns = int(operation['Added to stack'])
