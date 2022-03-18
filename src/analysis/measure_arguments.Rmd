@@ -20,7 +20,7 @@ setwd("~/sources/imapp/gas-cost-estimator/src")
 
 # The program set is 200 programs, with the count of measured OPCODE increases twice in steps of 15,
 # so we have a program with 0, 15, and 30 measured OPCODEs 
-program_set_codename = "arithmetic_c200_opc15x2"
+program_set_codename = "full1_c200_opc15x2"
 programs = read.csv(paste("../../local/pg_arguments_", program_set_codename, ".csv", sep=""))
 ```
 
@@ -110,20 +110,24 @@ extract_opcodes <- function(program_set_codename, arity) {
   programs = read.csv(paste("../../local/pg_arguments_", program_set_codename, ".csv", sep=""))
   programs = clean_programs(programs)
   if (!missing(arity)) {
+    if (arity == 0) {
+      programs = programs[which(is.na(programs$arg0) & is.na(programs$arg1) & is.na(programs$arg2)), ]
+    }
     if (arity == 1) {
-      programs = programs[which(is.na(programs$arg1) & is.na(programs$arg2)), ]
+      programs = programs[which(!s.na(programs$arg0) & is.na(programs$arg1) & is.na(programs$arg2)), ]
     }
     if (arity == 2) {
       programs = programs[which(!is.na(programs$arg1) & is.na(programs$arg2)), ]
     }
     if (arity == 3) {
-      programs = programs[which(!is.na(programs$arg1) & !is.na(programs$arg2)), ]
+      programs = programs[which(!is.na(programs$arg2)), ]
     }
   }
   unique(programs$opcode)
 }
 
 all_opcodes = extract_opcodes(program_set_codename)
+nullary_opcodes = extract_opcodes(program_set_codename, 0)
 unary_opcodes = extract_opcodes(program_set_codename, 1)
 binary_opcodes = extract_opcodes(program_set_codename, 2)
 ternary_opcodes = extract_opcodes(program_set_codename, 3)
@@ -155,12 +159,14 @@ arg_lm <- function(df, opcode, env, formula) {
 }
 
 add_arg_results <- function(model, opcode, env, results_df, arity) {
+  stopifnot(arity > 0)
+  
   all_coefficients = summary(model)$coefficients
   arg_coefficients = all_coefficients[!(row.names(all_coefficients) %in% c("op_count", "(Intercept)", "arg0", "arg1", "arg2")),]
   pure_op_count_coeff = all_coefficients["op_count", 1]
   # will be filled if any is impacting
   args_ns = c(NA, NA, NA)
-    
+  
   if (arity == 1) {
     # there's only one arg coefficient here, silly R forces us to take a special case path...
     has_significant = arg_coefficients[4] < p_value_thresh
@@ -349,7 +355,7 @@ We'll estimate a model with only those argument variables, where they turned out
 For those were no argument variable was impacting, we'll only estimate the marginal increase (corresponding to the constant cost of an OPCODE).
 
 ```{r}
-make_non_arg_model <- function(model, results_df, env, opcode) {
+add_non_arg_model_estimates <- function(model, results_df, env, opcode) {
   pure_op_count_coeff = summary(model)$coefficients["op_count", 1]
   args_ns = c(NA, NA, NA)
   results_df[nrow(results_df) + 1, ] = c(opcode, env, FALSE, FALSE, pure_op_count_coeff, args_ns)
@@ -384,7 +390,7 @@ for (env in all_envs) {
     if (is_modeled_with_args) {
       estimates = add_arg_model_estimates(model, opcode, env, estimates, first_pass)
     } else {
-      estimates = make_non_arg_model(model, estimates, env, opcode)
+      estimates = add_non_arg_model_estimates(model, estimates, env, opcode)
     }
   }
 }
