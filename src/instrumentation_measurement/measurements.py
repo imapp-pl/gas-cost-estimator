@@ -123,7 +123,7 @@ class Measurements(object):
         print(csv_chunk)
 
   def run_geth(self, mode, program, sampleSize):
-    golang_main = ['go', 'run', './instrumentation_measurement/geth/main.go']
+    golang_main = ['./instrumentation_measurement/bin/geth_main']
     args = ['--mode', mode, '--printCSV', '--printEach=false', '--sampleSize={}'.format(sampleSize)]
     bytecode_arg = ['--bytecode', program.bytecode]
     invocation = golang_main + args + bytecode_arg

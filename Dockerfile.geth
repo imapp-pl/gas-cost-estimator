@@ -17,6 +17,7 @@ ENV PATH=$PATH:/usr/local/go/bin
 ENV GOPATH=/srv/app/.go
 ENV GO111MODULE=off
 ENV GOBIN=/srv/app/.go/bin
+ENV GOGC=off
 
 # fixed golang dependencies
 RUN go get github.com/ethereum/go-ethereum
@@ -44,6 +45,7 @@ RUN go get ./geth/...
 
 # get the rest (program generation etc.) 
 COPY ./src/ /srv/app/src/
+RUN go build -o bin/geth_main geth/main.go
 
 WORKDIR /srv/app/
 
