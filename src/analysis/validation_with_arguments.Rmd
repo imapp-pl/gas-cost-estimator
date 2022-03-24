@@ -297,7 +297,19 @@ trivial_variable_plots(validation, 'env', 'openethereum')
 ```
 Trivial variable plots are interesting, after we have introduced varying program length. `openethereum` in particular has a good correlation there, which is caused by the large, constant cost of running an instruction (~250ns, regardless of OPCODE).
 
-Nevertheless, neither of the models is comparable with the model including the estimated `cost_ns`, see below.
+```{r}
+program_length_model_geth = lm_validation(validation, explained_variable, 'program_length', selection_col='env', selection_val='geth')
+program_length_model_evmone = lm_validation(validation, explained_variable, 'program_length', selection_col='env', selection_val='evmone')
+program_length_model_openethereum = lm_validation(validation, explained_variable, 'program_length', selection_col='env', selection_val='openethereum')
+print('geth all - only progam length')
+summary(program_length_model_geth)
+print('evmone all - only progam length')
+summary(program_length_model_evmone)
+print('openethereum all - only progam length')
+summary(program_length_model_openethereum)
+```
+
+Nevertheless, neither of the "trivial" models is comparable with the final validation model including the estimated `cost_ns`. see below.
 
 ### Final validation model
 

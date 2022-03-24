@@ -1,11 +1,10 @@
-from math import ceil
 import os
 import csv
 import fire
 import random
 import sys
 
-import constants
+from common import generate_single_marginal, prepare_opcodes, get_selection
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -40,19 +39,8 @@ class ProgramGenerator(object):
   def __init__(self, selectionFile='selection.csv', seed=0):
     random.seed(a=seed, version=2)
 
-    opcodes_file = os.path.join(dir_path, 'data', 'opcodes.csv')
-
-    with open(opcodes_file) as csvfile:
-      reader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
-      opcodes = {i['Value']: i for i in reader}
-
-    opcodes = self._fill_opcodes_push_dup_swap(opcodes)
-
-    selection_file = os.path.join(dir_path, 'data', selectionFile)
-
-    with open(selection_file) as csvfile:
-      reader = csv.DictReader(csvfile, delimiter=' ', quotechar='"')
-      selection = [i['Opcode'] for i in reader]
+    opcodes = prepare_opcodes(os.path.join(dir_path, 'data', 'opcodes.csv'))
+    selection = get_selection(os.path.join(dir_path, 'data', selectionFile))
 
     self._operations = [opcodes[op] for op in selection]
 
@@ -65,13 +53,13 @@ class ProgramGenerator(object):
     fullCsv (boolean): if set, will generate programs with accompanying data in CSV format
     count (int): the number of programs
     opcode (string): if set, will only generate programs for opcode
-    opCount (integer): number of measured opcodes, defaults to 10
+    opCount (integer): number of measured opcodes, defaults to 10. In total, programs with 0, `opCount` and `2 * opCount` will be generated.
 
     selectionFile (string): file name of the OPCODE selection file under `data`, defaults to `selection.csv`
     seed: a seed for random number generator, defaults to 0
     """
 
-    programs = self._generate_marginal(opcode, count, opCount)
+    programs = self._do_generate(opcode, count, opCount)
 
     if fullCsv:
       writer = csv.writer(sys.stdout, delimiter=',', quotechar='"')
@@ -95,7 +83,7 @@ class ProgramGenerator(object):
         print(program.bytecode)
 
 
-  def _generate_marginal(self, opcode, count, op_count):
+  def _do_generate(self, opcode, count, op_count):
     """
     """
     operations = [operation for operation in self._operations if operation['Value'] != '0xfe']
@@ -126,75 +114,11 @@ class ProgramGenerator(object):
     single_op_pushes = [self._random_push(size) for size in arg_bit_sizes]
     # the arguments are popped from the stack
     single_op_pushes.reverse()
-    return [self._generate_single_program(single_op_pushes, arg_bit_sizes, operation, 0),
-            self._generate_single_program(single_op_pushes, arg_bit_sizes, operation, op_count),
-            self._generate_single_program(single_op_pushes, arg_bit_sizes, operation, op_count * 2)]
 
-  def _generate_single_program(self, single_op_pushes, arg_bit_sizes, operation, op_count):
-    """
-    
-    """
-    arity = int(operation['Removed from stack'])
+    # the program triplet will be for the following number of measured OPCODEs
+    op_counts = [0, op_count, op_count * 2]
 
-    # i.e. 23 from 0x23
-    opcode = operation['Value'][2:4]
-    popcode = "50"
-
-    has_parameter = True if 'Parameter' in operation and operation['Parameter'] else False
-    if has_parameter:
-      opcode += operation['Parameter']
-
-    push_count = 120
-    total_pop_count = 40
-
-    interleaved_pop_count = max(op_count - 1, 0)
-    end_pop_count = total_pop_count - interleaved_pop_count
-      
-    pushes = single_op_pushes * ceil(push_count / arity)
-
-    if op_count == 0:
-      middle = []
-      pops = [popcode] * total_pop_count
-    elif op_count >= 1:
-      middle = [opcode] + [popcode, opcode] * interleaved_pop_count
-      pops = [popcode] * end_pop_count
-
-    bytecode = ''.join(pushes + middle + pops)
-
-    # just in case
-    assert interleaved_pop_count + end_pop_count == total_pop_count
-    assert end_pop_count > 0
-
-    return Program(bytecode, operation['Mnemonic'], op_count, arg_bit_sizes)
-        
-  def _fill_opcodes_push_dup_swap(self, opcodes):
-    pushes = constants.EVM_PUSHES
-    dups = constants.EVM_DUPS
-    swaps = constants.EVM_SWAPS
-
-    pushes = self._opcodes_dict_push_dup_swap(pushes, [0] * len(pushes), [1] * len(pushes), parameter='00')
-    opcodes = {**opcodes, **pushes}
-    dups = self._opcodes_dict_push_dup_swap(dups, range(1, len(dups)), range(2, len(dups)+1))
-    opcodes = {**opcodes, **dups}
-    swaps = self._opcodes_dict_push_dup_swap(swaps, range(2, len(swaps)+1), range(2, len(swaps)+1))
-    opcodes = {**opcodes, **swaps}
-    return opcodes
-
-  def _opcodes_dict_push_dup_swap(self, source, removeds, addeds, parameter=None):
-    source_list = source.split()
-    opcodes = source_list[::2]
-    names = source_list[1::2]
-    new_part = {
-      opcode: {
-        'Value': opcode,
-        'Mnemonic': name,
-        'Removed from stack': removed,
-        'Added to stack': added,
-        'Parameter': parameter
-      } for opcode, name, removed, added in zip(opcodes, names, removeds, addeds)
-    }
-
-    return new_part
+    return [Program(generate_single_marginal(single_op_pushes, operation, o), operation['Mnemonic'], o, arg_bit_sizes) for o in op_counts]
 
 def main():
   fire.Fire(ProgramGenerator, name='generate')

@@ -199,13 +199,13 @@ no comments here, I can't imagine sizing could depend on anything.
 
 ## `0x3e,RETURNDATACOPY`
 
-`0x3e,RETURNDATACOPY,"3 + 3 * ceil(amount / 32)",,3,0,This opcode has similar semantics to CALLDATACOPY, but instead of copying `
+`0x3e,RETURNDATACOPY,"3 + 3 * ceil(amount / 32)",,3,0,This opcode has similar semantics to CALLDATACOPY, but instead of copying data from the call data, it copies data from the return data buffer`
 
 - **geth**: Data is in `interpreter.returnData`
 - **evmone**: Data is in `state.return_data`
 - **openethereum**: Data is in `self.return_data`
 
-see `CALLDATACOPY`, everything is same just the data is from the code not input
+see `CALLDATACOPY`, everything is same just the data is from the called contract return not input
 
 ## `0x41,COINBASE` and friends
 
