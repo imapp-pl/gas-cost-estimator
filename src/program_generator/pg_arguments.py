@@ -27,7 +27,7 @@ class Program(object):
       self.arg0, self.arg1, self.arg2 = get(args, variant - 1), None, None
     elif opcode in constants.EVM_SWAPS:
       variant = int(opcode[4:])
-      self.arg0, self.arg1, self.arg2 = get(args, 0), get(args, variant - 1), None
+      self.arg0, self.arg1, self.arg2 = get(args, 0), get(args, variant), None
     else:
       self.arg0 = get(args, 0)
       self.arg1 = get(args, 1)
