@@ -10,7 +10,8 @@ Common tools for program generation. To be organized if needed, for now just bag
 
 def generate_single_marginal(single_op_pushes, operation, op_count):
   """
-  
+  The number of pushes in single_op_pushes must be equal to arity.
+  The returned program has the same number of empty pushes, pushes and pops regardless op_count.
   """
   arity = int(operation['Removed from stack'])
   nreturns = int(operation['Added to stack'])

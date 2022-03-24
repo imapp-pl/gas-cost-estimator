@@ -56,7 +56,6 @@ class ProgramGenerator(object):
     opsLimit (int): the limit operations for a single program, including pushes as one
     randomizeOpsLimit (boolean): whether the limit of operations should be randomized, up to the value of opsLimit
     bytecodeLimit (int): the bytecode limit of a single program
-    seed: a seed for random number generator, defaults to 0
     dominant: an opcode that is picked more often then others, probability ~0.5
     push: the range of default push used in the program, values 1..32, assign ops push1..push32
     randomizePush: whether size of arguments should be randomized, up to the value of push
@@ -160,10 +159,10 @@ class ProgramGenerator(object):
       # i.e. 23 from 0x23
       opcode = operation['Value'][2:4]
       if op in byte_ops:  # BYTE SIGNEXTEND needs 0-31 value on the top of the stack
-        bytecode += self._random_push(pushMax, randomizePush)
+        bytecode += self._random_push(pushMax, randomizePush) if cleanStack or previous_nreturns == 0 else ""
         bytecode += self._random_push_less_32()
       elif op in shift_ops:  # SHL, SHR, SAR need 0-255 value on the top of the stack
-        bytecode += self._random_push(pushMax, randomizePush)
+        bytecode += self._random_push(pushMax, randomizePush) if cleanStack or previous_nreturns == 0 else ""
         bytecode += self._random_push(1, False)
       else:
         bytecode += ''.join([self._random_push(pushMax, randomizePush) for _ in range(needed_pushes)])
