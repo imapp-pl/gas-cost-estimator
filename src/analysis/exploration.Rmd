@@ -1,6 +1,6 @@
 ---
 title: "R Notebook: initial exploration for Gas Cost Estimator"
-output: html_notebook
+output: html_document
 ---
 
 ```{r include=FALSE, fig.width=20}

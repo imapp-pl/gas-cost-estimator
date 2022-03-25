@@ -1,6 +1,6 @@
 ---
 title: "R Notebook: exploration of validation of measurements - with varying arguments; for Gas Cost Estimator"
-output: html_notebook
+output: html_document
 ---
 
 ```{r include=FALSE, fig.width=20}
@@ -101,30 +101,30 @@ We've extended the program length to 30 OPCODEs to accommodate more `PUSH`es and
 setwd("~/sources/imapp/gas-cost-estimator/src")
 
 # we have tried `c900_ops300_clean` too, but it is a bit overkill. No surprises there.
-# program_set_codename = "c100_ops300_clean"
+# program_set_codename = "arythmetic_c100_ops300_clean"
 # measurement_codename = "200_8"
 
 # we randomize the number of instructions in the random programs to capture program length impact on OPCODE performance
-program_set_codename = "c100_randOps500_clean"
+program_set_codename = "arythmetic_c100_randOps500_clean"
 measurement_codename = "200_8"
 
 # this dataset (tiny programs) has a radically highler slope coefficient and lower Intercept
 # this prompt us to vary the opsLimit for the validation program generation
-# program_set_codename = "c100_ops10_clean"
+# program_set_codename = "arythmetic_c100_ops10_clean"
 # measurement_codename = "200_8"
 
 # this is the data set without varying argument size. 
-# program_set_codename = "c100_ops30_clean_smallpush"
+# program_set_codename = "arythmetic_c100_ops30_clean_smallpush"
 # measurement_codename = "50_1"
 
-traces = read.csv(paste("../../local/trace_pg_arythmetic_", program_set_codename, ".csv", sep=""))
+traces = read.csv(paste("../../local/trace_pg_", program_set_codename, ".csv", sep=""))
 head(traces)
-total_measurements_geth = read.csv(paste("../../local/geth_pg_arythmetic_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
+total_measurements_geth = read.csv(paste("../../local/geth_pg_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
 head(total_measurements_geth)
-total_measurements_evmone = read.csv(paste("../../local/evmone_pg_arythmetic_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
+total_measurements_evmone = read.csv(paste("../../local/evmone_pg_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
 head(total_measurements_evmone)
 # TODO: at this point, for openethereum we are getting much better (acceptable) results for the sample size 16, nsamples 400, see Discussion section below
-total_measurements_openethereum = read.csv(paste("../../local/openethereum_pg_arythmetic_", program_set_codename, "_", "16_400", ".csv", sep=""))
+total_measurements_openethereum = read.csv(paste("../../local/openethereum_pg_", program_set_codename, "_", "16_400", ".csv", sep=""))
 head(total_measurements_openethereum)
 
 total_measurements_geth$env = 'geth'

@@ -1,6 +1,6 @@
 ---
 title: "R Notebook: exploration of various timers"
-output: html_notebook
+output: html_document
 ---
 
 Read in the output of `go run ./src/instrumentation_measurement/clock_resolution_go/main.go` (and other routines for overhead measurements):

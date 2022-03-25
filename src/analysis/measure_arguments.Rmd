@@ -1,6 +1,6 @@
 ---
 title: "R Notebook: estimation of impact of arguments on gas costs; for Gas Cost Estimator"
-output: html_notebook
+output: html_document
 ---
 
 ```{r include=FALSE, fig.width=20}
@@ -9,13 +9,6 @@ library(nlme)
 
 # prevent scientific notation
 options(scipen = 100)
-
-# enable traceback for debugging
-
-options(error = function() {
-  traceback(3)
-  stop()
-)
 ```
 
 
