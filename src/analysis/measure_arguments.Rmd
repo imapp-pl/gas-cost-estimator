@@ -9,6 +9,13 @@ library(nlme)
 
 # prevent scientific notation
 options(scipen = 100)
+
+# enable traceback for debugging
+
+options(error = function() {
+  traceback(3)
+  stop()
+)
 ```
 
 
@@ -245,6 +252,9 @@ Not immediately useful - commented out because it has too many params
 
 ```{r}
 get_impact_args_for <- function(df, opcode, env) {
+  if (opcode %in% nullary_opcodes) {
+    return(c())
+  }
   args = c()
   for (n in 0:2) {
     argname = paste0('arg', n, '_ns')
@@ -271,7 +281,9 @@ get_model_formula_for <- function(df, opcode, env) {
   args_formula = paste0(argnames, collapse=' + ')
   
   impact_args = get_impact_args_for(df, opcode, env)
-  if (is.null(impact_args)) {
+  if (opcode %in% nullary_opcodes) {
+    as.formula('measure_total_time_ns ~ op_count')
+  } else if (is.null(impact_args)) {
     as.formula(paste0('measure_total_time_ns ~ op_count +  ', args_formula))
   } else {
   arg_op_count_names = paste0('arg', impact_args, ':op_count')
