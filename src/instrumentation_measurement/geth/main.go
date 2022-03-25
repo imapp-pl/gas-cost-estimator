@@ -49,11 +49,11 @@ func main() {
 	// from `github.com/ethereum/go-ethereum/core/vm/runtime/runtime.go:109`
 	cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
 
-	// Initialize some constant calldata of 32MB, 2^25.
-	// This means, if we offset between 0th and 2^24th byte, we can fetch between 0 and 2^24 bytes (16MB)
-	// In consequence, we need args to memory-copying OPCODEs to be between 0 and 2^24, 2^24 fits in a PUSH3,
+	// Initialize some constant calldata of 128KB, 2^17 bytes.
+	// This means, if we offset between 0th and 2^16th byte, we can fetch between 0 and 2^16 bytes (64KB)
+	// In consequence, we need args to memory-copying OPCODEs to be between 0 and 2^16, 2^16 fits in a PUSH3,
 	// which we'll be using to generate arguments for those OPCODEs.
-	calldata = []byte(strings.Repeat("{", 1<<25))
+	calldata = []byte(strings.Repeat("{", 1<<17))
 
 	// Warm-up. **NOTE** we're keeping tracing on during warm-up, otherwise measurements are off
 	cfg.EVMConfig.Debug = false
