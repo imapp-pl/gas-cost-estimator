@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"os"
 	go_runtime "runtime"
+	"strings"
 	"time"
 
 	_ "unsafe"
@@ -19,6 +20,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 )
+
+var calldata []byte
 
 func main() {
 
@@ -46,10 +49,16 @@ func main() {
 	// from `github.com/ethereum/go-ethereum/core/vm/runtime/runtime.go:109`
 	cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
 
+	// Initialize some constant calldata of 32MB, 2^25.
+	// This means, if we offset between 0th and 2^24th byte, we can fetch between 0 and 2^24 bytes (16MB)
+	// In consequence, we need args to memory-copying OPCODEs to be between 0 and 2^24, 2^24 fits in a PUSH3,
+	// which we'll be using to generate arguments for those OPCODEs.
+	calldata = []byte(strings.Repeat("{", 1<<25))
+
 	// Warm-up. **NOTE** we're keeping tracing on during warm-up, otherwise measurements are off
 	cfg.EVMConfig.Debug = false
 	cfg.EVMConfig.Instrumenter = vm.NewInstrumenterLogger()
-	retWarmUp, _, errWarmUp := runtime.Execute(bytecode, nil, cfg)
+	retWarmUp, _, errWarmUp := runtime.Execute(bytecode, calldata, cfg)
 	// End warm-up
 
 	sampleStart := time.Now()
@@ -82,7 +91,7 @@ func TraceBytecode(cfg *runtime.Config, bytecode []byte, printCSV bool, sampleId
 	cfg.EVMConfig.Tracer = tracer
 	cfg.EVMConfig.Debug = true
 
-	_, _, err := runtime.Execute(bytecode, nil, cfg)
+	_, _, err := runtime.Execute(bytecode, calldata, cfg)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 	}
@@ -111,7 +120,7 @@ func MeasureTotal(cfg *runtime.Config, bytecode []byte, printEach bool, printCSV
 	cfg.EVMConfig.Instrumenter = vm.NewInstrumenterLogger()
 	go_runtime.GC()
 
-	_, _, err := runtime.Execute(bytecode, nil, cfg)
+	_, _, err := runtime.Execute(bytecode, calldata, cfg)
 
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -126,7 +135,7 @@ func MeasureAll(cfg *runtime.Config, bytecode []byte, printEach bool, printCSV b
 	cfg.EVMConfig.Instrumenter = vm.NewInstrumenterLogger()
 	go_runtime.GC()
 	start := time.Now()
-	_, _, err := runtime.Execute(bytecode, nil, cfg)
+	_, _, err := runtime.Execute(bytecode, calldata, cfg)
 	duration := time.Since(start)
 
 	if err != nil {
@@ -195,7 +204,9 @@ func setDefaults(cfg *runtime.Config) {
 
 // for full options see github.com/ethereum/go-ethereum/core/vm/logger.go:50
 func setDefaultTracerConfig(cfg *vm.LogConfig) {
-	cfg.EnableMemory = true
+	// Necessary, otherwise the initial memory allocation causes that memory to get copied over each instruction.
+	// If we need this to be enabled in the future, we need to rethink the initial MSTORE8
+	cfg.EnableMemory = false
 	cfg.DisableStack = false
 	cfg.DisableStorage = true
 	cfg.EnableReturnData = true

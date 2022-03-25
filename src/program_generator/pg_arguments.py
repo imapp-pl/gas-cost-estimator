@@ -106,28 +106,40 @@ class ProgramGenerator(object):
 
     return programs
 
-  # TODO: copied from pg_arythmetic.py. Refactor!
-  def _random_push(self, push):
-    value = random.getrandbits(8*push)
+  def _random_byte_size_push(self, byte_size):
+    value = random.getrandbits(8*byte_size)
+    return self._byte_size_push(byte_size, value)
+
+  def _byte_size_push(self, byte_size, value):
     value = hex(value)
     value = value[2:]
-    if len(value) < 2*push:
-      value = (2*push-len(value))*'0' + value
-    op_num = 6 * 16 + push - 1  # 0x60 is PUSH1
+    if len(value) < 2*byte_size:
+      value = (2*byte_size-len(value))*'0' + value
+    # byte_size is also the OPCODE variant
+    op_num = 6 * 16 + byte_size - 1  # 0x60 is PUSH1
     op = hex(op_num)[2:]
     return op + value
 
   def _generate_program_triplet(self, operation, op_count):
     arity = int(operation['Removed from stack'])
-    arg_bit_sizes = [random.randint(1, 32) for _ in range(0, arity)]
-    single_op_pushes = [self._random_push(size) for size in arg_bit_sizes]
+    opcode = operation['Mnemonic']
+    if opcode in constants.MEMORY_OPCODES:
+      # memory-copying OPCODEs need arguments to indicate up to 16MB of memory
+      arg_sizes = [random.randint(0, (1<<24) - 1) for _ in range(0, arity)]
+      single_op_pushes = [self._byte_size_push(3, size) for size in arg_sizes]
+      # for these OPCODEs the important size variable is just the argument
+    else:
+      arg_byte_sizes = [random.randint(1, 32) for _ in range(0, arity)]
+      single_op_pushes = [self._random_byte_size_push(size) for size in arg_byte_sizes]
+      # for these OPCODEs the important size variable is the number of bytes of the argument
+      arg_sizes = arg_byte_sizes
     # the arguments are popped from the stack
     single_op_pushes.reverse()
 
     # the program triplet will be for the following number of measured OPCODEs
     op_counts = [0, op_count, op_count * 2]
 
-    return [Program(generate_single_marginal(single_op_pushes, operation, o), operation['Mnemonic'], o, arg_bit_sizes) for o in op_counts]
+    return [Program(generate_single_marginal(single_op_pushes, operation, o), operation['Mnemonic'], o, arg_sizes) for o in op_counts]
 
 def main():
   fire.Fire(ProgramGenerator, name='generate')

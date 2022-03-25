@@ -47,7 +47,7 @@ def generate_single_marginal(single_op_pushes, operation, op_count):
     middle = [opcode] + ([popcode] * nreturns + [opcode]) * interleaved_op_and_pops_count
     pops = [popcode] * end_pop_count
 
-  bytecode = ''.join(empty_pushes + pushes + middle + pops)
+  bytecode = ''.join([initial_mstore_bytecode()] + empty_pushes + pushes + middle + pops)
 
   # just in case
   assert interleaved_op_and_pops_count * nreturns + end_pop_count == total_pop_count
@@ -102,3 +102,10 @@ def _opcodes_dict_push_dup_swap(source, removeds, addeds, parameter=None):
   }
 
   return new_part
+
+# Returns a single MSTORE8 accompanied with pushes, causing allocation of 32MB of memory
+# 6000 - PUSH1 the zero (the byte to store)
+# 6301ffffff - PUSH4 32MB-worth-of-bytes minus one byte
+# 53 - MSTORE8
+def initial_mstore_bytecode():
+  return "60006301ffffff53"
