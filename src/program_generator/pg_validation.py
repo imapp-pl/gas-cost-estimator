@@ -130,21 +130,21 @@ class ProgramGenerator(object):
     memory_ops = [0x35, 0x36, 0x37]  # CALLDATALOAD, CALLDATASIZE, CALLDATACOPY
 
     all_ops = []
-    # all_ops.extend(arithmetic_ops)
-    # all_ops.extend(exp_ops)
-    # all_ops.extend(bitwise_ops)
-    # all_ops.extend(byte_ops)
-    # all_ops.extend(shift_ops)
-    # all_ops.extend(comparison_ops)
-    # all_ops.extend(iszero_ops)
-    # all_ops.extend(simple_nullary_ops)
-    # all_ops.extend(pop_ops)
-    # all_ops.extend(jumpdest_ops)
+    all_ops.extend(arithmetic_ops)
+    all_ops.extend(exp_ops)
+    all_ops.extend(bitwise_ops)
+    all_ops.extend(byte_ops)
+    all_ops.extend(shift_ops)
+    all_ops.extend(comparison_ops)
+    all_ops.extend(iszero_ops)
+    all_ops.extend(simple_nullary_ops)
+    all_ops.extend(pop_ops)
+    all_ops.extend(jumpdest_ops)
     all_ops.extend(memory_ops)
     # PUSHes DUPs and SWAPs overwhelm the others if treated equally. We pick the class with probability as any
     # other OPCODE, and then the variant is drawn in a subsequent `random.choice` with equal probability.
-    # all_ops.append("DUPclass")
-    # all_ops.append("SWAPclass")
+    all_ops.append("DUPclass")
+    all_ops.append("SWAPclass")
 
     if dominant and dominant not in all_ops:
       raise ValueError(dominant)
