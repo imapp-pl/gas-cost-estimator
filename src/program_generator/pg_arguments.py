@@ -125,9 +125,10 @@ class ProgramGenerator(object):
     opcode = operation['Mnemonic']
     if opcode in constants.MEMORY_OPCODES:
       # memory-copying OPCODEs need arguments to indicate up to 64KB of memory
-      arg_sizes = [random.randint(0, (1<<16) - 1) for _ in range(0, arity)]
-      single_op_pushes = [self._byte_size_push(3, size) for size in arg_sizes]
+      args = [random.randint(0, (1<<16) - 1) for _ in range(0, arity)]
+      single_op_pushes = [self._byte_size_push(3, arg) for arg in args]
       # for these OPCODEs the important size variable is just the argument
+      arg_sizes = args
     else:
       arg_byte_sizes = [random.randint(1, 32) for _ in range(0, arity)]
       single_op_pushes = [self._random_byte_size_push(size) for size in arg_byte_sizes]
