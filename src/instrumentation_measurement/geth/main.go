@@ -92,7 +92,7 @@ func TraceBytecode(cfg *runtime.Config, bytecode []byte, printCSV bool, sampleId
 		for i, log := range logs {
 			fmt.Fprintf(os.Stdout, "%d,%d,%v,%d", i, log.Pc, log.Op, len(log.Stack))
 
-			// let's print only 32 elems of the stack
+			// printing the stack
 			for i, elem := range log.Stack {
 				if i < 1024 {
 					fmt.Fprintf(os.Stdout, ",%d", elem.ToBig())
