@@ -4,6 +4,7 @@ import fire
 import random
 import sys
 
+import constants
 from common import generate_single_marginal, prepare_opcodes, get_selection
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -20,9 +21,17 @@ class Program(object):
     self.bytecode = bytecode
     self.opcode = opcode
     self.op_count = op_count
-    self.arg0 = get(args, 0)
-    self.arg1 = get(args, 1)
-    self.arg2 = get(args, 2)
+
+    if opcode in constants.EVM_DUPS:
+      variant = int(opcode[3:])
+      self.arg0, self.arg1, self.arg2 = get(args, variant - 1), None, None
+    elif opcode in constants.EVM_SWAPS:
+      variant = int(opcode[4:])
+      self.arg0, self.arg1, self.arg2 = get(args, 0), get(args, variant), None
+    else:
+      self.arg0 = get(args, 0)
+      self.arg1 = get(args, 1)
+      self.arg2 = get(args, 2)
 
 
 class ProgramGenerator(object):

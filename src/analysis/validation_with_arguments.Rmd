@@ -1,6 +1,6 @@
 ---
 title: "R Notebook: exploration of validation of measurements - with varying arguments; for Gas Cost Estimator"
-output: html_notebook
+output: html_document
 ---
 
 ```{r include=FALSE, fig.width=20}
@@ -51,19 +51,10 @@ lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
 setwd("~/sources/imapp/gas-cost-estimator/src")
 
 estimated_cost = read.csv("../../local/argument_estimated_cost.csv")
-# from measure_marginal.Rmd
-# TODO we need this to fill in missing PUSHes and POP, to be rectified later
+# from measure_marginal.Rmd, not currently used except experimentation with mixing (see below)
 marginal = read.csv("../../local/marginal_estimated_cost.csv")
 
-# TODO remove when rectified
-for (opcode in c('PUSH1', 'POP')) {
-  for (env in all_envs) {
-    # working around the ridiculous type coercion of `c()`
-    estimated_cost[nrow(estimated_cost) + 1, 1:2] = c(opcode, env)
-    estimated_cost[nrow(estimated_cost), 3:4] = c(FALSE, FALSE)
-    estimated_cost[nrow(estimated_cost), 5:8] = c(marginal[which(marginal$op==opcode & marginal$env==env), 'estimate_marginal_ns'], NA, NA, NA)
-  }
-}
+# TODO: PUSHes aren't estimated and are prevalent in the validation programs. Rectify this.
 ```
 
 #### Mix marginal and argument measurements?
@@ -101,30 +92,33 @@ We've extended the program length to 30 OPCODEs to accommodate more `PUSH`es and
 setwd("~/sources/imapp/gas-cost-estimator/src")
 
 # we have tried `c900_ops300_clean` too, but it is a bit overkill. No surprises there.
-# program_set_codename = "c100_ops300_clean"
+# program_set_codename = "arythmetic_c100_ops300_clean"
 # measurement_codename = "200_8"
 
 # we randomize the number of instructions in the random programs to capture program length impact on OPCODE performance
-program_set_codename = "c100_randOps500_clean"
-measurement_codename = "200_8"
+# program_set_codename = "arythmetic_c100_randOps500_clean"
+# measurement_codename = "200_8"
 
 # this dataset (tiny programs) has a radically highler slope coefficient and lower Intercept
 # this prompt us to vary the opsLimit for the validation program generation
-# program_set_codename = "c100_ops10_clean"
+# program_set_codename = "arythmetic_c100_ops10_clean"
 # measurement_codename = "200_8"
 
 # this is the data set without varying argument size. 
-# program_set_codename = "c100_ops30_clean_smallpush"
+# program_set_codename = "arythmetic_c100_ops30_clean_smallpush"
 # measurement_codename = "50_1"
 
-traces = read.csv(paste("../../local/trace_pg_arythmetic_", program_set_codename, ".csv", sep=""))
+program_set_codename = "full1_c400_randOps1000_clean"
+measurement_codename = "200_8"
+
+traces = read.csv(paste("../../local/trace_pg_validation_", program_set_codename, ".csv", sep=""))
 head(traces)
-total_measurements_geth = read.csv(paste("../../local/geth_pg_arythmetic_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
+total_measurements_geth = read.csv(paste("../../local/geth_pg_validation_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
 head(total_measurements_geth)
-total_measurements_evmone = read.csv(paste("../../local/evmone_pg_arythmetic_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
+total_measurements_evmone = read.csv(paste("../../local/evmone_pg_validation_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
 head(total_measurements_evmone)
 # TODO: at this point, for openethereum we are getting much better (acceptable) results for the sample size 16, nsamples 400, see Discussion section below
-total_measurements_openethereum = read.csv(paste("../../local/openethereum_pg_arythmetic_", program_set_codename, "_", "16_400", ".csv", sep=""))
+total_measurements_openethereum = read.csv(paste("../../local/openethereum_pg_validation_", program_set_codename, "_", "16_400", ".csv", sep=""))
 head(total_measurements_openethereum)
 
 total_measurements_geth$env = 'geth'
@@ -230,7 +224,7 @@ We need an additional simple (plottable) "fingerprint" of the OPCODEs included i
 
 ```{r}
 fingerprint <- function(x) {
-  paste(x[which(!(x$op %in% c('PUSH32', 'PUSH1', 'STOP', 'POP'))),'op'], collapse=' ')
+  paste(x[which(!(x$op %in% c('PUSH1', 'PUSH2', 'PUSH3', 'PUSH4', 'PUSH5', 'PUSH6', 'PUSH7', 'PUSH8', 'PUSH9', 'PUSH10', 'PUSH11', 'PUSH12', 'PUSH13', 'PUSH14', 'PUSH15', 'PUSH16', 'PUSH17', 'PUSH18', 'PUSH19', 'PUSH20', 'PUSH21', 'PUSH22', 'PUSH23', 'PUSH24', 'PUSH25', 'PUSH26', 'PUSH27', 'PUSH28', 'PUSH29', 'PUSH30', 'PUSH31', 'PUSH32', 'STOP', 'POP'))),'op'], collapse=' ')
 }
 has_exp <- function(x) {
   if ('EXP' %in% x$op) 'red' else 'blue'
@@ -245,7 +239,7 @@ validation$n_zero_args = gapply(traces, c('op', 'program_id', 'arg_0', 'arg_1', 
 
 ```{r fig.width=15}
 # we've removed outliers so picking the right ylim / OUTLINE no longer required
-par(mfrow=c(2,3))
+par(mfrow=c(3,2))
 overview_plots <- function(df, selection_col, selection_val) {
   subset = df[which(df[, selection_col] == selection_val), ]
   boxplot(measure_total_time_ns ~ program_id, data=subset, main=selection_val)
@@ -264,13 +258,8 @@ Based on the plots alone, it does not appear like our estimation only relies on 
 program_length <- function(x) {
   max(x$instruction_id)
 }
-count_op <- function(x, op) {
-  sum(x$op == op)
-}
 # the "trivial" variables to check if we are not doing trivial estimation
 validation$program_length = gapply(traces, c('program_id', 'instruction_id'), FUN=function(x) program_length(x), groups=traces$program_id)
-validation$n_push = gapply(traces, c('program_id', 'op'), FUN=function(x) count_op(x, 'PUSH1'), groups=traces$program_id)
-validation$n_pop = gapply(traces, c('program_id', 'op'), FUN=function(x) count_op(x, 'POP'), groups=traces$program_id)
 ```
 
 We divide the validation data into classes with respect to the length of the program:
@@ -281,15 +270,11 @@ validation_short = validation[which(validation$program_length <= 100), ]
 ```
 
 ```{r fig.width=15}
-par(mfrow=c(3,3))
+par(mfrow=c(1,3))
 trivial_variable_plots <- function(df, selection_col, selection_val) {
   subset = df[which(df[, selection_col] == selection_val), ]
   plot_validation(subset, explained_variable, 'program_length')
   title(main=paste(selection_val, 'program_length'))
-  plot_validation(subset, explained_variable, 'n_push')
-  title(main=paste(selection_val, 'n_push'))
-  plot_validation(subset, explained_variable, 'n_pop')
-  title(main=paste(selection_val, 'n_pop'))
 }
 trivial_variable_plots(validation, 'env', 'geth')
 trivial_variable_plots(validation, 'env', 'evmone')

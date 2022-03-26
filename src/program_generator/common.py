@@ -24,8 +24,10 @@ def generate_single_marginal(single_op_pushes, operation, op_count):
   if has_parameter:
     opcode += operation['Parameter']
 
-  MAX_INSTRUCTIONS = 60
   # support up to 60 instructions
+  MAX_INSTRUCTIONS = 60
+  assert op_count <= MAX_INSTRUCTIONS
+  
   total_pop_count = MAX_INSTRUCTIONS * nreturns
   # support up to 60 ternary instructions
   push_count = MAX_INSTRUCTIONS * 3

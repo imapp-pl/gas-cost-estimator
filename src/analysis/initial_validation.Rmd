@@ -1,6 +1,6 @@
 ---
 title: "R Notebook: exploration of validation by comparing individual and total measurements; for Gas Cost Estimator"
-output: html_notebook
+output: html_document
 ---
 
 ```{r include=FALSE, fig.width=20}

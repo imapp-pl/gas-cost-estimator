@@ -1,6 +1,6 @@
 ---
 title: "R Notebook: exploration of relation of OPCODE measurements with timer overhead measurements"
-output: html_notebook
+output: html_document
 ---
 
 ## Introductory stuffs
