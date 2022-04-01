@@ -161,13 +161,16 @@ class Measurements(object):
 
   def run_evmone(self, mode, program, sampleSize):
     evmone_build_path = './instrumentation_measurement/evmone/build/'
-    evmone_main = [evmone_build_path + 'evmc/bin/evmc', 'run']
-    args = ['--measure-{}'.format(mode),'--vm', evmone_build_path + '/lib/libevmone.so', '--repeat', '{}'.format(sampleSize)]
+    evmone_main = [evmone_build_path + 'bin/evmc', 'run']
+
+    # only measure-total is currently supported
+    assert mode == "total"
+    args = ['--vm', evmone_build_path + '/lib/libevmone.so,O=0', '--sample-size', '{}'.format(sampleSize)]
     invocation = evmone_main + args + [program.bytecode]
     result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
     assert result.returncode == 0
     # strip additional output information added by evmone
-    instrumenter_result = result.stdout.split('\n')[2:-5]
+    instrumenter_result = result.stdout.split('\n')[3:-4]
 
     return instrumenter_result
 
