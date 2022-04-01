@@ -224,35 +224,6 @@ class ProgramGenerator(object):
       value = (2-len(value))*'0' + value
     return '60' + value
 
-  def _fill_opcodes_push_dup_swap(self, opcodes):
-    pushes = constants.EVM_PUSHES
-    dups = constants.EVM_DUPS
-    swaps = constants.EVM_SWAPS
-
-    pushes = self._opcodes_dict_push_dup_swap(pushes, [0] * len(pushes), [1] * len(pushes), parameter='00')
-    opcodes = {**opcodes, **pushes}
-    dups = self._opcodes_dict_push_dup_swap(dups, range(1, len(dups)), range(2, len(dups)+1))
-    opcodes = {**opcodes, **dups}
-    swaps = self._opcodes_dict_push_dup_swap(swaps, range(2, len(swaps)+1), range(2, len(swaps)+1))
-    opcodes = {**opcodes, **swaps}
-    return opcodes
-
-  def _opcodes_dict_push_dup_swap(self, source, removeds, addeds, parameter=None):
-    source_list = source.split()
-    opcodes = source_list[::2]
-    names = source_list[1::2]
-    new_part = {
-      opcode: {
-        'Value': opcode,
-        'Mnemonic': name,
-        'Removed from stack': removed,
-        'Added to stack': added,
-        'Parameter': parameter
-      } for opcode, name, removed, added in zip(opcodes, names, removeds, addeds)
-    }
-
-    return new_part
-
 def main():
   fire.Fire(ProgramGenerator, name='generate')
 
