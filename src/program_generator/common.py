@@ -47,7 +47,10 @@ def generate_single_marginal(single_op_pushes, operation, op_count):
     middle = [opcode] + ([popcode] * nreturns + [opcode]) * interleaved_op_and_pops_count
     pops = [popcode] * end_pop_count
 
-  bytecode = ''.join([initial_mstore_bytecode()] + empty_pushes + pushes + middle + pops)
+  # If this is an OPCODE accessing memory, we pre-allocate 128KB of memory at the very beginning
+  initial_mstore = [initial_mstore_bytecode()] if operation['Mnemonic'] in constants.MEMORY_OPCODES else []
+
+  bytecode = ''.join(initial_mstore + empty_pushes + pushes + middle + pops)
 
   # just in case
   assert interleaved_op_and_pops_count * nreturns + end_pop_count == total_pop_count
