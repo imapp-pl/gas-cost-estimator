@@ -1,4 +1,5 @@
 import csv
+import random
 from math import ceil
 
 import constants
@@ -35,21 +36,38 @@ def generate_single_marginal(single_op_pushes, operation, op_count):
 
   interleaved_op_and_pops_count = max(op_count - 1, 0)
   end_pop_count = total_pop_count - interleaved_op_and_pops_count * nreturns
-    
-  empty_pushes = ["6000"] * empty_push_count
-  pushes = single_op_pushes * ceil(push_count / arity(operation)) if arity(operation) > 0 else []
 
-  if op_count == 0:
-    middle = []
-    pops = [popcode] * total_pop_count
-  elif op_count >= 1:
-    middle = [opcode] + ([popcode] * nreturns + [opcode]) * interleaved_op_and_pops_count
-    pops = [popcode] * end_pop_count
+  # start generation
+  bytecode = ''
 
   # If this is an OPCODE accessing memory, we pre-allocate 128KB of memory at the very beginning
-  initial_mstore = [initial_mstore_bytecode()] if operation['Mnemonic'] in constants.MEMORY_OPCODES else []
+  initial_mstore = initial_mstore_bytecode() if operation['Mnemonic'] in constants.MEMORY_OPCODES else ''
+  bytecode += initial_mstore
+    
+  empty_pushes = ["6000"] * empty_push_count
+  bytecode += ''.join(empty_pushes)
+  pushes = single_op_pushes * ceil(push_count / arity(operation)) if arity(operation) > 0 else []
+  bytecode += ''.join(pushes)
 
-  bytecode = ''.join(initial_mstore + empty_pushes + pushes + middle + pops)
+  if operation['Mnemonic'] in ["JUMP", "JUMPI"]:
+    # JUMPs don't return anything, we don't POP it, so assertion
+    assert nreturns == 0
+
+    empty_combos_count = MAX_INSTRUCTIONS - op_count
+    for _ in range(0, op_count):
+      bytecode += jump_opcode_combo(bytecode, opcode)
+    for _ in range(0, empty_combos_count):
+      bytecode += jump_opcode_combo(bytecode, None)
+  else:
+    if op_count == 0:
+      middle = []
+      pops = [popcode] * total_pop_count
+      bytecode += ''.join(middle + pops)
+    elif op_count >= 1:
+      middle = [opcode] + ([popcode] * nreturns + [opcode]) * interleaved_op_and_pops_count
+      bytecode += ''.join(middle)
+      pops = [popcode] * end_pop_count
+      bytecode += ''.join(pops)
 
   # just in case
   assert interleaved_op_and_pops_count * nreturns + end_pop_count == total_pop_count
@@ -57,6 +75,19 @@ def generate_single_marginal(single_op_pushes, operation, op_count):
   assert end_pop_count >= 0
 
   return bytecode
+
+
+# Generates the combination of OPCODEs needed to perform a JUMP
+# `bytecode` so far, needed to generate a correct JUMPDEST pc
+# `opcode` - is that of JUMP or JUMPI. If None, will not put the opcode in at all
+def jump_opcode_combo(current_bytecode, opcode):
+  current_pc = len(current_bytecode) // 2
+  if opcode:
+    jumpdest_pc = current_pc + 1 + 3 + 1  # PUSH3, pushed 3 bytes, jump
+    return byte_size_push(3, jumpdest_pc) + opcode + '5b'
+  else:
+    jumpdest_pc = current_pc + 1 + 3  # PUSH3, pushed 3 bytes, no jump here!
+    return byte_size_push(3, jumpdest_pc) + '5b'
 
 
 def prepare_opcodes(opcodes_file):
@@ -113,8 +144,26 @@ def initial_mstore_bytecode():
   return "6000630001ffff53"
 
 def arity(operation):
-  # We're not analyzing JUMPs for argument costs, so treat them as nullary and prepare the stack elsewhere
-  if operation["Mnemonic"] in ["JUMP", "JUMPI"]:
+  # We're not analyzing JUMPs for destination arg cost, so pretend it's not there. We're pushing it in the main
+  # generation loop.
+  if operation["Mnemonic"] == "JUMP":
     return 0
+  elif operation["Mnemonic"] == "JUMPI":
+    return 1
   else:
-    return operation["Removed from stack"]
+    return int(operation["Removed from stack"])
+
+
+def random_byte_size_push(byte_size):
+  value = random.getrandbits(8*byte_size)
+  return byte_size_push(byte_size, value)
+
+def byte_size_push(byte_size, value):
+  value = hex(value)
+  value = value[2:]
+  if len(value) < 2*byte_size:
+    value = (2*byte_size-len(value))*'0' + value
+  # byte_size is also the OPCODE variant
+  op_num = 6 * 16 + byte_size - 1  # 0x60 is PUSH1
+  op = hex(op_num)[2:]
+  return op + value

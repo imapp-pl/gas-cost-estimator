@@ -5,7 +5,7 @@ import random
 import sys
 
 import constants
-from common import generate_single_marginal, prepare_opcodes, get_selection, arity
+from common import generate_single_marginal, prepare_opcodes, get_selection, arity, random_byte_size_push, byte_size_push
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -106,31 +106,17 @@ class ProgramGenerator(object):
 
     return programs
 
-  def _random_byte_size_push(self, byte_size):
-    value = random.getrandbits(8*byte_size)
-    return self._byte_size_push(byte_size, value)
-
-  def _byte_size_push(self, byte_size, value):
-    value = hex(value)
-    value = value[2:]
-    if len(value) < 2*byte_size:
-      value = (2*byte_size-len(value))*'0' + value
-    # byte_size is also the OPCODE variant
-    op_num = 6 * 16 + byte_size - 1  # 0x60 is PUSH1
-    op = hex(op_num)[2:]
-    return op + value
-
   def _generate_program_triplet(self, operation, op_count):
     opcode = operation['Mnemonic']
     if opcode in constants.MEMORY_OPCODES:
       # memory-copying OPCODEs need arguments to indicate up to 64KB of memory
       args = [random.randint(0, (1<<16) - 1) for _ in range(0, arity(operation))]
-      single_op_pushes = [self._byte_size_push(3, arg) for arg in args]
+      single_op_pushes = [byte_size_push(3, arg) for arg in args]
       # for these OPCODEs the important size variable is just the argument
       arg_sizes = args
     else:
       arg_byte_sizes = [random.randint(1, 32) for _ in range(0, arity(operation))]
-      single_op_pushes = [self._random_byte_size_push(size) for size in arg_byte_sizes]
+      single_op_pushes = [random_byte_size_push(size) for size in arg_byte_sizes]
       # for these OPCODEs the important size variable is the number of bytes of the argument
       arg_sizes = arg_byte_sizes
     # the arguments are popped from the stack
