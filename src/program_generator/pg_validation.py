@@ -6,7 +6,7 @@ import sys
 import random
 
 import constants
-from common import prepare_opcodes, get_selection, initial_mstore_bytecode, arity
+from common import prepare_opcodes, get_selection, initial_mstore_bytecode, arity, jump_opcode_combo
 
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -129,6 +129,8 @@ class ProgramGenerator(object):
 
     memory_ops = [0x35, 0x36, 0x37]  # CALLDATALOAD, CALLDATASIZE, CALLDATACOPY
 
+    jump_ops = [0x56, 0x57]  # JUMP, JUMPI
+
     all_ops = []
     all_ops.extend(arithmetic_ops)
     all_ops.extend(exp_ops)
@@ -141,6 +143,7 @@ class ProgramGenerator(object):
     all_ops.extend(pop_ops)
     all_ops.extend(jumpdest_ops)
     all_ops.extend(memory_ops)
+    all_ops.extend(jump_ops)
     # PUSHes DUPs and SWAPs overwhelm the others if treated equally. We pick the class with probability as any
     # other OPCODE, and then the variant is drawn in a subsequent `random.choice` with equal probability.
     all_ops.append("DUPclass")
@@ -182,12 +185,17 @@ class ProgramGenerator(object):
         assert cleanStack
         bytecode += ''.join([self._random_push(3, randomizePush) for _ in range(needed_pushes)])
       else:
+        # JUMP AND JUMPI are happy to fall in here, as they have their arity (needed pushes) reduced
+        # we'll push their destinations later
         bytecode += ''.join([self._random_push(pushMax, randomizePush) for _ in range(needed_pushes)])
       ops_count += needed_pushes
 
-      # push the current random opcode
-      bytecode += opcode
-      ops_count += 1
+      if operation['Mnemonic'] in ["JUMP", "JUMPI"]:
+        bytecode += jump_opcode_combo(bytecode, opcode)
+        ops_count += 3
+      else:
+        bytecode += opcode
+        ops_count += 1
 
       # Pop any results to keep the stack clean for the next iteration. Otherwise mark how many returns remain on
       # the stack after the OPCODE executed.
