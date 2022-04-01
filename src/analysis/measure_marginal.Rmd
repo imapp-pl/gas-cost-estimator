@@ -136,7 +136,7 @@ After adjusting the input higher, the intercept is "less" significant, but still
 
 ```{r}
 estimates = estimates[which(estimates$env != 'evmone'), ]
-results = load_data_set("evmone", "total_50_4")
+results = load_data_set("evmone", "50_4")
 for (opcode in all_opcodes) {
   estimate = compute_all(results, opcode, "evmone", TRUE)
   estimates[nrow(estimates) + 1, ] = c(opcode, estimate, 'evmone')
@@ -145,19 +145,21 @@ for (opcode in all_opcodes) {
 
 ```{r}
 estimates = estimates[which(estimates$env != 'geth'), ]
-results = load_data_set("geth", "total_50_4")
+results = load_data_set("geth", "50_4")
 for (opcode in all_opcodes) {
   estimate = compute_all(results, opcode, "geth", TRUE)
   estimates[nrow(estimates) + 1, ] = c(opcode, estimate, 'geth')
 }
 ```
 ```{r}
-estimates = estimates[which(estimates$env != 'openethereum'), ]
-results = load_data_set("openethereum", "total_50_4")
-for (opcode in all_opcodes) {
-  estimate = compute_all(results, opcode, "openethereum", TRUE)
-  estimates[nrow(estimates) + 1, ] = c(opcode, estimate, 'openethereum')
-}
+# TODO: cleanup, openethereum isn't supported anymore
+
+# estimates = estimates[which(estimates$env != 'openethereum'), ]
+# results = load_data_set("openethereum", "50_4")
+# for (opcode in all_opcodes) {
+#   estimate = compute_all(results, opcode, "openethereum", TRUE)
+#   estimates[nrow(estimates) + 1, ] = c(opcode, estimate, 'openethereum')
+# }
 ```
 Some extra validation tools for `openethereum`. Optional so commented out.
 

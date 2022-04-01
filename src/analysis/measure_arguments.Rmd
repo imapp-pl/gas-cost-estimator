@@ -20,7 +20,7 @@ setwd("~/sources/imapp/gas-cost-estimator/src")
 
 # The program set is 200 programs, with the count of measured OPCODE increases twice in steps of 15,
 # so we have a program with 0, 15, and 30 measured OPCODEs 
-program_set_codename = "full1_c200_opc15x2"
+program_set_codename = "full2_comb_c200_opc15x2"
 programs = read.csv(paste("../../local/pg_arguments_", program_set_codename, ".csv", sep=""))
 ```
 
@@ -48,8 +48,9 @@ measurement_codename = "50_1"
 result_geth = load_data_set("geth", program_set_codename, measurement_codename)
 result_evmone = load_data_set("evmone", program_set_codename, measurement_codename)
 # was originally 400_4, but this goes over the memory, must reduce to less
-result_openethereum = load_data_set("openethereum", program_set_codename, "200_2")
-results = rbind(result_evmone, result_geth, result_openethereum)
+# TODO: cleanup, openethereum isn't supported anymore
+# result_openethereum = load_data_set("openethereum", program_set_codename, "200_2")
+results = rbind(result_evmone, result_geth)
 # TODO geth short-circuits zero length programs, resulting in zero timing somehow. Drop these more elegantly, not based on measure_total_time_ns
 results = results[which(results$measure_total_time_ns != 0), ]
 head(results)
@@ -81,14 +82,14 @@ if (removed_outliers) {
   # before
   boxplot(measure_total_time_ns ~ opcode, data=measurements[which(measurements$env == 'geth'), ], las=2, outline=TRUE, log='y')
   boxplot(measure_total_time_ns ~ opcode, data=measurements[which(measurements$env == 'evmone'), ], las=2, outline=TRUE, log='y')
-  boxplot(measure_total_time_ns ~ opcode, data=measurements[which(measurements$env == 'openethereum'), ], las=2, outline=TRUE, log='y')
+  # boxplot(measure_total_time_ns ~ opcode, data=measurements[which(measurements$env == 'openethereum'), ], las=2, outline=TRUE, log='y')
 
   measurements = remove_outliers(measurements, 'measure_total_time_ns')
   
   # after
   boxplot(measure_total_time_ns ~ opcode, data=measurements[which(measurements$env == 'geth'), ], las=2, outline=TRUE, log='y')
   boxplot(measure_total_time_ns ~ opcode, data=measurements[which(measurements$env == 'evmone'), ], las=2, outline=TRUE, log='y')
-  boxplot(measure_total_time_ns ~ opcode, data=measurements[which(measurements$env == 'openethereum'), ], las=2, outline=TRUE, log='y')
+  # boxplot(measure_total_time_ns ~ opcode, data=measurements[which(measurements$env == 'openethereum'), ], las=2, outline=TRUE, log='y')
 }
 ```
 
@@ -117,7 +118,7 @@ unary_opcodes = extract_opcodes(1)
 binary_opcodes = extract_opcodes(2)
 ternary_opcodes = extract_opcodes(3)
 
-all_envs = c('geth', 'evmone', 'openethereum')
+all_envs = c('geth', 'evmone')
 ```
 ### Models
 
@@ -202,7 +203,7 @@ analyze_for_env <- function(df, results_df, env) {
 
 first_pass = analyze_for_env(measurements, first_pass, 'geth')
 first_pass = analyze_for_env(measurements, first_pass, 'evmone')
-first_pass = analyze_for_env(measurements, first_pass, 'openethereum')
+# first_pass = analyze_for_env(measurements, first_pass, 'openethereum')
 
 proceed_with_opcodes = unique(first_pass[which(first_pass$has_impacting == 'TRUE'), 'opcode'])
 
