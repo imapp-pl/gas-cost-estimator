@@ -5,7 +5,7 @@ import random
 import sys
 
 import constants
-from common import generate_single_marginal, prepare_opcodes, get_selection
+from common import generate_single_marginal, prepare_opcodes, get_selection, arity
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -121,16 +121,15 @@ class ProgramGenerator(object):
     return op + value
 
   def _generate_program_triplet(self, operation, op_count):
-    arity = int(operation['Removed from stack'])
     opcode = operation['Mnemonic']
     if opcode in constants.MEMORY_OPCODES:
       # memory-copying OPCODEs need arguments to indicate up to 64KB of memory
-      args = [random.randint(0, (1<<16) - 1) for _ in range(0, arity)]
+      args = [random.randint(0, (1<<16) - 1) for _ in range(0, arity(operation))]
       single_op_pushes = [self._byte_size_push(3, arg) for arg in args]
       # for these OPCODEs the important size variable is just the argument
       arg_sizes = args
     else:
-      arg_byte_sizes = [random.randint(1, 32) for _ in range(0, arity)]
+      arg_byte_sizes = [random.randint(1, 32) for _ in range(0, arity(operation))]
       single_op_pushes = [self._random_byte_size_push(size) for size in arg_byte_sizes]
       # for these OPCODEs the important size variable is the number of bytes of the argument
       arg_sizes = arg_byte_sizes

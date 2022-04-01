@@ -6,7 +6,7 @@ import sys
 import random
 
 import constants
-from common import prepare_opcodes, get_selection, initial_mstore_bytecode
+from common import prepare_opcodes, get_selection, initial_mstore_bytecode, arity
 
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -164,12 +164,11 @@ class ProgramGenerator(object):
         op = random.choice(swap_ops)
 
       operation = self._operations[op]
-      arity = int(operation['Removed from stack'])
       nreturns = int(operation['Added to stack'])
 
       # determine how many args we need to push on the stack and push
       # some value have remained on the stack, unless we're in `cleanStack` mode, whereby they had been popped
-      needed_pushes = arity if cleanStack else (arity - previous_nreturns)
+      needed_pushes = arity(operation) if cleanStack else (arity(operation) - previous_nreturns)
       # i.e. 23 from 0x23
       opcode = operation['Value'][2:4]
       if op in byte_ops:  # BYTE SIGNEXTEND needs 0-31 value on the top of the stack

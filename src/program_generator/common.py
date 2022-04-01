@@ -13,7 +13,6 @@ def generate_single_marginal(single_op_pushes, operation, op_count):
   The number of pushes in single_op_pushes must be equal to arity.
   The returned program has the same number of empty pushes, pushes and pops regardless op_count.
   """
-  arity = int(operation['Removed from stack'])
   nreturns = int(operation['Added to stack'])
 
   # i.e. 23 from 0x23
@@ -38,7 +37,7 @@ def generate_single_marginal(single_op_pushes, operation, op_count):
   end_pop_count = total_pop_count - interleaved_op_and_pops_count * nreturns
     
   empty_pushes = ["6000"] * empty_push_count
-  pushes = single_op_pushes * ceil(push_count / arity) if arity > 0 else []
+  pushes = single_op_pushes * ceil(push_count / arity(operation)) if arity(operation) > 0 else []
 
   if op_count == 0:
     middle = []
@@ -112,3 +111,10 @@ def _opcodes_dict_push_dup_swap(source, removeds, addeds, parameter=None):
 # 53 - MSTORE8
 def initial_mstore_bytecode():
   return "6000630001ffff53"
+
+def arity(operation):
+  # We're not analyzing JUMPs for argument costs, so treat them as nullary and prepare the stack elsewhere
+  if operation["Mnemonic"] in ["JUMP", "JUMPI"]:
+    return 0
+  else:
+    return operation["Removed from stack"]

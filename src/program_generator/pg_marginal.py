@@ -4,7 +4,7 @@ import fire
 import random
 import sys
 
-from common import generate_single_marginal, prepare_opcodes, get_selection
+from common import generate_single_marginal, prepare_opcodes, get_selection, arity
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -95,9 +95,8 @@ class ProgramGenerator(object):
     return programs
 
   def _generate_single_program(self, operation, op_count):
-    arity = int(operation['Removed from stack'])
     # for compatibility with the generate_single_marginal function
-    single_op_pushes = ["60a1"] * arity
+    single_op_pushes = ["60a1"] * arity(operation)
 
     return Program(generate_single_marginal(single_op_pushes, operation, op_count), operation['Mnemonic'], op_count)
         
