@@ -5,7 +5,7 @@ import random
 import sys
 
 import constants
-from common import generate_single_marginal, prepare_opcodes, get_selection, arity, random_byte_size_push, byte_size_push
+from common import generate_single_marginal, prepare_opcodes, get_selection, arity, random_value_byte_size_push, byte_size_push
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -116,7 +116,9 @@ class ProgramGenerator(object):
       arg_sizes = args
     else:
       arg_byte_sizes = [random.randint(1, 32) for _ in range(0, arity(operation))]
-      single_op_pushes = [random_byte_size_push(size) for size in arg_byte_sizes]
+      # NOTE: `random_value_byte_size_push` means in this case, we randomize the size of pushed value, but keep the PUSH
+      # variant resticted to PUSH32.
+      single_op_pushes = [random_value_byte_size_push(size, 32) for size in arg_byte_sizes]
       # for these OPCODEs the important size variable is the number of bytes of the argument
       arg_sizes = arg_byte_sizes
     # the arguments are popped from the stack

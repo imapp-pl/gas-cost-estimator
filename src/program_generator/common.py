@@ -154,8 +154,8 @@ def arity(operation):
     return int(operation["Removed from stack"])
 
 
-def random_byte_size_push(byte_size):
-  value = random.getrandbits(8*byte_size)
+def random_value_byte_size_push(value_size, byte_size):
+  value = random.getrandbits(8*value_size)
   return byte_size_push(byte_size, value)
 
 def byte_size_push(byte_size, value):
