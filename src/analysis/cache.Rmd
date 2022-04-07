@@ -1,0 +1,313 @@
+---
+title: "R Notebook: exploration of caches usage by opcode executions at Evmone; for Gas Cost Estimator"
+output: html_notebook
+---
+```{r, setup, include=FALSE}
+knitr::opts_knit$set(root.dir = '~/sources/imapp/gas-cost-estimator/src')
+```
+```{r include=FALSE, fig.width=20}
+library(sqldf)
+library(nlme)
+```
+
+## Programs generation
+
+The set of test programs is generated with the following command.
+
+```
+python3 program_generator/pg_marginal.py generate --fullCsv --shuffleCounts=true --stepOpCount=5 --maxOpCount=50 --selectionFile='selection_arguments.csv' > ../../local/pg_marginal_50.csv
+```
+
+## Building binaries
+
+We need to use binaries as closes as it is possible to Evmone production release. Our base release is 0.8.2. 
+It is patched: a program execution is repeated 1,000,000 times in the loop within the same vm.
+
+```
+cd ../..
+git clone --recursive -b v0.8.2 https://github.com/ethereum/evmone.git temp/evmone
+patch temp/evmone/lib/evmone/baseline.cpp gas-cost-estimator/src/instrumentation_measurement/baseline.patch
+patch temp/evmone/lib/evmone/execution.cpp gas-cost-estimator/src/instrumentation_measurement/execution.patch
+mkdir temp/evmone/build
+cd temp/evmone/build
+cmake .. -DEVMONE_TESTING=ON && cmake --build . --
+cd ..
+cp -r build/ ../../gas-cost-estimator/src/instrumentation_measurement/
+cd ../../gas-cost-estimator/src/
+```
+
+Binaries can be tested with this command.
+
+```
+perf stat -ddd -x , ./build/bin/evmc run --vm ./build/lib/libevmone.so 60a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a10250025002500250025002500250025002500250025002500250025002500250025002500250025002500250025002505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050
+```
+
+## Perf overhead
+
+We verify the impact of using perf tool on the measurements. We compare runs with perf and without perf.
+For this, we use a simple tool time. Only the executions of vms are measured, the python part is skipped.
+
+The command to generate measurements.
+
+```
+cat ../../local/pg_marginal_50.csv | python3 instrumentation_measurement/measurements.py measure --evm evmone --mode time --sampleSize=1 --nSamples=20 > ../../local/time_evmone_pg_marginal_50_1000000.csv
+```
+
+```{r}
+programs = read.csv("../../local/pg_marginal_50.csv")
+time_measurements_data = read.csv("../../local/time_evmone_pg_marginal_50_1000000.csv")
+time_measurements = sqldf("SELECT programs.program_id as program_id, opcode, op_count, sample_id, 
+                  real_time_perf, user_time_perf, sys_time_perf, real_time_pure, user_time_pure, sys_time_pure
+          FROM time_measurements_data
+          INNER JOIN programs ON(time_measurements_data.program_id = programs.program_id)")
+```
+
+```{r}
+t <- aggregate(cbind(time_measurements$real_time_perf,time_measurements$real_time_pure), by = list(time_measurements$opcode, time_measurements$op_count), FUN = function(x) c(sd1 = sd(x), m1 = mean(x), r1 = sd(x)/mean(x)))
+
+t <- do.call(data.frame, t)
+colnames(t) <- c("opcode", "op_count", "real_time_perf_sd", "real_time_perf_mean", "real_time_perf_rel", "real_time_pure_sd", "real_time_pure_mean", "real_time_pure_rel")
+
+max_perf <- max(t$real_time_perf_rel)
+max_pure <- max(t$real_time_pure_rel)
+```
+
+At first, observe that the results of runs are even. For each opcode and op_count we calculate the standard deviation, the mean value and relative deviation which is the standard deviation / mean value. The maximum value of the relative deviation is `r max_perf` for runs with perf and `r max_pure` for runs without perf, which are around 1%. This implies that we can aggregate the results and safely use the mean times of samples.
+
+In the table below: real_time is wallclock time, sd stands for the standard deviation and rel stands for relative deviation, perf refers to exectuion with perf and pure refers to execution witout perf.
+
+```{r}
+t
+```
+```{r}
+t <- aggregate(cbind(time_measurements$user_time_perf,time_measurements$sys_time_perf,time_measurements$user_time_pure,time_measurements$sys_time_pure), by = list(time_measurements$opcode, time_measurements$op_count), FUN = mean)
+
+colnames(t) <- c("opcode", "op_count", "user_time_perf", "sys_time_perf", "user_time_pure", "sys_time_pure")
+
+mt <- sqldf("SELECT opcode, max(abs(user_time_perf-user_time_pure)/user_time_pure) as max_increase FROM t GROUP BY opcode")
+```
+
+We calculate maximal relative increase of CPU time usage when using perf. For most opcodes it is around 0.1%. There is one opcode with 0.5% increase. These are very low values and time executions are almost the same when using perf and not using perf.
+
+```{r}
+mt
+```
+
+The detailed presentations.
+
+```{r fig.width=10}
+pp <- function(tt) {
+  opcode <- tt[1,1]
+  m <- max(tt$user_time_perf)
+  plot(tt$op_count, tt$user_time_perf, col=1, type="p", ylim=c(0,m+1), xlab="op_count", ylab="sys_time/user_time", main=opcode)
+  lines(tt$op_count, tt$user_time_pure, col=2, type="p")
+  lines(tt$op_count, tt$sys_time_perf, col=3, type="p")
+  lines(tt$op_count, tt$sys_time_pure, col=4, type="p")
+}
+for (it in split(t, f=t$opcode)) {
+  pp(it)
+}
+```
+
+It is hard to distinguish the perf times and pure times as the graph points overlap. Concluding, the impact of using perf is negligible for our analysis.
+
+## Analysis
+
+We use trimmed means (10% cut off) of measured stats for analysis. The stats are measured with perf tool:
+
+- task_clock
+- context_switches
+- page_faults
+- instructions
+- branches
+- branch_misses
+- L1_dcache_loads
+- LLC_loads
+- LLC_load_misses
+- L1_icache_loads
+- L1_icache_load_misses
+- dTLB_loads
+- dTLB_load_misses
+- iTLB_loads
+- iTLB_load_misses
+
+```{r}
+programs = read.csv("../../local/pg_marginal_50.csv")
+measurements_data = read.csv("../../local/perf_evmone_pg_marginal_50_1000000.csv")
+measurements = sqldf("SELECT opcode, op_count, 
+                  measurements_data.*
+          FROM measurements_data
+          INNER JOIN programs ON(measurements_data.program_id = programs.program_id)")
+measurements_avg <- aggregate(cbind(measurements$task_clock,measurements$context_switches,measurements$page_faults,measurements$instructions,measurements$branches,measurements$branch_misses,measurements$L1_dcache_loads,measurements$LLC_loads,measurements$LLC_load_misses,measurements$L1_icache_loads,measurements$L1_icache_load_misses,measurements$dTLB_loads,measurements$dTLB_load_misses,measurements$iTLB_loads,measurements$iTLB_load_misses), by = list(measurements$opcode, measurements$op_count), FUN = mean, trim=0.1)
+
+colnames(measurements_avg) <- c("opcode", "op_count", "task_clock", "context_switches", "page_faults", "instructions", "branches", "branch_misses", "L1_dcache_loads","LLC_loads","LLC_load_misses","L1_icache_loads","L1_icache_load_misses","dTLB_loads","dTLB_load_misses","iTLB_loads","iTLB_load_misses")
+
+```
+
+Below is the visualization of dependencies between each stat and the number of measured opcodes in the programs (op_count).
+
+```{r fig.width=10}
+t <- measurements_avg[order(measurements_avg$opcode),]
+matplot(do.call(data.frame, split(t$task_clock, t$opcode)), type="l", xlab="op_count", ylab="task_clock",axes=FALSE)
+axis(side=1, at=1:11, labels=c(0,5,10,15,20,25,30,35,40,45,50))
+axis(2)
+matplot(do.call(data.frame, split(t$context_switches, t$opcode)), type="l", xlab="op_count", ylab="context_switches",axes=FALSE)
+axis(side=1, at=1:11, labels=c(0,5,10,15,20,25,30,35,40,45,50))
+axis(2)
+matplot(do.call(data.frame, split(t$page_faults, t$opcode)), type="l", xlab="op_count", ylab="page_faults",axes=FALSE)
+axis(side=1, at=1:11, labels=c(0,5,10,15,20,25,30,35,40,45,50))
+axis(2)
+matplot(do.call(data.frame, split(t$instructions, t$opcode)), type="l", xlab="op_count", ylab="instructions",axes=FALSE)
+axis(side=1, at=1:11, labels=c(0,5,10,15,20,25,30,35,40,45,50))
+axis(2)
+matplot(do.call(data.frame, split(t$branches, t$opcode)), type="l", xlab="op_count", ylab="branches",axes=FALSE)
+axis(side=1, at=1:11, labels=c(0,5,10,15,20,25,30,35,40,45,50))
+axis(2)
+matplot(do.call(data.frame, split(t$branch_misses, t$opcode)), type="l", xlab="op_count", ylab="branch_misses",axes=FALSE)
+axis(side=1, at=1:11, labels=c(0,5,10,15,20,25,30,35,40,45,50))
+axis(2)
+matplot(do.call(data.frame, split(t$L1_dcache_loads, t$opcode)), type="l", xlab="op_count", ylab="L1_dcache_loads",axes=FALSE)
+axis(side=1, at=1:11, labels=c(0,5,10,15,20,25,30,35,40,45,50))
+axis(2)
+matplot(do.call(data.frame, split(t$LLC_loads, t$opcode)), type="l", xlab="op_count", ylab="LLC_loads",axes=FALSE)
+axis(side=1, at=1:11, labels=c(0,5,10,15,20,25,30,35,40,45,50))
+axis(2)
+matplot(do.call(data.frame, split(t$LLC_load_misses, t$opcode)), type="l", xlab="op_count", ylab="LLC_load_misses",axes=FALSE)
+axis(side=1, at=1:11, labels=c(0,5,10,15,20,25,30,35,40,45,50))
+axis(2)
+matplot(do.call(data.frame, split(t$L1_icache_loads, t$opcode)), type="l", xlab="op_count", ylab="L1_icache_loads",axes=FALSE)
+axis(side=1, at=1:11, labels=c(0,5,10,15,20,25,30,35,40,45,50))
+axis(2)
+matplot(do.call(data.frame, split(t$L1_icache_load_misses, t$opcode)), type="l", xlab="op_count", ylab="L1_icache_load_misses",axes=FALSE)
+axis(side=1, at=1:11, labels=c(0,5,10,15,20,25,30,35,40,45,50))
+axis(2)
+matplot(do.call(data.frame, split(t$dTLB_loads, t$opcode)), type="l", xlab="op_count", ylab="dTLB_loads",axes=FALSE)
+axis(side=1, at=1:11, labels=c(0,5,10,15,20,25,30,35,40,45,50))
+axis(2)
+matplot(do.call(data.frame, split(t$dTLB_load_misses, t$opcode)), type="l", xlab="op_count", ylab="dTLB_load_misses",axes=FALSE)
+axis(side=1, at=1:11, labels=c(0,5,10,15,20,25,30,35,40,45,50))
+axis(2)
+matplot(do.call(data.frame, split(t$iTLB_loads, t$opcode)), type="l", xlab="op_count", ylab="iTLB_loads",axes=FALSE)
+axis(side=1, at=1:11, labels=c(0,5,10,15,20,25,30,35,40,45,50))
+axis(2)
+matplot(do.call(data.frame, split(t$iTLB_load_misses, t$opcode)), type="l", xlab="op_count", ylab="iTLB_load_misses",axes=FALSE)
+axis(side=1, at=1:11, labels=c(0,5,10,15,20,25,30,35,40,45,50))
+axis(2)
+```
+
+Looking at the graphs we can say that a few factors have linear dependencies. For the sake of completeness we calculate Pearson correlations.
+
+```{r}
+a <- split(t, t$opcode)
+for (j in 1:length(a)) {
+  n <- names(a)[j]
+  i <- a[j][[n]]
+  b <- cor(i[,-1:-2], i$op_count, method="pearson")
+  colnames(b) <- c(n)
+  print(b)
+}
+```
+
+### task_clock, instructions, L1_dcache_loads, L1_icache_loads, dTLB_loads, iTLB_loads
+
+These stats are strongly correlated. Moreover, the graphs look similar. As an additional observation we check how they are related each other.
+
+For each stat and each opcode we calculate
+
+```
+slope(opcode)/slope(EXP)
+```
+
+where dividing by slope(EXP) is for the normalization purposes. We could think of this as the average cache usage per opcode compared to EXP opcode.
+
+```{r fig.width=10}
+a <- split(t, t$opcode)
+ns <- c("task_clock", "instructions", "L1_dcache_loads", "L1_icache_loads", "dTLB_loads", "iTLB_loads")
+slopes <- list()
+for (j in 1:length(a)) {
+  n <- names(a)[j]
+  i <- a[j][[n]]
+  s <- lapply(paste(ns, '~ op_count'), function(f){
+    b <- lm(as.formula(f), data=i)
+    b$coefficients["op_count"]
+  })
+  if (n == "EXP") {
+    EXPslopes <- s
+  }
+  slopes <- append(slopes, s)
+}
+for (j in 1:length(slopes)) {
+  slopes[[j]] = slopes[[j]] / EXPslopes[[((j-1) %% length(ns)) + 1]]
+}
+slopes <- matrix(slopes, nrow = length(ns), ncol = length(a), byrow = FALSE)
+matplot(slopes, type="l", xlab = "stats", axes=FALSE)
+axis(side=1, at=1:length(ns), labels=ns)
+axis(2)
+```
+
+### L1_icache_load_misses, dTLB_load_misses, iTLB_load_misses
+
+Note that L1_dcache_load_misses are not accounted, there is no data. 
+
+The number of misses indicates how often a given item of data was accessed but not present in the cache.
+
+To have better overview, we calculate maximal miss ratio for each opcode. See the table below.
+
+```{r}
+sqldf("SELECT opcode, max(L1_icache_load_misses/L1_icache_loads) as 'max L1_ichache miss ratio', max(dTLB_load_misses/dTLB_loads) as 'max dTLB miss ratio', max(iTLB_load_misses/iTLB_loads) as 'max iTLB miss ratio' FROM measurements_avg GROUP BY opcode")
+```
+
+The miss ratio is 0.1% at most for L1 instr cache. This indicates that executions tightly depends on L1 caches. Probably the required evmone executable fits in L1 cache. Unfortunately, stats for L1 data cache is missing. Note that a contract bytecode is taken from L1 data cache.
+
+The miss ratios for translation tables are extremely low. This is expected. The most important is that this does not affect comparison of opcode workloads.
+
+### LLC_loads, LLC_load_misses
+
+The miss ratio for the last level cache is very low, 0.02% at most. See the table below.
+
+```{r}
+sqldf("SELECT opcode, max(LLC_load_misses/LLC_loads) as 'max LLC miss ratio' FROM measurements_avg GROUP BY opcode")
+```
+
+One observation is that our tests hardly leave caches. The other observation is that every opcode has almost the same ratio, which is very good.
+
+Finally, we compare usage of L1 caches and LLC caches. The formula is `LLC_loads/(L1_icache_loads+L1_dcache_loads)`
+
+```{r}
+sqldf("SELECT opcode, avg(LLC_loads/(L1_icache_loads+L1_dcache_loads)) as ratio, stdev(LLC_loads/(L1_icache_loads+L1_dcache_loads)) as sdev FROM measurements_avg GROUP BY opcode")
+```
+
+Every opcode has similar ratio. L1 cache is 1000 times more often in use than LLC. So L1 cache performance has crucial impact on test results.
+
+### page_faults
+
+The graph of page_faults is saw shaped. But the absolute values are much higher so changes are relatively low.
+We calculate the range of page_faults for each op_count (max-min).
+
+```{r}
+sqldf("SELECT op_count, max(page_faults)-min(page_faults) as 'range (max-min)' FROM measurements_avg GROUP BY op_count")
+```
+
+These ranges are equal 3 at most which is around 1% of the average values. There is the saw effect. But the amplitudes of opcodes are circa 6 which is around 2.5% of the average values. So we say that page_faults does not depend on opcode actually and almost do not depend on op_counts. The presumption is that page_faults are due to startup/warmup, but this requires further analysis.
+
+```{r}
+sqldf("SELECT opcode, max(page_faults)-min(page_faults) as 'amplitude (max-min)' FROM measurements_avg GROUP BY opcode")
+```
+
+### branches, branch_misses
+
+Correlation of branches is more than 0.99 for every opcode. This is not surprising. But the distribution is different than task_clock, if we consider slopes. And that is not clear why.
+
+Here are the miss ratios for the branch prediction. 
+
+```{r}
+sqldf("SELECT opcode, avg(branch_misses/branches) as 'miss ratio', stdev(branch_misses/branches) as sdev FROM measurements_avg GROUP BY opcode")
+```
+
+Note that the branch prediction is very effective for every opcode, the hit ratio is around 0.999. And the fact that branch_misses are not linear does not impact these ratios much. So we can say that branch_misses does not impact on opcode usage cost because of low values, and branches are safe factors because of high correlation.
+
+Lets look closer at branch_misses graph. There are two steps. At op_count=0 the values are 5.2M. Then there is a jump to 6.2M at op_count=5. Not all opcodes behaves the same way, but the deviations are not significant. The general conclusion is that there is a visible increase of branch_misses when a new opcode is added to a program, but this increase does not depend on an opcode itself and does not depend on the number of opcode occurrences.
+
+### The Saw effect
+
+Looking at page_faults we can observe the saw effect. But this can be observed at branches and LLC_loads also. The regularity is very surprising. Especially that test programs were shuffled. The cause of this is currently unknown. But apparently it has very little impact on the tests results.

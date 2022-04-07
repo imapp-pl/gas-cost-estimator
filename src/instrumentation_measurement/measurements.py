@@ -4,6 +4,7 @@ import sys
 import subprocess
 import re
 import os.path
+from io import StringIO
 
 MAX_OPCODE_ARGS=7
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -63,7 +64,7 @@ class Measurements(object):
     sampleSize (integer): size of a sample to pass into the EVM measuring executable
     evm (string): which evm use. Default: geth. Allowed: geth, openethereum, evmone
     nSamples (integer): number of samples (individual starts of the EVM measuring executable) to do
-    mode (string): Measurement mode. Allowed: total, all, trace
+    mode (string): Measurement mode. Allowed: total, all, trace, perf, time
     """
 
     geth = "geth"
@@ -74,6 +75,8 @@ class Measurements(object):
     measure_total = "total"
     measure_all = "all"
     trace_opcodes = "trace"
+    measure_perf = "perf"
+    measure_time = "time"
 
     if not self._check_clocksource():
       print("clocksource should be tsc, found something different. See docker_timer.md somewhere in the docs")
@@ -83,8 +86,8 @@ class Measurements(object):
       print("Wrong evm parameter. Allowed are: {}, {}, {}, {}".format(geth, openethereum, evmone, openethereum_ewasm))
       return
 
-    if mode not in {measure_total, measure_all, trace_opcodes}:
-        print("Invalid measurement mode. Allowed options: {}, {}, {}".format(measure_total, measure_all, trace_opcodes))
+    if mode not in {measure_total, measure_all, trace_opcodes, measure_perf, measure_time}:
+        print("Invalid measurement mode. Allowed options: {}, {}, {}, {}, {}".format(measure_total, measure_all, trace_opcodes, measure_perf, measure_time))
         return
     elif mode == measure_total:
         header = "program_id,sample_id,run_id,measure_total_time_ns,measure_total_timer_time_ns"
@@ -99,19 +102,33 @@ class Measurements(object):
             header += elem
 
         print(header)
+    elif mode == measure_perf:
+        header = "program_id,sample_id,task_clock,context_switches,page_faults,instructions,branches,branch_misses,L1_dcache_loads,LLC_loads,LLC_load_misses,L1_icache_loads,L1_icache_load_misses,dTLB_loads,dTLB_load_misses,iTLB_loads,iTLB_load_misses"
+        print(header)
+    elif mode == measure_time:
+        header = "program_id,sample_id,real_time_perf,user_time_perf,sys_time_perf,real_time_pure,user_time_pure,sys_time_pure"
+        print(header)
 
 
     for program in self._programs:
       for sample_id in range(nSamples):
         instrumenter_result = None
         if evm == geth:
-          instrumenter_result = self.run_geth(mode, program, sampleSize)
+          if mode == measure_perf:
+            instrumenter_result = self.run_perf_geth(mode, program, sampleSize)
+          else:
+            instrumenter_result = self.run_geth(mode, program, sampleSize)
         elif evm == openethereum:
           instrumenter_result = self.run_openethereum(mode, program, sampleSize)
         elif evm == openethereum_ewasm:
           instrumenter_result = self.run_openethereum_wasm(program, sampleSize)
         elif evm == evmone:
-          instrumenter_result = self.run_evmone(mode, program, sampleSize)
+          if mode == measure_perf:
+            instrumenter_result = self.run_perf_evmone(mode, program, sampleSize)
+          elif mode == measure_time:
+            instrumenter_result = self.run_time_evmone(mode, program, sampleSize)
+          else:
+            instrumenter_result = self.run_evmone(mode, program, sampleSize)
 
         if mode == trace_opcodes:
             instrumenter_result = self.sanitize_tracer_result(instrumenter_result)
@@ -159,6 +176,51 @@ class Measurements(object):
     instrumenter_result = result.stdout.split('\n')[38:-4]
     return instrumenter_result
 
+  def run_perf_evmone(self, mode, program, sampleSize):
+    perf_evmone_main = ['perf', 'stat', '-ddd', '-x', ',', './instrumentation_measurement/build/bin/evmc', 'run']
+    args = ['--vm', './instrumentation_measurement/build/lib/libevmone.so']
+    bytecode = program.bytecode
+    invocation = perf_evmone_main + args + [bytecode]
+    result = subprocess.run(invocation, capture_output=True, universal_newlines=True)
+    assert result.returncode == 0
+    # print('error', result.stderr)
+    instrumenter_result = ''
+    perf_stats = csv.reader(StringIO(result.stderr), delimiter=',')
+    for row in perf_stats:
+      event_name = row[2]
+      if (event_name in ['task-clock', 'context-switches', 'page-faults', 'instructions', 'branches', 'branch-misses', 'L1-dcache-loads', 'LLC-loads', 'LLC-load-misses', 'L1-icache-loads', 'L1-icache-load-misses', 'dTLB-loads', 'dTLB-load-misses', 'iTLB-loads', 'iTLB-load-misses']):
+        instrumenter_result += row[0] + ','
+    # strip the final comma
+    instrumenter_result = instrumenter_result[:-1]
+
+    return [instrumenter_result]
+
+  def run_time_evmone(self, mode, program, sampleSize):
+    perf_evmone_main = ['time', '-p', 'perf', 'stat', '-ddd', '-x', ',', './instrumentation_measurement/build/bin/evmc', 'run']
+    pure_evmone_main = ['time', '-p', 'perf', 'stat', '-ddd', '-x', ',', './instrumentation_measurement/build/bin/evmc', 'run']
+    args = ['--vm', './instrumentation_measurement/build/lib/libevmone.so']
+    bytecode = program.bytecode
+    perf_invocation = perf_evmone_main + args + [bytecode]
+    pure_invocation = pure_evmone_main + args + [bytecode]
+    instrumenter_result = ''
+
+    result = subprocess.run(perf_invocation, capture_output=True, universal_newlines=True)
+    assert result.returncode == 0
+    # print('error', result.stderr)
+    perf_stats = StringIO(result.stderr).getvalue().splitlines()
+    len_perf_stats = len(perf_stats)
+    instrumenter_result += perf_stats[len_perf_stats-3].split(' ')[1] + ',' + perf_stats[len_perf_stats-2].split(' ')[1] + ',' + perf_stats[len_perf_stats-1].split(' ')[1]
+
+    instrumenter_result += ','
+    result = subprocess.run(pure_invocation, capture_output=True, universal_newlines=True)
+    assert result.returncode == 0
+    # print('error', result.stderr)
+    pure_stats = StringIO(result.stderr).getvalue().splitlines()
+    len_pure_stats = len(pure_stats)
+    instrumenter_result += pure_stats[len_pure_stats-3].split(' ')[1] + ',' + pure_stats[len_pure_stats-2].split(' ')[1] + ',' + pure_stats[len_pure_stats-1].split(' ')[1]
+
+    return [instrumenter_result]
+
   def run_evmone(self, mode, program, sampleSize):
     evmone_build_path = './instrumentation_measurement/evmone/build/'
     evmone_main = [evmone_build_path + 'evmc/bin/evmc', 'run']
@@ -170,6 +232,25 @@ class Measurements(object):
     instrumenter_result = result.stdout.split('\n')[2:-5]
 
     return instrumenter_result
+
+  def run_perf_geth(self, mode, program, sampleSize):
+    perf_geth_main = ['perf', 'stat', '-ddd', '-x', ',', './instrumentation_measurement/geth/main_minimal']
+    args = ['--sampleSize={}'.format(sampleSize)]
+    bytecode_arg = ['--bytecode', program.bytecode]
+    invocation = perf_geth_main + args + bytecode_arg
+    result = subprocess.run(invocation, capture_output=True, universal_newlines=True)
+    assert result.returncode == 0
+    # print('error', result.stderr)
+    instrumenter_result = ''
+    perf_stats = csv.reader(StringIO(result.stderr), delimiter=',')
+    for row in perf_stats:
+      event_name = row[2]
+      if (event_name in ['task-clock', 'context-switches', 'page-faults', 'instructions', 'branches', 'branch-misses', 'L1-dcache-loads', 'LLC-loads', 'LLC-load-misses', 'L1-icache-loads', 'L1-icache-load-misses', 'dTLB-loads', 'dTLB-load-misses', 'iTLB-loads', 'iTLB-load-misses']):
+        instrumenter_result += row[0] + ','
+    # strip the final comma
+    instrumenter_result = instrumenter_result[:-1]
+
+    return [instrumenter_result]
 
   def csv_row_append_info(self, instrumenter_result, program, sample_id):
     # append program_id and sample_id which are not known to the instrumenter tool
