@@ -47,7 +47,10 @@ def generate_single_marginal(single_op_pushes, operation, op_count):
     middle = [opcode] + ([popcode] * nreturns + [opcode]) * interleaved_op_and_pops_count
     pops = [popcode] * end_pop_count
 
-  bytecode = ''.join(empty_pushes + pushes + middle + pops)
+  # If this is an OPCODE accessing memory, we pre-allocate 128KB of memory at the very beginning
+  initial_mstore = [initial_mstore_bytecode()] if operation['Mnemonic'] in constants.MEMORY_OPCODES else []
+
+  bytecode = ''.join(initial_mstore + empty_pushes + pushes + middle + pops)
 
   # just in case
   assert interleaved_op_and_pops_count * nreturns + end_pop_count == total_pop_count
@@ -102,3 +105,10 @@ def _opcodes_dict_push_dup_swap(source, removeds, addeds, parameter=None):
   }
 
   return new_part
+
+# Returns a single MSTORE8 accompanied with pushes, causing pre-allocation of all the memory at program's disposal
+# 6000 - PUSH1 the zero (the byte to store)
+# 630001ffff - PUSH4 128KB-worth-of-bytes minus one byte
+# 53 - MSTORE8
+def initial_mstore_bytecode():
+  return "6000630001ffff53"
