@@ -181,7 +181,7 @@ class ProgramGenerator(object):
         bytecode += self._random_push(pushMax, randomizePush) if cleanStack or previous_nreturns == 0 else ""
         bytecode += self._random_push(1, False)
       elif op in memory_ops:
-        # otherwise memory OPCODEs might malfunction on arbitrary args. We have only limited memory to work with.
+        # `cleanStack` is assumed here, otherwise memory OPCODEs might malfunction on arbitrarily large arguments
         assert cleanStack
         bytecode += ''.join([self._random_push(3, randomizePush) for _ in range(needed_pushes)])
       else:
