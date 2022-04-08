@@ -166,4 +166,3 @@ def byte_size_push(byte_size, value):
   # byte_size is also the OPCODE variant
   op_num = 6 * 16 + byte_size - 1  # 0x60 is PUSH1
   op = hex(op_num)[2:]
-  return op + value
