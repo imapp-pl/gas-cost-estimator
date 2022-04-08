@@ -65,7 +65,7 @@ measurements = sqldf("SELECT opcode, op_count, arg0, arg1, arg2, sample_id, run_
 head(measurements)
 ```
 
-```{r}
+```{r fig.width=18, fig.height=6}
 remove_outliers <- function(df, col) {
   boxplot_result = boxplot(df[, col] ~ df[, 'op_count'] + df[, 'env'] + df[, 'opcode'], plot=FALSE)
   outliers = boxplot_result$out

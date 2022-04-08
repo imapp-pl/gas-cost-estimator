@@ -6,7 +6,7 @@ import sys
 import random
 
 import constants
-from common import prepare_opcodes, get_selection, initial_mstore_bytecode
+from common import prepare_opcodes, get_selection, initial_mstore_bytecode, arity, jump_opcode_combo
 
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -129,6 +129,8 @@ class ProgramGenerator(object):
 
     memory_ops = [0x35, 0x36, 0x37]  # CALLDATALOAD, CALLDATASIZE, CALLDATACOPY
 
+    jump_ops = [0x56, 0x57]  # JUMP, JUMPI
+
     all_ops = []
     all_ops.extend(arithmetic_ops)
     all_ops.extend(exp_ops)
@@ -141,6 +143,7 @@ class ProgramGenerator(object):
     all_ops.extend(pop_ops)
     all_ops.extend(jumpdest_ops)
     all_ops.extend(memory_ops)
+    all_ops.extend(jump_ops)
     # PUSHes DUPs and SWAPs overwhelm the others if treated equally. We pick the class with probability as any
     # other OPCODE, and then the variant is drawn in a subsequent `random.choice` with equal probability.
     all_ops.append("DUPclass")
@@ -164,12 +167,11 @@ class ProgramGenerator(object):
         op = random.choice(swap_ops)
 
       operation = self._operations[op]
-      arity = int(operation['Removed from stack'])
       nreturns = int(operation['Added to stack'])
 
       # determine how many args we need to push on the stack and push
       # some value have remained on the stack, unless we're in `cleanStack` mode, whereby they had been popped
-      needed_pushes = arity if cleanStack else (arity - previous_nreturns)
+      needed_pushes = arity(operation) if cleanStack else (arity(operation) - previous_nreturns)
       # i.e. 23 from 0x23
       opcode = operation['Value'][2:4]
       if op in byte_ops:  # BYTE SIGNEXTEND needs 0-31 value on the top of the stack
@@ -179,16 +181,21 @@ class ProgramGenerator(object):
         bytecode += self._random_push(pushMax, randomizePush) if cleanStack or previous_nreturns == 0 else ""
         bytecode += self._random_push(1, False)
       elif op in memory_ops:
-        # otherwise memory OPCODEs might malfunction on arbitrary args. We have only limited memory to work with.
+        # `cleanStack` is assumed here, otherwise memory OPCODEs might malfunction on arbitrarily large arguments
         assert cleanStack
         bytecode += ''.join([self._random_push(3, randomizePush) for _ in range(needed_pushes)])
       else:
+        # JUMP AND JUMPI are happy to fall in here, as they have their arity (needed pushes) reduced
+        # we'll push their destinations later
         bytecode += ''.join([self._random_push(pushMax, randomizePush) for _ in range(needed_pushes)])
       ops_count += needed_pushes
 
-      # push the current random opcode
-      bytecode += opcode
-      ops_count += 1
+      if operation['Mnemonic'] in ["JUMP", "JUMPI"]:
+        bytecode += jump_opcode_combo(bytecode, opcode)
+        ops_count += 3
+      else:
+        bytecode += opcode
+        ops_count += 1
 
       # Pop any results to keep the stack clean for the next iteration. Otherwise mark how many returns remain on
       # the stack after the OPCODE executed.
@@ -223,35 +230,6 @@ class ProgramGenerator(object):
     if len(value) < 2:
       value = (2-len(value))*'0' + value
     return '60' + value
-
-  def _fill_opcodes_push_dup_swap(self, opcodes):
-    pushes = constants.EVM_PUSHES
-    dups = constants.EVM_DUPS
-    swaps = constants.EVM_SWAPS
-
-    pushes = self._opcodes_dict_push_dup_swap(pushes, [0] * len(pushes), [1] * len(pushes), parameter='00')
-    opcodes = {**opcodes, **pushes}
-    dups = self._opcodes_dict_push_dup_swap(dups, range(1, len(dups)), range(2, len(dups)+1))
-    opcodes = {**opcodes, **dups}
-    swaps = self._opcodes_dict_push_dup_swap(swaps, range(2, len(swaps)+1), range(2, len(swaps)+1))
-    opcodes = {**opcodes, **swaps}
-    return opcodes
-
-  def _opcodes_dict_push_dup_swap(self, source, removeds, addeds, parameter=None):
-    source_list = source.split()
-    opcodes = source_list[::2]
-    names = source_list[1::2]
-    new_part = {
-      opcode: {
-        'Value': opcode,
-        'Mnemonic': name,
-        'Removed from stack': removed,
-        'Added to stack': added,
-        'Parameter': parameter
-      } for opcode, name, removed, added in zip(opcodes, names, removeds, addeds)
-    }
-
-    return new_part
 
 def main():
   fire.Fire(ProgramGenerator, name='generate')
