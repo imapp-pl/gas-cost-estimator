@@ -72,6 +72,9 @@ def generate_single_marginal(single_op_pushes, operation, op_count):
       pops = [popcode] * end_pop_count
       bytecode += ''.join(pops)
 
+  final_unreachable_placeholder = 'unreachable' if operation['Mnemonic'] == 'CODECOPY' else ''
+  bytecode += final_unreachable_placeholder
+
   # just in case
   assert interleaved_op_and_pops_count * nreturns + end_pop_count == total_pop_count
   assert interleaved_op_and_pops_count >= 0
