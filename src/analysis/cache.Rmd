@@ -1,6 +1,9 @@
 ---
-title: "R Notebook: exploration of caches usage by opcode executions at Evmone; for Gas Cost Estimator"
-output: html_notebook
+title: 'R Notebook: exploration of caches usage by opcode executions at Evmone; for
+  Gas Cost Estimator'
+output:
+  html_document:
+    df_print: paged
 ---
 ```{r, setup, include=FALSE}
 knitr::opts_knit$set(root.dir = '~/sources/imapp/gas-cost-estimator/src')
@@ -39,7 +42,7 @@ cd ../../gas-cost-estimator/src/
 Binaries can be tested with this command.
 
 ```
-perf stat -ddd -x , ./build/bin/evmc run --vm ./build/lib/libevmone.so 60a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a160a10250025002500250025002500250025002500250025002500250025002500250025002500250025002500250025002505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050505050
+perf stat -ddd -x , ./build/bin/evmc run --vm ./build/lib/libevmone.so 60a150
 ```
 
 ## Perf overhead
@@ -112,6 +115,10 @@ for (it in split(t, f=t$opcode)) {
 It is hard to distinguish the perf times and pure times as the graph points overlap. Concluding, the impact of using perf is negligible for our analysis.
 
 ## Analysis
+
+```
+cat ../../local/pg_marginal_50.csv | python3 instrumentation_measurement/measurements.py measure --evm evmone --mode perf --sampleSize=1 --nSamples=20 > ../../local/perf_evmone_pg_marginal_50_1000000.csv
+```
 
 We use trimmed means (10% cut off) of measured stats for analysis. The stats are measured with perf tool:
 
@@ -311,3 +318,108 @@ Lets look closer at branch_misses graph. There are two steps. At op_count=0 the 
 ### The Saw effect
 
 Looking at page_faults we can observe the saw effect. But this can be observed at branches and LLC_loads also. The regularity is very surprising. Especially that test programs were shuffled. The cause of this is currently unknown. But apparently it has very little impact on the tests results.
+
+
+Let us look closer at a chosen opcode in order to have some insights. Here are detailed measurements for ADD opcode with the step = 1 instead of 5.
+
+```
+python3 program_generator/pg_marginal.py generate --fullCsv --shuffleCounts=true --stepOpCount=1 --maxOpCount=50 --opcode=ADD --selectionFile='selection_arguments.csv' > ../../local/pg_marginal_ADD_50.csv
+```
+
+```{r}
+add_programs = read.csv("../../local/pg_marginal_ADD_50.csv")
+add_measurements_data = read.csv("../../local/perf_evmone_pg_marginal_ADD_50_1000000.csv")
+add_measurements = sqldf("SELECT opcode, op_count, 
+                  add_measurements_data.*
+          FROM add_measurements_data
+          INNER JOIN add_programs ON(add_measurements_data.program_id = add_programs.program_id)")
+add_measurements_avg <- aggregate(cbind(add_measurements$task_clock,add_measurements$context_switches,add_measurements$page_faults,add_measurements$instructions,add_measurements$branches,add_measurements$branch_misses,add_measurements$L1_dcache_loads,add_measurements$LLC_loads,add_measurements$LLC_load_misses,add_measurements$L1_icache_loads,add_measurements$L1_icache_load_misses,add_measurements$dTLB_loads,add_measurements$dTLB_load_misses,add_measurements$iTLB_loads,add_measurements$iTLB_load_misses), by = list(add_measurements$opcode, add_measurements$op_count), FUN = mean, trim=0.1)
+
+colnames(add_measurements_avg) <- c("opcode", "op_count", "task_clock", "context_switches", "page_faults", "instructions", "branches", "branch_misses", "L1_dcache_loads","LLC_loads","LLC_load_misses","L1_icache_loads","L1_icache_load_misses","dTLB_loads","dTLB_load_misses","iTLB_loads","iTLB_load_misses")
+
+```
+
+```{r fig.width=10}
+add_t <- add_measurements_avg[order(add_measurements_avg$opcode),]
+matplot(do.call(data.frame, split(add_t$task_clock, add_t$opcode)), type="l", xlab="op_count", ylab="task_clock",axes=FALSE)
+axis(side=1, at=1:50, labels=c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49))
+axis(2)
+matplot(do.call(data.frame, split(add_t$context_switches, add_t$opcode)), type="l", xlab="op_count", ylab="context_switches",axes=FALSE)
+axis(side=1, at=1:50, labels=c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49))
+axis(2)
+matplot(do.call(data.frame, split(add_t$page_faults, add_t$opcode)), type="l", xlab="op_count", ylab="page_faults",axes=FALSE)
+axis(side=1, at=1:50, labels=c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49))
+axis(2)
+matplot(do.call(data.frame, split(add_t$instructions, add_t$opcode)), type="l", xlab="op_count", ylab="instructions",axes=FALSE)
+axis(side=1, at=1:50, labels=c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49))
+axis(2)
+matplot(do.call(data.frame, split(add_t$branches, add_t$opcode)), type="l", xlab="op_count", ylab="branches",axes=FALSE)
+axis(side=1, at=1:50, labels=c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49))
+axis(2)
+matplot(do.call(data.frame, split(add_t$branch_misses, add_t$opcode)), type="l", xlab="op_count", ylab="branch_misses",axes=FALSE)
+axis(side=1, at=1:50, labels=c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49))
+axis(2)
+matplot(do.call(data.frame, split(add_t$L1_dcache_loads, add_t$opcode)), type="l", xlab="op_count", ylab="L1_dcache_loads",axes=FALSE)
+axis(side=1, at=1:50, labels=c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49))
+axis(2)
+matplot(do.call(data.frame, split(add_t$LLC_loads, add_t$opcode)), type="l", xlab="op_count", ylab="LLC_loads",axes=FALSE)
+axis(side=1, at=1:50, labels=c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49))
+axis(2)
+matplot(do.call(data.frame, split(add_t$LLC_load_misses, add_t$opcode)), type="l", xlab="op_count", ylab="LLC_load_misses",axes=FALSE)
+axis(side=1, at=1:50, labels=c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49))
+axis(2)
+matplot(do.call(data.frame, split(add_t$L1_icache_loads, add_t$opcode)), type="l", xlab="op_count", ylab="L1_icache_loads",axes=FALSE)
+axis(side=1, at=1:50, labels=c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49))
+axis(2)
+matplot(do.call(data.frame, split(add_t$L1_icache_load_misses, add_t$opcode)), type="l", xlab="op_count", ylab="L1_icache_load_misses",axes=FALSE)
+axis(side=1, at=1:50, labels=c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49))
+axis(2)
+matplot(do.call(data.frame, split(add_t$dTLB_loads, add_t$opcode)), type="l", xlab="op_count", ylab="dTLB_loads",axes=FALSE)
+axis(side=1, at=1:50, labels=c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49))
+axis(2)
+matplot(do.call(data.frame, split(add_t$dTLB_load_misses, add_t$opcode)), type="l", xlab="op_count", ylab="dTLB_load_misses",axes=FALSE)
+axis(side=1, at=1:50, labels=c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49))
+axis(2)
+matplot(do.call(data.frame, split(add_t$iTLB_loads, add_t$opcode)), type="l", xlab="op_count", ylab="iTLB_loads",axes=FALSE)
+axis(side=1, at=1:50, labels=c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49))
+axis(2)
+matplot(do.call(data.frame, split(add_t$iTLB_load_misses, add_t$opcode)), type="l", xlab="op_count", ylab="iTLB_load_misses",axes=FALSE)
+axis(side=1, at=1:50, labels=c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49))
+axis(2)
+```
+
+The visible irregularities and perturbations may be due to inexactness of perf tool. It estimates statistics because of massive number of events and multiplexing. We say 'may be' because not enough investigation were done. On the other hand deviations are very little and does not affect overall conclusions.
+
+For demonstration purposes here is the excerpt of a single run of perf tool with one of test programs. The measuring time of events is 30-46% due to multiplexing.
+
+```
+perf stat -ddd ./instrumentation_measurement/build/bin/evmc run --vm ./instrumentation_measurement/build/lib/libevmone.so ...
+```
+
+```
+         18,124.52 msec task-clock                #    1.000 CPUs utilized          
+                78      context-switches          #    0.004 K/sec                  
+                 0      cpu-migrations            #    0.000 K/sec                  
+               227      page-faults               #    0.013 K/sec                  
+    48,483,422,169      cycles                    #    2.675 GHz                      (46.09%)
+    97,389,787,800      instructions              #    2.01  insn per cycle           (46.11%)
+    20,536,729,856      branches                  # 1133.091 M/sec                    (46.13%)
+         5,516,085      branch-misses             #    0.03% of all branches          (46.15%)
+    20,276,931,394      L1-dcache-loads           # 1118.757 M/sec                    (46.18%)
+   <not supported>      L1-dcache-load-misses                                       
+       165,543,864      LLC-loads                 #    9.134 M/sec                    (46.20%)
+             3,805      LLC-load-misses           #    0.00% of all LL-cache hits     (30.82%)
+    14,244,255,529      L1-icache-loads           #  785.911 M/sec                    (30.81%)
+         8,349,123      L1-icache-load-misses     #    0.06% of all L1-icache hits    (30.79%)
+    20,287,095,231      dTLB-loads                # 1119.317 M/sec                    (30.76%)
+           446,020      dTLB-load-misses          #    0.00% of all dTLB cache hits   (30.73%)
+    97,420,989,586      iTLB-loads                # 5375.093 M/sec                    (38.41%)
+           177,281      iTLB-load-misses          #    0.00% of all iTLB cache hits   (38.40%)
+   <not supported>      L1-dcache-prefetches                                        
+   <not supported>      L1-dcache-prefetch-misses                                   
+
+      18.127671598 seconds time elapsed
+
+      18.117488000 seconds user
+       0.007998000 seconds sys
+```
