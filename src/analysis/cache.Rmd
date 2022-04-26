@@ -423,3 +423,18 @@ perf stat -ddd ./instrumentation_measurement/build/bin/evmc run --vm ./instrumen
       18.117488000 seconds user
        0.007998000 seconds sys
 ```
+
+The detailed insight.
+
+```{r}
+add_programs = read.csv("../../local/pg_marginal_ADD_50.csv")
+add_instr_measurements_data = read.csv("../../local/perf_evmone_pg_marginal_ADD_instructions_50_1000000.csv")
+add_instr_measurements = sqldf("SELECT opcode, op_count, 
+                  add_instr_measurements_data.*
+          FROM add_instr_measurements_data
+          INNER JOIN add_programs ON(add_instr_measurements_data.program_id = add_programs.program_id)")
+```
+
+```{r fig.width=10}
+boxplot(instructions~op_count,data=add_instr_measurements)
+```
