@@ -106,6 +106,8 @@ class ProgramGenerator(object):
     bytecode = ''
     # always preallocate memory to avoid uneven amount of allocation later
     bytecode += initial_mstore_bytecode()
+    # always include at least one JUMP
+    bytecode += jump_opcode_combo(bytecode, "56")
     # number of operations including pushes
     ops_count = 0
     if not cleanStack:
