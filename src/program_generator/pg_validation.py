@@ -124,12 +124,17 @@ class ProgramGenerator(object):
                           0x44, 0x45, 0x46, 0x47, 0x58, 0x59, 0x5a]
     pop_ops = [0x50]
     jumpdest_ops = [0x5b]  # JUMPDEST
+
+    push_ops = [0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d, 0x7e, 0x7f]
     dup_ops = [0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f]
     swap_ops = [0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f]
 
-    memory_ops = [0x35, 0x36, 0x37]  # CALLDATALOAD, CALLDATASIZE, CALLDATACOPY
+    # CALLDATALOAD, CALLDATASIZE, CALLDATACOPY, CODECOPY, MLOAD
+    memory_ops = [0x35, 0x36, 0x37, 0x39, 0x51]
 
+    mstore_ops = [0x52, 0x53]  # MSTORE, MSTORE8
     jump_ops = [0x56, 0x57]  # JUMP, JUMPI
+    returndata_ops = [0x3d]  # RETURNDATASIZE
 
     all_ops = []
     all_ops.extend(arithmetic_ops)
@@ -144,8 +149,11 @@ class ProgramGenerator(object):
     all_ops.extend(jumpdest_ops)
     all_ops.extend(memory_ops)
     all_ops.extend(jump_ops)
+    all_ops.extend(mstore_ops)
+    all_ops.extend(returndata_ops)
     # PUSHes DUPs and SWAPs overwhelm the others if treated equally. We pick the class with probability as any
     # other OPCODE, and then the variant is drawn in a subsequent `random.choice` with equal probability.
+    all_ops.append("PUSHclass")
     all_ops.append("DUPclass")
     all_ops.append("SWAPclass")
 
@@ -161,7 +169,9 @@ class ProgramGenerator(object):
       else:
         op = random.choice(all_ops)
 
-      if op == "DUPclass":
+      if op == "PUSHclass":
+        op = random.choice(push_ops)  
+      elif op == "DUPclass":
         op = random.choice(dup_ops)
       elif op == "SWAPclass":
         op = random.choice(swap_ops)
@@ -183,19 +193,30 @@ class ProgramGenerator(object):
       elif op in memory_ops:
         # `cleanStack` is assumed here, otherwise memory OPCODEs might malfunction on arbitrarily large arguments
         assert cleanStack
-        bytecode += ''.join([self._random_push(3, randomizePush) for _ in range(needed_pushes)])
+        # PUSH2 produces an argument btw 0 and 64KB, exactly what we need
+        # TODO: parametrize this across the codebase
+        bytecode += ''.join([self._random_push(2, randomizePush) for _ in range(needed_pushes)])
+      elif op in mstore_ops:
+        # `cleanStack` is assumed here, otherwise memory OPCODEs might malfunction on arbitrarily large arguments
+        assert cleanStack
+        # first arg is the stored value, then offset
+        bytecode += self._random_push(pushMax, randomizePush)
+        bytecode += self._random_push(2, randomizePush)
       else:
         # JUMP AND JUMPI are happy to fall in here, as they have their arity (needed pushes) reduced
         # we'll push their destinations later
         bytecode += ''.join([self._random_push(pushMax, randomizePush) for _ in range(needed_pushes)])
       ops_count += needed_pushes
 
-      if operation['Mnemonic'] in ["JUMP", "JUMPI"]:
+      if op in jump_ops:
         bytecode += jump_opcode_combo(bytecode, opcode)
         ops_count += 3
       else:
         bytecode += opcode
         ops_count += 1
+
+      if op in push_ops:
+        bytecode += operation['Parameter']
 
       # Pop any results to keep the stack clean for the next iteration. Otherwise mark how many returns remain on
       # the stack after the OPCODE executed.
@@ -205,6 +226,9 @@ class ProgramGenerator(object):
         ops_count += nreturns
       else:
         previous_nreturns = nreturns
+
+    final_unreachable_placeholder = 'unreachable'
+    bytecode += final_unreachable_placeholder
 
     return Program(bytecode, ops_count)
 
