@@ -70,21 +70,23 @@ class Measurements(object):
     openethereum = "openethereum"
     openethereum_ewasm = "openethereum_ewasm"
     evmone = "evmone"
+    nethermind = "nethermind"
 
     measure_total = "total"
     measure_all = "all"
     trace_opcodes = "trace"
+    benchmark_mode = "benchmark"
 
     if not self._check_clocksource():
       print("clocksource should be tsc, found something different. See docker_timer.md somewhere in the docs")
       return
 
-    if evm not in {geth, openethereum, evmone, openethereum_ewasm}:
-      print("Wrong evm parameter. Allowed are: {}, {}, {}, {}".format(geth, openethereum, evmone, openethereum_ewasm))
+    if evm not in {geth, openethereum, evmone, openethereum_ewasm, nethermind}:
+      print("Wrong evm parameter. Allowed are: {}, {}, {}, {}".format(geth, openethereum, evmone, openethereum_ewasm, nethermind))
       return
 
-    if mode not in {measure_total, measure_all, trace_opcodes}:
-        print("Invalid measurement mode. Allowed options: {}, {}, {}".format(measure_total, measure_all, trace_opcodes))
+    if mode not in {measure_total, measure_all, trace_opcodes, benchmark_mode}:
+        print("Invalid measurement mode. Allowed options: {}, {}, {}".format(measure_total, measure_all, trace_opcodes, benchmark_mode))
         return
     elif mode == measure_total:
         header = "program_id,sample_id,run_id,measure_total_time_ns,measure_total_timer_time_ns"
@@ -97,7 +99,12 @@ class Measurements(object):
         for i in range(MAX_OPCODE_ARGS):
             elem = ",arg_{}".format(i)
             header += elem
-
+        print(header)
+    elif mode == benchmark_mode:
+        if sampleSize > 1:
+          sampleSize = 1
+          print("Sample size for benchmark reset to 1")
+        header = "program_id,sample_id,measure_total_time_ns,measure_total_sd"
         print(header)
 
 
@@ -105,7 +112,10 @@ class Measurements(object):
       for sample_id in range(nSamples):
         instrumenter_result = None
         if evm == geth:
-          instrumenter_result = self.run_geth(mode, program, sampleSize)
+          if mode == benchmark_mode:
+            instrumenter_result = self.run_geth_benchmark(program)
+          else:
+            instrumenter_result = self.run_geth(mode, program, sampleSize)
         elif evm == openethereum:
           instrumenter_result = self.run_openethereum(mode, program, sampleSize)
         elif evm == openethereum_ewasm:
