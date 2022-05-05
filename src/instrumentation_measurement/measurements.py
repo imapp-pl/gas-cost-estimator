@@ -37,9 +37,21 @@ class Measurements(object):
   | run_id | instruction_id | measure_all_time_ns | measure_one_time_ns |
   """
 
+  def _expand_unreachable_code(self, bytecode):
+    if bytecode[-11:] == 'unreachable':
+      bytecode = bytecode[:-11]
+      bytecode += '00'  # STOP
+      # TODO: The -2 - this is only to not hit the hard `MAX_ARG_STRLEN` limit of `131072` bytes,
+      #       c.f. https://tousu.in/qa/?qa=833087/
+      #       Is there a way to get rid of, other than limiting the length of memory args?
+      bytecode += '03' * (((1<<17) - len(bytecode) - 2) // 2)
+      return bytecode
+    else:
+      return bytecode
+
   def _program_from_csv_row(self, row):
     program_id = row['program_id']
-    bytecode = row['bytecode']
+    bytecode = self._expand_unreachable_code(row['bytecode'])
 
     # might be missing
     measured_op_position = row.get('measured_op_position')

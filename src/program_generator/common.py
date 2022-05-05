@@ -43,6 +43,9 @@ def generate_single_marginal(single_op_pushes, operation, op_count):
   # If this is an OPCODE accessing memory, we pre-allocate 128KB of memory at the very beginning
   initial_mstore = initial_mstore_bytecode() if operation['Mnemonic'] in constants.MEMORY_OPCODES else ''
   bytecode += initial_mstore
+
+  initial_call = initial_call_bytecode() if operation['Mnemonic'] in constants.RETURNDATA_OPCODES else ''
+  bytecode += initial_call
     
   empty_pushes = ["6000"] * empty_push_count
   bytecode += ''.join(empty_pushes)
@@ -68,6 +71,9 @@ def generate_single_marginal(single_op_pushes, operation, op_count):
       bytecode += ''.join(middle)
       pops = [popcode] * end_pop_count
       bytecode += ''.join(pops)
+
+  final_unreachable_placeholder = 'unreachable' if operation['Mnemonic'] == 'CODECOPY' else ''
+  bytecode += final_unreachable_placeholder
 
   # just in case
   assert interleaved_op_and_pops_count * nreturns + end_pop_count == total_pop_count
@@ -110,17 +116,17 @@ def _fill_opcodes_push_dup_swap(opcodes):
   dups = constants.EVM_DUPS
   swaps = constants.EVM_SWAPS
 
-  pushes = _opcodes_dict_push_dup_swap(pushes, [0] * len(pushes), [1] * len(pushes), parameter='00')
+  pushes = _opcodes_dict_push_dup_swap(pushes, [0] * len(pushes), [1] * len(pushes), ['03' * variant for variant in range(1,33)])
   opcodes = {**opcodes, **pushes}
   # For dups and swaps the removeds/addeds aren't precise. "removed" is how much is required to be on stack
   # so it must be pushed there once. "added" is how much is really added "extra"
-  dups = _opcodes_dict_push_dup_swap(dups, range(1, len(dups)), [1] * len(dups))
+  dups = _opcodes_dict_push_dup_swap(dups, range(1, len(dups)), [1] * len(dups), [None] * len(dups))
   opcodes = {**opcodes, **dups}
-  swaps = _opcodes_dict_push_dup_swap(swaps, range(2, len(swaps)+1), [0] * len(swaps))
+  swaps = _opcodes_dict_push_dup_swap(swaps, range(2, len(swaps)+1), [0] * len(swaps), [None] * len(swaps))
   opcodes = {**opcodes, **swaps}
   return opcodes
 
-def _opcodes_dict_push_dup_swap(source, removeds, addeds, parameter=None):
+def _opcodes_dict_push_dup_swap(source, removeds, addeds, parameters):
   source_list = source.split()
   opcodes = source_list[::2]
   names = source_list[1::2]
@@ -131,7 +137,7 @@ def _opcodes_dict_push_dup_swap(source, removeds, addeds, parameter=None):
       'Removed from stack': removed,
       'Added to stack': added,
       'Parameter': parameter
-    } for opcode, name, removed, added in zip(opcodes, names, removeds, addeds)
+    } for opcode, name, removed, added, parameter in zip(opcodes, names, removeds, addeds, parameters)
   }
 
   return new_part
@@ -142,6 +148,15 @@ def _opcodes_dict_push_dup_swap(source, removeds, addeds, parameter=None):
 # 53 - MSTORE8
 def initial_mstore_bytecode():
   return "6000630001ffff53"
+
+# Returns a single CALL accompaniend with pushes, causing the RETURNDATA to be filled with some of our memory
+# 60006000 - PUSH1 the return data length and offset - we're not using this mechanism to return, just the RETURNDATAx OPCODEs
+# 630001ffff6000 - PUSH the input data length and offset - we're pushing all our preallocated memory
+# 6004 - PUSH1 the 0x4 for identity precompiled contract
+# 61ffff - PUSH2 some gas, just in case
+# F150 - CALL and POP the return status, which should be 0x1
+def initial_call_bytecode():
+  return "60006000630001ffff60006000600461ffffF150"
 
 def arity(operation):
   # We're not analyzing JUMPs for destination arg cost, so pretend it's not there. We're pushing it in the main
@@ -166,3 +181,4 @@ def byte_size_push(byte_size, value):
   # byte_size is also the OPCODE variant
   op_num = 6 * 16 + byte_size - 1  # 0x60 is PUSH1
   op = hex(op_num)[2:]
+  return op + value
