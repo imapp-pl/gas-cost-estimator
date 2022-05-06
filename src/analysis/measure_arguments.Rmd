@@ -131,15 +131,22 @@ Notes:
 
 ```{r}
 
-first_pass = data.frame(matrix(ncol = 8, nrow = 0))
-colnames(first_pass) <- c('opcode', 'env', 'has_significant', 'has_impacting', 'estimate_marginal_ns', 'arg0_ns', 'arg1_ns', 'arg2_ns')
+first_pass = data.frame(matrix(ncol = 14, nrow = 0))
+colnames(first_pass) <- c('opcode', 'env', 'has_significant', 'has_impacting', 'estimate_marginal_ns',
+                          'arg0_ns', 'arg1_ns', 'arg2_ns',
+                          'arg0_ns_raw', 'arg1_ns_raw', 'arg2_ns_raw',
+                          'arg0_ns_p', 'arg1_ns_p', 'arg2_ns_p')
 
 # Every `arg` coefficient represents the impact of the argument's byte size growing by 1.
-# We treat as impactful the arguments, where:
+# We treat as impactful the arguments where p-value is effectively zero. The previous approach was:
+# Treat as impactful the arguments, where:
 # 1. The estimate is significant with confidence 0.001
 # 2. The increase of arg's byte size by 1 will increase the cost by more than 1%
-p_value_thresh = 0.001
-impact_ratio = 0.01
+# but it turned out to be much less stable in practice.
+p_value_thresh = 1e-30
+# p_value_thresh = 0.001
+impact_ratio = 0.00
+# impact_ratio = 0.01
 
 arg_lm <- function(df, opcode, env, formula) {
   data = df[which(df$opcode==opcode & df$env==env), ]
@@ -154,6 +161,9 @@ add_arg_results <- function(model, opcode, env, results_df, arity) {
   pure_op_count_coeff = all_coefficients["op_count", 1]
   # will be filled if any is impacting
   args_ns = c(NA, NA, NA)
+  # will be always if arg present
+  args_ns_raw = c(NA, NA, NA)
+  args_ns_p = c(NA, NA, NA)
   
   if (arity == 1) {
     # there's only one arg coefficient here, silly R forces us to take a special case path...
@@ -168,6 +178,8 @@ add_arg_results <- function(model, opcode, env, results_df, arity) {
     if (has_impacting) {
       args_ns[1] = arg_coefficients[1]
     }
+    args_ns_raw[1] = arg_coefficients[1]
+    args_ns_p[1] = arg_coefficients[4]
   } else {
     significant = arg_coefficients[, 4] < p_value_thresh
     has_significant = length(which(significant)) > 0
@@ -176,8 +188,10 @@ add_arg_results <- function(model, opcode, env, results_df, arity) {
     can_impact = significant & coefficient_impact > pure_op_count_coeff * impact_ratio
     has_impacting = length(which(can_impact)) > 0
     args_ns[which(can_impact)] = arg_coefficients[which(can_impact), 1]
+    args_ns_raw[1:arity] = arg_coefficients[1:arity, 1]
+    args_ns_p[1:arity] = arg_coefficients[1:arity, 4]
   }
-  results_df[nrow(results_df) + 1, ] = c(opcode, env, has_significant, has_impacting, pure_op_count_coeff, args_ns)
+  results_df[nrow(results_df) + 1, ] = c(opcode, env, has_significant, has_impacting, pure_op_count_coeff, args_ns, args_ns_raw, args_ns_p)
   return(results_df)
 }
 
@@ -371,8 +385,9 @@ add_arg_model_estimates <- function(model, opcode, env, results_df, df) {
 ```
 
 ```{r}
-estimates = data.frame(matrix(ncol = ncol(first_pass), nrow = 0))
-colnames(estimates) <- colnames(first_pass)
+estimates = data.frame(matrix(ncol = 8, nrow = 0))
+colnames(estimates) <- c('opcode', 'env', 'has_significant', 'has_impacting', 'estimate_marginal_ns',
+                         'arg0_ns', 'arg1_ns', 'arg2_ns')
 
 for (env in all_envs) {
   for (opcode in all_opcodes) {

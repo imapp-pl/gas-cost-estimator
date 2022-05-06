@@ -299,7 +299,6 @@ validation_no_exp = validation[which(validation$dominant != 'EXP'), ]
 ```
 
 ```{r fig.width=15}
-par(mfrow=c(1,2))
 trivial_variable_plots <- function(df, selection_col, selection_val, labels, colors, log) {
   if (missing(labels)) {
     labels = 'program_id'
@@ -314,8 +313,6 @@ trivial_variable_plots <- function(df, selection_col, selection_val, labels, col
   plot_validation(subset, explained_variable, 'program_length', labels=labels, colors=colors, log=log)
   title(main=paste(selection_val, 'program_length'))
 }
-trivial_variable_plots(validation, 'env', 'geth', labels='dominant')
-trivial_variable_plots(validation, 'env', 'evmone', labels='dominant')
 ```
 Trivial variable plots are interesting, after we have introduced varying program length. `openethereum` in particular has a good correlation there, which is caused by the large, constant cost of running an instruction (~250ns, regardless of OPCODE).
 
@@ -364,8 +361,6 @@ print('geth long')
 lm_validation(validation_long, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
 print('evmone long')
 lm_validation(validation_long, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
-summary(model_geth)
-summary(model_evmone)
 
 print('geth all - no EXP')
 lm_validation(validation_no_exp, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
@@ -403,6 +398,11 @@ trivial_variable_plots(validation, 'env', 'geth', labels='dominant', log='xy')
 trivial_variable_plots(validation, 'env', 'evmone', labels='dominant', log='xy')
 compare_plots(validation, 'env', 'geth', 'cost_ns', labels='dominant', log='xy')
 compare_plots(validation, 'env', 'evmone', 'cost_ns', labels='dominant', log='xy')
+par(mfrow=c(2,2))
+trivial_variable_plots(validation, 'env', 'geth', labels='dominant')
+trivial_variable_plots(validation, 'env', 'evmone', labels='dominant')
+compare_plots(validation, 'env', 'geth', 'cost_ns', labels='dominant')
+compare_plots(validation, 'env', 'evmone', 'cost_ns', labels='dominant')
 ```
 
 ## Model diagnostics
