@@ -14,7 +14,7 @@ options(scipen = 100)
 ### Data preparations
 
 ```{r}
-explained_variable = 'min_measure_total_time_ns'
+explained_variable = 'avg_measure_total_time_ns'
 all_envs = c('geth', 'evmone')
 ```
 
@@ -46,7 +46,9 @@ lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
   } else {
     subset = df
   }
-  lm(subset[, yvar] ~ subset[,xvar], data=subset)
+  model = lm(subset[, yvar] ~ subset[,xvar], data=subset)
+  print(summary(model))
+  return(model)
 }
 ```
 
@@ -178,10 +180,23 @@ estimated_traces$arg0[which(is.na(estimated_traces$arg0))] = 0
 estimated_traces$arg1[which(is.na(estimated_traces$arg1))] = 0
 estimated_traces$arg2[which(is.na(estimated_traces$arg2))] = 0
 
+arg0_linear_opcodes = c('CALLDATALOAD', 'CALLDATACOPY', 'RETURNDATACOPY', 'MLOAD', 'MSTORE', 'MSTORE8', 'CODECOPY')
+arg1_linear_opcodes = c('CALLDATACOPY', 'RETURNDATACOPY', 'CODECOPY')
+arg2_linear_opcodes = c('CALLDATACOPY', 'RETURNDATACOPY', 'CODECOPY')
+
+arg0_estimated_cost_log = estimated_traces$arg0_ns * log(estimated_traces$arg0 + 1, 256) * !(estimated_traces$op %in% arg0_linear_opcodes)
+arg1_estimated_cost_log = estimated_traces$arg1_ns * log(estimated_traces$arg1 + 1, 256) * !(estimated_traces$op %in% arg1_linear_opcodes)
+arg2_estimated_cost_log = estimated_traces$arg2_ns * log(estimated_traces$arg2 + 1, 256) * !(estimated_traces$op %in% arg2_linear_opcodes)
+arg0_estimated_cost_lin = estimated_traces$arg0_ns * estimated_traces$arg0 * (estimated_traces$op %in% arg0_linear_opcodes)
+arg1_estimated_cost_lin = estimated_traces$arg1_ns * estimated_traces$arg1 * (estimated_traces$op %in% arg1_linear_opcodes)
+arg2_estimated_cost_lin = estimated_traces$arg2_ns * estimated_traces$arg2 * (estimated_traces$op %in% arg2_linear_opcodes)
+arg0_estimated_cost = arg0_estimated_cost_log + arg0_estimated_cost_lin
+arg1_estimated_cost = arg1_estimated_cost_log + arg1_estimated_cost_lin
+arg2_estimated_cost = arg2_estimated_cost_log + arg2_estimated_cost_lin
 estimated_traces$cost_ns = estimated_traces$estimate_marginal_ns + 
-                           estimated_traces$arg0_ns * log(estimated_traces$arg0 + 1, 256) +
-                           estimated_traces$arg1_ns * log(estimated_traces$arg1 + 1, 256) +
-                           estimated_traces$arg2_ns * log(estimated_traces$arg2 + 1, 256)
+                           arg0_estimated_cost +
+                           arg1_estimated_cost +
+                           arg2_estimated_cost
 ```
 
 ```{r}
@@ -280,19 +295,23 @@ We divide the validation data into classes with respect to the length of the pro
 ```{r}
 validation_long = validation[which(validation$program_length > 400), ]
 validation_short = validation[which(validation$program_length <= 100), ]
+validation_no_exp = validation[which(validation$dominant != 'EXP'), ]
 ```
 
 ```{r fig.width=15}
 par(mfrow=c(1,2))
-trivial_variable_plots <- function(df, selection_col, selection_val, labels, colors) {
+trivial_variable_plots <- function(df, selection_col, selection_val, labels, colors, log) {
   if (missing(labels)) {
     labels = 'program_id'
   }
   if (missing(colors)) {
     colors = 'has_exp'
   }
+  if (missing(log)) {
+    log = ''
+  }
   subset = df[which(df[, selection_col] == selection_val), ]
-  plot_validation(subset, explained_variable, 'program_length', labels=labels, colors=colors)
+  plot_validation(subset, explained_variable, 'program_length', labels=labels, colors=colors, log=log)
   title(main=paste(selection_val, 'program_length'))
 }
 trivial_variable_plots(validation, 'env', 'geth', labels='dominant')
@@ -300,13 +319,17 @@ trivial_variable_plots(validation, 'env', 'evmone', labels='dominant')
 ```
 Trivial variable plots are interesting, after we have introduced varying program length. `openethereum` in particular has a good correlation there, which is caused by the large, constant cost of running an instruction (~250ns, regardless of OPCODE).
 
+We add the 'no EXP' version to make sure that the improvement of the estimated gas model over program length model isn't only because of the extreme EXP case.
+
 ```{r}
-program_length_model_geth = lm_validation(validation, explained_variable, 'program_length', selection_col='env', selection_val='geth')
-program_length_model_evmone = lm_validation(validation, explained_variable, 'program_length', selection_col='env', selection_val='evmone')
 print('geth all - only progam length')
-summary(program_length_model_geth)
+lm_validation(validation, explained_variable, 'program_length', selection_col='env', selection_val='geth')
 print('evmone all - only progam length')
-summary(program_length_model_evmone)
+lm_validation(validation, explained_variable, 'program_length', selection_col='env', selection_val='evmone')
+print('geth all - only progam length - no EXP')
+lm_validation(validation_no_exp, explained_variable, 'program_length', selection_col='env', selection_val='geth')
+print('evmone all - only progam length  - no EXP')
+lm_validation(validation_no_exp, explained_variable, 'program_length', selection_col='env', selection_val='evmone')
 ```
 
 Nevertheless, neither of the "trivial" models is comparable with the final validation model including the estimated `cost_ns`. see below.
@@ -332,46 +355,54 @@ compare_plots <- function(df, selection_col, selection_val, estimate_var, labels
   title(main=paste(selection_val, ' estimate'))
 }
 
-model_geth = lm_validation(validation_short, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
-model_evmone = lm_validation(validation_short, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
 print('geth short')
-summary(model_geth)
+lm_validation(validation_short, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
 print('evmone short')
-summary(model_evmone)
+lm_validation(validation_short, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
 
-model_geth = lm_validation(validation_long, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
-model_evmone = lm_validation(validation_long, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
 print('geth long')
-summary(model_geth)
+lm_validation(validation_long, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
 print('evmone long')
+lm_validation(validation_long, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
+summary(model_geth)
 summary(model_evmone)
 
-model_geth = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
-model_evmone = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
+print('geth all - no EXP')
+lm_validation(validation_no_exp, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
+print('evmone all - no EXP')
+lm_validation(validation_no_exp, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
+
 print('geth all')
-summary(model_geth)
+model_geth = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
 print('evmone all')
-summary(model_evmone)
+model_evmone = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
 ```
 
 ```{r fig.width=15}
-par(mfrow=c(3,2))
+par(mfrow=c(4,2))
 compare_plots(validation_short, 'env', 'geth', 'cost_ns')
 compare_plots(validation_short, 'env', 'evmone', 'cost_ns')
 compare_plots(validation_long, 'env', 'geth', 'cost_ns')
 compare_plots(validation_long, 'env', 'evmone', 'cost_ns')
+compare_plots(validation_no_exp, 'env', 'geth', 'cost_ns')
+compare_plots(validation_no_exp, 'env', 'evmone', 'cost_ns')
 compare_plots(validation, 'env', 'geth', 'cost_ns')
 compare_plots(validation, 'env', 'evmone', 'cost_ns')
 ```
 
 A side-by-side comparison of the gas cost model with the `program_length` model.
 
-```{r fig.width=15}
+```{r fig.width=25}
 par(mfrow=c(2,2))
-trivial_variable_plots(validation, 'env', 'geth')
-trivial_variable_plots(validation, 'env', 'evmone')
-compare_plots(validation, 'env', 'geth', 'cost_ns', labels='dominant')
-compare_plots(validation, 'env', 'evmone', 'cost_ns', labels='dominant')
+trivial_variable_plots(validation_no_exp, 'env', 'geth', labels='dominant')
+trivial_variable_plots(validation_no_exp, 'env', 'evmone', labels='dominant')
+compare_plots(validation_no_exp, 'env', 'geth', 'cost_ns', labels='dominant')
+compare_plots(validation_no_exp, 'env', 'evmone', 'cost_ns', labels='dominant')
+par(mfrow=c(2,2))
+trivial_variable_plots(validation, 'env', 'geth', labels='dominant', log='xy')
+trivial_variable_plots(validation, 'env', 'evmone', labels='dominant', log='xy')
+compare_plots(validation, 'env', 'geth', 'cost_ns', labels='dominant', log='xy')
+compare_plots(validation, 'env', 'evmone', 'cost_ns', labels='dominant', log='xy')
 ```
 
 ## Model diagnostics
