@@ -15,11 +15,11 @@ options(scipen = 100)
 
 ```{r}
 explained_variable = 'min_measure_total_time_ns'
-all_envs = c('geth', 'evmone', 'openethereum')
+all_envs = c('geth', 'evmone')
 ```
 
 ```{r}
-plot_validation <- function(df, yvar, xvar, labels, colors, set_asp) {
+plot_validation <- function(df, yvar, xvar, labels, colors, set_asp, log) {
   if (missing(labels)) {
     labels = 'program_id'
   }
@@ -31,7 +31,10 @@ plot_validation <- function(df, yvar, xvar, labels, colors, set_asp) {
   } else {
     asp = 1
   }
-  scatter.smooth(df[, xvar], df[, yvar], col=df[, colors], asp=asp)
+  if (missing(log)) {
+    log = ''
+  }
+  scatter.smooth(df[, xvar], df[, yvar], col=df[, colors], asp=asp, log=log)
   text(df[, yvar] ~ df[, xvar], data=df, labels=df[, labels], cex=0.6, pos=4, font=2)
 }
 ```
@@ -108,8 +111,10 @@ setwd("~/sources/imapp/gas-cost-estimator/src")
 # program_set_codename = "arythmetic_c100_ops30_clean_smallpush"
 # measurement_codename = "50_1"
 
-program_set_codename = "full5_c100_randOps1000_clean_prejump"
+program_set_codename = "full5_c100_randOps1000_clean_prejump_randominant"
 measurement_codename = "200_8"
+
+programs = read.csv(paste("../../local/pg_validation_", program_set_codename, ".csv", sep=""))
 
 traces = read.csv(paste("../../local/trace_pg_validation_", program_set_codename, ".csv", sep=""))
 head(traces)
@@ -117,13 +122,9 @@ total_measurements_geth = read.csv(paste("../../local/geth_pg_validation_", prog
 head(total_measurements_geth)
 total_measurements_evmone = read.csv(paste("../../local/evmone_pg_validation_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
 head(total_measurements_evmone)
-# TODO: at this point, for openethereum we are getting much better (acceptable) results for the sample size 16, nsamples 400, see Discussion section below
-# total_measurements_openethereum = read.csv(paste("../../local/openethereum_pg_validation_", program_set_codename, "_", "16_400", ".csv", sep=""))
-# head(total_measurements_openethereum)
 
 total_measurements_geth$env = 'geth'
 total_measurements_evmone$env = 'evmone'
-# total_measurements_openethereum$env = 'openethereum'
 measurements = rbind(total_measurements_geth, total_measurements_evmone)
 head(measurements)
 ```
@@ -148,14 +149,12 @@ if (removed_outliers) {
   par(mfrow=c(2,2))
   boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'geth'), ], las=2, outline=TRUE, log='y')
   boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'evmone'), ], las=2, outline=TRUE, log='y')
-  # boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'openethereum'), ], las=2, outline=TRUE, log='y')
 
   measurements = remove_outliers(measurements, 'measure_total_time_ns')
   
   # after
   boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'geth'), ], las=2, outline=TRUE, log='y')
   boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'evmone'), ], las=2, outline=TRUE, log='y')
-  # boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'openethereum'), ], las=2, outline=TRUE, log='y')
 }
 ```
 
@@ -187,11 +186,14 @@ estimated_traces$cost_ns = estimated_traces$estimate_marginal_ns +
 
 ```{r}
 estimated_programs = sqldf("SELECT
-                              program_id,
+                              estimated_traces.program_id,
                               sum(cost_ns) as cost_ns,
-                              env
+                              env,
+                              dominant
                            FROM estimated_traces
-                           GROUP BY program_id, env")
+                           INNER JOIN programs ON
+                                 programs.program_id == estimated_traces.program_id
+                           GROUP BY estimated_traces.program_id, env, dominant")
 
 aggregate_measurements = sqldf("SELECT
                                   program_id,
@@ -209,7 +211,8 @@ validation = sqldf("SELECT
                       avg_measure_total_time_ns,
                       min_measure_total_time_ns,
                       cost_ns,
-                      estimated_programs.env
+                      estimated_programs.env,
+                      dominant
                     FROM estimated_programs
                     INNER JOIN aggregate_measurements ON 
                           aggregate_measurements.program_id == estimated_programs.program_id
@@ -223,12 +226,12 @@ We need an additional simple (plottable) "fingerprint" of the OPCODEs included i
 
 ```{r}
 fingerprint <- function(x) {
-  excluded = x$op %in% c('PUSH4', 'PUSH1', 'MSTORE8', 'STOP', 'POP')
+  excluded = x$op %in% c('PUSH4', 'PUSH1', 'MSTORE8', 'STOP', 'POP', 'JUMP', 'JUMPDEST')
   opcodes = unique(x[which(!excluded),'op'])
   paste(opcodes, collapse=' ')
 }
 fingerprint_no_push <- function(x) {
-  excluded = x$op %in% c('PUSH1', 'PUSH2', 'PUSH3', 'PUSH4', 'PUSH5', 'PUSH6', 'PUSH7', 'PUSH8', 'PUSH9', 'PUSH10', 'PUSH11', 'PUSH12', 'PUSH13', 'PUSH14', 'PUSH15', 'PUSH16', 'PUSH17', 'PUSH18', 'PUSH19', 'PUSH20', 'PUSH21', 'PUSH22', 'PUSH23', 'PUSH24', 'PUSH25', 'PUSH26', 'PUSH27', 'PUSH28', 'PUSH29', 'PUSH30', 'PUSH31', 'PUSH32', 'MSTORE8', 'STOP', 'POP')
+  excluded = x$op %in% c('PUSH1', 'PUSH2', 'PUSH3', 'PUSH4', 'PUSH5', 'PUSH6', 'PUSH7', 'PUSH8', 'PUSH9', 'PUSH10', 'PUSH11', 'PUSH12', 'PUSH13', 'PUSH14', 'PUSH15', 'PUSH16', 'PUSH17', 'PUSH18', 'PUSH19', 'PUSH20', 'PUSH21', 'PUSH22', 'PUSH23', 'PUSH24', 'PUSH25', 'PUSH26', 'PUSH27', 'PUSH28', 'PUSH29', 'PUSH30', 'PUSH31', 'PUSH32', 'MSTORE8', 'STOP', 'POP', 'JUMP', 'JUMPDEST')
   opcodes = unique(x[which(!excluded),'op'])
   paste(opcodes, collapse=' ')
 }
@@ -258,7 +261,6 @@ overview_plots <- function(df, selection_col, selection_val) {
 }
 overview_plots(measurements, 'env', 'geth')
 overview_plots(measurements, 'env', 'evmone')
-# overview_plots(measurements, 'env', 'openethereum')
 ```
 
 ### Check estimation using trivial variables
@@ -282,27 +284,29 @@ validation_short = validation[which(validation$program_length <= 100), ]
 
 ```{r fig.width=15}
 par(mfrow=c(1,2))
-trivial_variable_plots <- function(df, selection_col, selection_val) {
+trivial_variable_plots <- function(df, selection_col, selection_val, labels, colors) {
+  if (missing(labels)) {
+    labels = 'program_id'
+  }
+  if (missing(colors)) {
+    colors = 'has_exp'
+  }
   subset = df[which(df[, selection_col] == selection_val), ]
-  plot_validation(subset, explained_variable, 'program_length')
+  plot_validation(subset, explained_variable, 'program_length', labels=labels, colors=colors)
   title(main=paste(selection_val, 'program_length'))
 }
-trivial_variable_plots(validation, 'env', 'geth')
-trivial_variable_plots(validation, 'env', 'evmone')
-# trivial_variable_plots(validation, 'env', 'openethereum')
+trivial_variable_plots(validation, 'env', 'geth', labels='dominant')
+trivial_variable_plots(validation, 'env', 'evmone', labels='dominant')
 ```
 Trivial variable plots are interesting, after we have introduced varying program length. `openethereum` in particular has a good correlation there, which is caused by the large, constant cost of running an instruction (~250ns, regardless of OPCODE).
 
 ```{r}
 program_length_model_geth = lm_validation(validation, explained_variable, 'program_length', selection_col='env', selection_val='geth')
 program_length_model_evmone = lm_validation(validation, explained_variable, 'program_length', selection_col='env', selection_val='evmone')
-# program_length_model_openethereum = lm_validation(validation, explained_variable, 'program_length', selection_col='env', selection_val='openethereum')
 print('geth all - only progam length')
 summary(program_length_model_geth)
 print('evmone all - only progam length')
 summary(program_length_model_evmone)
-# print('openethereum all - only progam length')
-# summary(program_length_model_openethereum)
 ```
 
 Nevertheless, neither of the "trivial" models is comparable with the final validation model including the estimated `cost_ns`. see below.
@@ -312,61 +316,62 @@ Nevertheless, neither of the "trivial" models is comparable with the final valid
 We explore the models in two classes of program lengths. We keep the model for the long programs.
 
 ```{r}
-compare_plots <- function(df, selection_col, selection_val, estimate_var, labels, colors) {
+compare_plots <- function(df, selection_col, selection_val, estimate_var, labels, colors, log) {
   if (missing(labels)) {
     labels = 'program_id'
   }
   if (missing(colors)) {
     colors = 'has_exp'
   }
+  if (missing(log)) {
+    log = ''
+  }
   subset = df[which(df[, selection_col] == selection_val), ]
   # TODO: set_asp=TRUE works better when models are sane
-  plot_validation(subset, explained_variable, estimate_var, labels=labels, colors=colors) #, set_asp=TRUE)
+  plot_validation(subset, explained_variable, estimate_var, labels=labels, colors=colors, log=log) #, set_asp=TRUE)
   title(main=paste(selection_val, ' estimate'))
 }
 
 model_geth = lm_validation(validation_short, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
 model_evmone = lm_validation(validation_short, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
-# model_openethereum = lm_validation(validation_short, explained_variable, 'cost_ns', selection_col='env', selection_val='openethereum')
 print('geth short')
 summary(model_geth)
 print('evmone short')
 summary(model_evmone)
-# print('openethereum short')
-# summary(model_openethereum)
 
 model_geth = lm_validation(validation_long, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
 model_evmone = lm_validation(validation_long, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
-# model_openethereum = lm_validation(validation_long, explained_variable, 'cost_ns', selection_col='env', selection_val='openethereum')
 print('geth long')
 summary(model_geth)
 print('evmone long')
 summary(model_evmone)
-# print('openethereum long')
-# summary(model_openethereum)
 
 model_geth = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
 model_evmone = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
-# model_openethereum = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='openethereum')
 print('geth all')
 summary(model_geth)
 print('evmone all')
 summary(model_evmone)
-# print('openethereum all')
-# summary(model_openethereum)
 ```
 
 ```{r fig.width=15}
-# par(mfrow=c(3,2))
-# compare_plots(validation_short, 'env', 'geth', 'cost_ns')
-# compare_plots(validation_short, 'env', 'evmone', 'cost_ns')
-# # compare_plots(validation_short, 'env', 'openethereum', 'cost_ns')
-# compare_plots(validation_long, 'env', 'geth', 'cost_ns')
-# compare_plots(validation_long, 'env', 'evmone', 'cost_ns')
-# compare_plots(validation_long, 'env', 'openethereum', 'cost_ns')
-compare_plots(validation, 'env', 'geth', 'cost_ns', labels='program_length')
-compare_plots(validation, 'env', 'evmone', 'cost_ns', labels='program_length')
-# compare_plots(validation, 'env', 'openethereum', 'cost_ns')
+par(mfrow=c(3,2))
+compare_plots(validation_short, 'env', 'geth', 'cost_ns')
+compare_plots(validation_short, 'env', 'evmone', 'cost_ns')
+compare_plots(validation_long, 'env', 'geth', 'cost_ns')
+compare_plots(validation_long, 'env', 'evmone', 'cost_ns')
+compare_plots(validation, 'env', 'geth', 'cost_ns')
+compare_plots(validation, 'env', 'evmone', 'cost_ns')
+```
+
+A side-by-side comparison of the gas cost model with the `program_length` model.
+
+```{r fig.width=15}
+par(mfrow=c(2,2))
+trivial_variable_plots(validation, 'env', 'geth')
+trivial_variable_plots(validation, 'env', 'evmone')
+compare_plots(validation, 'env', 'geth', 'cost_ns', labels='dominant')
+compare_plots(validation, 'env', 'evmone', 'cost_ns', labels='dominant')
 ```
 
 ## Model diagnostics
@@ -375,7 +380,6 @@ compare_plots(validation, 'env', 'evmone', 'cost_ns', labels='program_length')
 par(mfrow=c(2,4))
 plot(model_geth)
 plot(model_evmone)
-# plot(model_openethereum)
 ```
 
 ### Discussion of results so far
