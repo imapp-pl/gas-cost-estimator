@@ -144,19 +144,19 @@ def _opcodes_dict_push_dup_swap(source, removeds, addeds, parameters):
 
 # Returns a single MSTORE8 accompanied with pushes, causing pre-allocation of all the memory at program's disposal
 # 6000 - PUSH1 the zero (the byte to store)
-# 630001ffff - PUSH4 128KB-worth-of-bytes minus one byte
+# 617fff - PUSH2 32KB-worth-of-bytes minus one byte
 # 53 - MSTORE8
 def initial_mstore_bytecode():
-  return "6000630001ffff53"
+  return "6000617fff53"
 
 # Returns a single CALL accompaniend with pushes, causing the RETURNDATA to be filled with some of our memory
 # 60006000 - PUSH1 the return data length and offset - we're not using this mechanism to return, just the RETURNDATAx OPCODEs
-# 630001ffff6000 - PUSH the input data length and offset - we're pushing all our preallocated memory
+# 6180006000 - PUSH the input data length and offset - we're pushing all our preallocated memory
 # 6004 - PUSH1 the 0x4 for identity precompiled contract
 # 61ffff - PUSH2 some gas, just in case
 # F150 - CALL and POP the return status, which should be 0x1
 def initial_call_bytecode():
-  return "60006000630001ffff60006000600461ffffF150"
+  return "6000600061800060006000600461ffffF150"
 
 def arity(operation):
   # We're not analyzing JUMPs for destination arg cost, so pretend it's not there. We're pushing it in the main
