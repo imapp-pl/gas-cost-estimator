@@ -113,10 +113,7 @@ class Measurements(object):
             header += elem
         print(header)
     elif mode == benchmark_mode:
-        if sampleSize > 1:
-          sampleSize = 1
-          print("Sample size for benchmark reset to 1")
-        header = "program_id,sample_id,measure_total_time_ns,measure_total_sd"
+        header = "method,sample_id,sample_size,measure_total_time_ns"
         print(header)
 
 
@@ -156,6 +153,17 @@ class Measurements(object):
 
     return instrumenter_result
 
+  def run_geth_benchmark(program, sampleSize):
+    geth_benchmark = ['go run ./instrumentation_measurement/geth_benchmark/tests/imapp_benchmark/imapp_bench.go']
+    args = ['--sampleSize={}'.format(sampleSize)]
+    bytecode_arg = ['--bytecode', program.bytecode]
+    invocation = geth_benchmark + args + bytecode_arg
+    result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
+    assert result.returncode == 0
+    # strip the final newline
+    instrumenter_result = result.stdout.split('\n')[:-1]
+
+    return instrumenter_result
   def run_openethereum(self, mode, program, sampleSize):
     openethereum_build_path = './instrumentation_measurement/openethereum/target/release/'
     openethereum_main = [openethereum_build_path + 'openethereum-evm']
