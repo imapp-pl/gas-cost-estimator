@@ -65,7 +65,7 @@ class Measurements(object):
     reader = csv.DictReader(sys.stdin, delimiter=',', quotechar='"')
     self._programs = [self._program_from_csv_row(row) for row in reader]
 
-  def measure(self, sampleSize, mode="all", evm="geth", nSamples=1):
+  def measure(self, sampleSize=1, mode="all", evm="geth", nSamples=1):
     """
     Main entrypoint of the CLI tool.
 
@@ -113,7 +113,7 @@ class Measurements(object):
             header += elem
         print(header)
     elif mode == benchmark_mode:
-        header = "method,sample_id,sample_size,measure_total_time_ns"
+        header = "run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,mem_allocs_count,mem_allocs_bytes"
         print(header)
 
 
@@ -122,7 +122,7 @@ class Measurements(object):
         instrumenter_result = None
         if evm == geth:
           if mode == benchmark_mode:
-            instrumenter_result = self.run_geth_benchmark(program)
+            instrumenter_result = self.run_geth_benchmark(program, sampleSize)
           else:
             instrumenter_result = self.run_geth(mode, program, sampleSize)
         elif evm == openethereum:
@@ -153,17 +153,21 @@ class Measurements(object):
 
     return instrumenter_result
 
-  def run_geth_benchmark(program, sampleSize):
-    geth_benchmark = ['go run ./instrumentation_measurement/geth_benchmark/tests/imapp_benchmark/imapp_bench.go']
-    args = ['--sampleSize={}'.format(sampleSize)]
+  def run_geth_benchmark(self, program, sampleSize):
+    geth_benchmark = ['./instrumentation_measurement/geth_benchmark/tests/imapp_benchmark/imapp_benchmark']
+
+    # alternative just-in-time compilation (could run 50% slower)
+    # geth_benchmark = ['go', 'run', './instrumentation_measurement/geth_benchmark/tests/imapp_benchmark/imapp_bench.go']
+
+    args = ['--sampleSize', '{}'.format(sampleSize)]
     bytecode_arg = ['--bytecode', program.bytecode]
     invocation = geth_benchmark + args + bytecode_arg
     result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
     assert result.returncode == 0
     # strip the final newline
     instrumenter_result = result.stdout.split('\n')[:-1]
-
     return instrumenter_result
+
   def run_openethereum(self, mode, program, sampleSize):
     openethereum_build_path = './instrumentation_measurement/openethereum/target/release/'
     openethereum_main = [openethereum_build_path + 'openethereum-evm']

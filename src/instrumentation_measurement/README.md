@@ -28,3 +28,12 @@ sudo docker run --rm --privileged --security-opt seccomp:unconfined \
 ```
 
 For other EVMs use respective `Dockerfile`s and use the `--evm` flag on the `measure` command, e.g. `measure --evm openethereum`
+
+
+### Preparing Go Etherum Benchmark
+Compile benchmark program
+```
+cd geth_benchmark\tests\imapp_benchmark
+go build
+```
+
