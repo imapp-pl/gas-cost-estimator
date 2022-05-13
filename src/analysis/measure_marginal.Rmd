@@ -162,7 +162,7 @@ evmone_bimodals = all_opcodes[which(grepl("PUSH", all_opcodes) & all_opcodes != 
 estimates = estimates[which(estimates$env != 'evmone'), ]
 results = load_data_set("evmone", "50_4")
 for (opcode in all_opcodes) {
-  estimate = compute_all(results, opcode, "evmone", TRUE, bimodal_opcodes=evmone_bimodals)
+  estimate = compute_all(results, opcode, "evmone", TRUE, bimodal_opcodes=evmone_bimodals, plots='all')
   estimates[nrow(estimates) + 1, ] = c(opcode, estimate, 'evmone')
 }
 ```
@@ -171,7 +171,7 @@ for (opcode in all_opcodes) {
 estimates = estimates[which(estimates$env != 'geth'), ]
 results = load_data_set("geth", "50_4")
 for (opcode in all_opcodes) {
-  estimate = compute_all(results, opcode, "geth", TRUE)
+  estimate = compute_all(results, opcode, "geth", TRUE, plots='all')
   estimates[nrow(estimates) + 1, ] = c(opcode, estimate, 'geth')
 }
 ```
