@@ -445,9 +445,45 @@ Another note is that increasing sample size and/or number of samples for the val
 
 Lastly, increasing the sample size on the estimation set (`marginal/arguments`), improves the validation model further, and also makes the estimates much more reasonable.
 
+### Final results
+
+```{r}
+all_envs = c("geth", "evmone")
+# changing from COINBASE originally, b/c it is very expensive in evmone
+pivot_opcode = "EXP"
+
+pivot_statistics = sqldf(paste0("SELECT estimate_marginal_ns, env FROM estimated_cost WHERE opcode='", pivot_opcode, "'"))
+pivot_gas_cost = current_gas_cost$constant_current_gas[which(current_gas_cost$opcode==pivot_opcode)]
+  
+row.names(pivot_statistics) = pivot_statistics$env
+
+for (env in all_envs) {
+  estimated_cost$estimate_marginal_ns_rel[which(estimated_cost$env==env)] = estimated_cost$estimate_marginal_ns[which(estimated_cost$env == env)] /
+                                                                            pivot_statistics[env, 'estimate_marginal_ns']
+  estimated_cost$arg0_ns_rel[which(estimated_cost$env==env)] = estimated_cost$arg0_ns[which(estimated_cost$env == env)] /
+                                                                            pivot_statistics[env, 'estimate_marginal_ns']
+  estimated_cost$arg1_ns_rel[which(estimated_cost$env==env)] = estimated_cost$arg1_ns[which(estimated_cost$env == env)] /
+                                                                            pivot_statistics[env, 'estimate_marginal_ns']
+  estimated_cost$arg2_ns_rel[which(estimated_cost$env==env)] = estimated_cost$arg2_ns[which(estimated_cost$env == env)] /
+                                                                            pivot_statistics[env, 'estimate_marginal_ns']
+  estimated_cost$estimate_marginal_gas[which(estimated_cost$env==env)] = estimated_cost$estimate_marginal_ns_rel[which(estimated_cost$env == env)] * pivot_gas_cost
+  estimated_cost$arg0_gas[which(estimated_cost$env==env)] = estimated_cost$arg0_ns_rel[which(estimated_cost$env == env)] * pivot_gas_cost
+  estimated_cost$arg1_gas[which(estimated_cost$env==env)] = estimated_cost$arg1_ns_rel[which(estimated_cost$env == env)] * pivot_gas_cost
+  estimated_cost$arg2_gas[which(estimated_cost$env==env)] = estimated_cost$arg2_ns_rel[which(estimated_cost$env == env)] * pivot_gas_cost
+}
+
+gas_schedule_comparison = sqldf("SELECT current_gas_cost.opcode, constant_current_gas, geth.estimate_marginal_gas as geth_gas, evmone.estimate_marginal_gas as evmone_gas
+                                 FROM current_gas_cost 
+                                 INNER JOIN estimated_cost as geth
+                                   ON geth.opcode = current_gas_cost.opcode AND geth.env = 'geth'
+                                 INNER JOIN estimated_cost as evmone
+                                   ON evmone.opcode = current_gas_cost.opcode AND evmone.env = 'evmone'")
+```
+
 
 ```{r}
 # just export the final compiled estimations to a file
 setwd("~/sources/imapp/gas-cost-estimator/src")
 write.csv(estimated_cost, paste0("../../local/final_estimated_cost", suffix, ".csv"), quote=FALSE, row.names=FALSE)
+write.csv(gas_schedule_comparison, paste0("../../local/gas_schedule_comparison.csv", suffix, ".csv"), quote=FALSE, row.names=FALSE)
 ```

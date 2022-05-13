@@ -143,7 +143,7 @@ colnames(estimates) <- c('op', 'estimate_marginal_ns', 'estimate_marginal_ns_std
 ```{r}
 estimates = estimates[which(estimates$env != 'geth'), ]
 for (opcode in all_opcodes) {
-  estimate = compute_all(measurements, opcode, "geth", use_median=TRUE)
+  estimate = compute_all(measurements, opcode, "geth", use_median=TRUE, plots='all')
   estimates[nrow(estimates) + 1, ] = c(opcode, estimate$slope, estimate$stderr, 'geth')
 }
 ```
@@ -152,7 +152,7 @@ for (opcode in all_opcodes) {
 evmone_bimodals = all_opcodes[which(grepl("PUSH", all_opcodes) & all_opcodes != "PUSH1" | all_opcodes == "JUMP")]
 estimates = estimates[which(estimates$env != 'evmone'), ]
 for (opcode in all_opcodes) {
-  estimate = compute_all(measurements, opcode, "evmone", bimodal_opcodes=evmone_bimodals, use_median=TRUE)
+  estimate = compute_all(measurements, opcode, "evmone", bimodal_opcodes=evmone_bimodals, use_median=TRUE, plots='all')
   estimates[nrow(estimates) + 1, ] = c(opcode, estimate$slope, estimate$stderr, 'evmone')
 }
 ```
