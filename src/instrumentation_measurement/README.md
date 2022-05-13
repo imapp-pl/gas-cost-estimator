@@ -37,3 +37,18 @@ cd geth_benchmark\tests\imapp_benchmark
 go build
 ```
 
+### Preparing Nethermind
+Requirements:
+- .Net Core 6.0
+
+Make sure that all submodules are fetched:
+```
+cd nethermind_benchmark
+git submodule update --recursive --remote --init
+```
+
+Compile benchmark program:
+```
+cd nethermind_benchmark\src
+dotnet build -c Release .\Benchmarks.sln
+```
