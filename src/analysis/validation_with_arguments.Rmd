@@ -487,3 +487,10 @@ There's an interesting phenomenon on the `openethereum` validation, if you use `
 Another note is that increasing sample size and/or number of samples for the validation set, improves the validation model. It might be that we're brute-forcing over the problem of the unstability of `openethereum`'s performance (see above).
 
 Lastly, increasing the sample size on the estimation set (`marginal/arguments`), improves the validation model further, and also makes the estimates much more reasonable.
+
+
+```{r}
+# just export the final compiled estimations to a file
+setwd("~/sources/imapp/gas-cost-estimator/src")
+write.csv(estimated_cost, "../../local/final_estimated_cost.csv", quote=FALSE, row.names=FALSE)
+```
