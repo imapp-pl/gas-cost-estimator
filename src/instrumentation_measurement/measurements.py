@@ -114,16 +114,13 @@ class Measurements(object):
       for sample_id in range(nSamples):
         instrumenter_result = None
         if evm == geth:
-          if mode == measure_perf:
-            instrumenter_result = self.run_perf_geth(mode, program, sampleSize)
-          else:
-            instrumenter_result = self.run_geth(mode, program, sampleSize)
+          instrumenter_result = self.run_geth(mode, program, sampleSize)
         elif evm == openethereum:
           instrumenter_result = self.run_openethereum(mode, program, sampleSize)
         elif evm == openethereum_ewasm:
           instrumenter_result = self.run_openethereum_wasm(program, sampleSize)
         elif evm == evmone:
-            instrumenter_result = self.run_evmone(mode, program, sampleSize)
+          instrumenter_result = self.run_evmone(mode, program, sampleSize)
 
         if mode == trace_opcodes:
             instrumenter_result = self.sanitize_tracer_result(instrumenter_result)
@@ -135,6 +132,34 @@ class Measurements(object):
         print(csv_chunk)
 
   def run_geth(self, mode, program, sampleSize):
+    if mode == 'perf':
+      return self.run_perf_geth(program)
+    elif mode == 'time':
+      return self.run_time_geth(program, sampleSize)
+    else:
+      return self.run_geth_default(mode, program, sampleSize)
+
+  def run_perf_geth(self, mode, program, sampleSize):
+    bin = './instrumentation_measurement/geth/main_minimal'
+    perf_geth_main = ['perf', 'stat', '-ddd', '-x', ',', bin]
+    args = ['--sampleSize={}'.format(sampleSize)]
+    bytecode_arg = ['--bytecode', program.bytecode]
+    invocation = perf_geth_main + args + bytecode_arg
+    result = subprocess.run(invocation, capture_output=True, universal_newlines=True)
+    assert result.returncode == 0
+    # print('error', result.stderr)
+    instrumenter_result = ''
+    perf_stats = csv.reader(StringIO(result.stderr), delimiter=',')
+    for row in perf_stats:
+      event_name = row[2]
+      if (event_name in ['task-clock', 'context-switches', 'page-faults', 'instructions', 'branches', 'branch-misses', 'L1-dcache-loads', 'LLC-loads', 'LLC-load-misses', 'L1-icache-loads', 'L1-icache-load-misses', 'dTLB-loads', 'dTLB-load-misses', 'iTLB-loads', 'iTLB-load-misses']):
+        instrumenter_result += row[0] + ','
+    # strip the final comma
+    instrumenter_result = instrumenter_result[:-1]
+
+    return [instrumenter_result]
+
+  def run_geth_default(self, mode, program, sampleSize):
     golang_main = ['./instrumentation_measurement/bin/geth_main']
     args = ['--mode', mode, '--printCSV', '--printEach=false', '--sampleSize={}'.format(sampleSize)]
     bytecode_arg = ['--bytecode', program.bytecode]
@@ -175,9 +200,9 @@ class Measurements(object):
     if mode == 'perf':
       return self.run_perf_evmone(program)
     elif mode == 'time':
-      return self.run_time_evmone(mode, program, sampleSize)
+      return self.run_time_evmone(program)
     else:
-      return self.run_time_default(mode, program, sampleSize)
+      return self.run_evmone_default(mode, program, sampleSize)
 
   def run_perf_evmone(self, program):
     evmone_build_path = './instrumentation_measurement/build/'
@@ -246,25 +271,6 @@ class Measurements(object):
     instrumenter_result = result.stdout.split('\n')[2:-5]
 
     return instrumenter_result
-
-  def run_perf_geth(self, mode, program, sampleSize):
-    perf_geth_main = ['perf', 'stat', '-ddd', '-x', ',', './instrumentation_measurement/geth/main_minimal']
-    args = ['--sampleSize={}'.format(sampleSize)]
-    bytecode_arg = ['--bytecode', program.bytecode]
-    invocation = perf_geth_main + args + bytecode_arg
-    result = subprocess.run(invocation, capture_output=True, universal_newlines=True)
-    assert result.returncode == 0
-    # print('error', result.stderr)
-    instrumenter_result = ''
-    perf_stats = csv.reader(StringIO(result.stderr), delimiter=',')
-    for row in perf_stats:
-      event_name = row[2]
-      if (event_name in ['task-clock', 'context-switches', 'page-faults', 'instructions', 'branches', 'branch-misses', 'L1-dcache-loads', 'LLC-loads', 'LLC-load-misses', 'L1-icache-loads', 'L1-icache-load-misses', 'dTLB-loads', 'dTLB-load-misses', 'iTLB-loads', 'iTLB-load-misses']):
-        instrumenter_result += row[0] + ','
-    # strip the final comma
-    instrumenter_result = instrumenter_result[:-1]
-
-    return [instrumenter_result]
 
   def csv_row_append_info(self, instrumenter_result, program, sample_id):
     # append program_id and sample_id which are not known to the instrumenter tool
