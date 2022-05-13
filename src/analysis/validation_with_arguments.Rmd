@@ -113,7 +113,7 @@ setwd("~/sources/imapp/gas-cost-estimator/src")
 # program_set_codename = "arythmetic_c100_ops30_clean_smallpush"
 # measurement_codename = "50_1"
 
-program_set_codename = "full5_c100_randOps1000_clean_prejump_randominant"
+program_set_codename = "full5_c100_randOps1500_clean_prejump_randominant"
 measurement_codename = "200_8"
 
 programs = read.csv(paste("../../local/pg_validation_", program_set_codename, ".csv", sep=""))
