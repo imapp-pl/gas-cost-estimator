@@ -123,11 +123,6 @@ class Measurements(object):
         elif evm == openethereum_ewasm:
           instrumenter_result = self.run_openethereum_wasm(program, sampleSize)
         elif evm == evmone:
-          if mode == measure_perf:
-            instrumenter_result = self.run_perf_evmone(mode, program, sampleSize)
-          elif mode == measure_time:
-            instrumenter_result = self.run_time_evmone(mode, program, sampleSize)
-          else:
             instrumenter_result = self.run_evmone(mode, program, sampleSize)
 
         if mode == trace_opcodes:
@@ -176,14 +171,27 @@ class Measurements(object):
     instrumenter_result = result.stdout.split('\n')[38:-4]
     return instrumenter_result
 
-  def run_perf_evmone(self, mode, program, sampleSize):
-    perf_evmone_main = ['perf', 'stat', '-ddd', '-x', ',', './instrumentation_measurement/build/bin/evmc', 'run']
-    args = ['--vm', './instrumentation_measurement/build/lib/libevmone.so']
+  def run_evmone(self, mode, program, sampleSize):
+    if mode == 'perf':
+      return self.run_perf_evmone(program)
+    elif mode == 'time':
+      return self.run_time_evmone(mode, program, sampleSize)
+    else:
+      return self.run_time_default(mode, program, sampleSize)
+
+  def run_perf_evmone(self, program):
+    evmone_build_path = './instrumentation_measurement/build/'
+    bin = evmone_build_path + 'bin/evmc'
+    vm = evmone_build_path + 'lib/libevmone.so'
+    perf_evmone_main = ['perf', 'stat', '-ddd', '-x', ',', bin, 'run']
+    #    perf_evmone_main = ['perf', 'stat', '--event', 'task-clock:D,instructions:D', '-x', ',', bin, 'run']
+    args = ['--vm', vm]
     bytecode = program.bytecode
     invocation = perf_evmone_main + args + [bytecode]
+
     result = subprocess.run(invocation, capture_output=True, universal_newlines=True)
-    assert result.returncode == 0
     # print('error', result.stderr)
+    assert result.returncode == 0
     instrumenter_result = ''
     perf_stats = csv.reader(StringIO(result.stderr), delimiter=',')
     for row in perf_stats:
@@ -195,33 +203,39 @@ class Measurements(object):
 
     return [instrumenter_result]
 
-  def run_time_evmone(self, mode, program, sampleSize):
-    perf_evmone_main = ['time', '-p', 'perf', 'stat', '-ddd', '-x', ',', './instrumentation_measurement/build/bin/evmc', 'run']
-    pure_evmone_main = ['time', '-p', 'perf', 'stat', '-ddd', '-x', ',', './instrumentation_measurement/build/bin/evmc', 'run']
-    args = ['--vm', './instrumentation_measurement/build/lib/libevmone.so']
+  def run_time_evmone(self, program):
+    evmone_build_path = './instrumentation_measurement/build/'
+    bin = evmone_build_path + 'bin/evmc'
+    vm = evmone_build_path + 'lib/libevmone.so'
+    perf_evmone_main = ['time', '-p', 'perf', 'stat', '-ddd', '-x', ',', bin, 'run']
+    pure_evmone_main = ['time', '-p', bin, 'run']
+    args = ['--vm', vm]
     bytecode = program.bytecode
     perf_invocation = perf_evmone_main + args + [bytecode]
     pure_invocation = pure_evmone_main + args + [bytecode]
-    instrumenter_result = ''
 
+    instrumenter_result = ''
     result = subprocess.run(perf_invocation, capture_output=True, universal_newlines=True)
-    assert result.returncode == 0
     # print('error', result.stderr)
-    perf_stats = StringIO(result.stderr).getvalue().splitlines()
-    len_perf_stats = len(perf_stats)
+    assert result.returncode == 0
+    perf_stats = result.stderr.split('\n')
+    len_perf_stats = len(perf_stats) - 1
     instrumenter_result += perf_stats[len_perf_stats-3].split(' ')[1] + ',' + perf_stats[len_perf_stats-2].split(' ')[1] + ',' + perf_stats[len_perf_stats-1].split(' ')[1]
 
     instrumenter_result += ','
     result = subprocess.run(pure_invocation, capture_output=True, universal_newlines=True)
-    assert result.returncode == 0
     # print('error', result.stderr)
-    pure_stats = StringIO(result.stderr).getvalue().splitlines()
-    len_pure_stats = len(pure_stats)
+    assert result.returncode == 0
+    pure_stats = result.stderr.split('\n')
+    len_pure_stats = len(pure_stats) - 1
     instrumenter_result += pure_stats[len_pure_stats-3].split(' ')[1] + ',' + pure_stats[len_pure_stats-2].split(' ')[1] + ',' + pure_stats[len_pure_stats-1].split(' ')[1]
 
     return [instrumenter_result]
 
-  def run_evmone(self, mode, program, sampleSize):
+  def run_evmone_default(self, mode, program, sampleSize):
+    evmone_build_path = './instrumentation_measurement/evmone/build/'
+    bin = evmone_build_path + 'bin/evmc'
+    vm = evmone_build_path + 'lib/libevmone.so'
     evmone_build_path = './instrumentation_measurement/evmone/build/'
     evmone_main = [evmone_build_path + 'evmc/bin/evmc', 'run']
     args = ['--measure-{}'.format(mode),'--vm', evmone_build_path + '/lib/libevmone.so', '--repeat', '{}'.format(sampleSize)]
