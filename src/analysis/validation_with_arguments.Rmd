@@ -56,6 +56,8 @@ lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
 setwd("~/sources/imapp/gas-cost-estimator/src")
 
 estimated_cost = read.csv("../../local/argument_estimated_cost.csv")
+# those are only the constant gas costs, we'll calculate arg portion of the cost later
+current_gas_cost = read.csv("program_generator/data/current_gas_cost.csv")
 # from measure_marginal.Rmd, not currently used except experimentation with mixing (see below)
 marginal = read.csv("../../local/marginal_estimated_cost.csv")
 
@@ -169,10 +171,13 @@ estimated_traces = sqldf("SELECT
                             program_id, sample_id, instruction_id, op,
                             arg_0 as arg0, arg_1 as arg1, arg_2 as arg2,
                             env,
-                            arg0_ns, arg1_ns, arg2_ns, estimate_marginal_ns
+                            arg0_ns, arg1_ns, arg2_ns, estimate_marginal_ns,
+                            constant_current_gas
                           FROM traces
                           INNER JOIN estimated_cost ON
-                            traces.op == estimated_cost.opcode")
+                            traces.op == estimated_cost.opcode
+                          INNER JOIN current_gas_cost ON
+                            traces.op == current_gas_cost.opcode")
 
 # TODO: very crude, how can this be made more robust?
 
@@ -200,9 +205,18 @@ estimated_traces$cost_ns = estimated_traces$estimate_marginal_ns +
 ```
 
 ```{r}
+arg1_current_gas = (estimated_traces$arg1 != 0) * 50 * (log(estimated_traces$arg1, 256) + 1) * (estimated_traces$op == 'EXP')
+arg2_current_gas = 3 * ceiling(estimated_traces$arg2 / 32) * (estimated_traces$op %in% arg2_linear_opcodes)
+estimated_traces$current_gas = estimated_traces$constant_current_gas +
+                               arg1_current_gas +
+                               arg2_current_gas
+```
+
+```{r}
 estimated_programs = sqldf("SELECT
                               estimated_traces.program_id,
                               sum(cost_ns) as cost_ns,
+                              sum(current_gas) as current_gas,
                               env,
                               dominant
                            FROM estimated_traces
@@ -226,6 +240,7 @@ validation = sqldf("SELECT
                       avg_measure_total_time_ns,
                       min_measure_total_time_ns,
                       cost_ns,
+                      current_gas,
                       estimated_programs.env,
                       dominant
                     FROM estimated_programs
@@ -331,6 +346,15 @@ lm_validation(validation_no_exp, explained_variable, 'program_length', selection
 
 Nevertheless, neither of the "trivial" models is comparable with the final validation model including the estimated `cost_ns`. see below.
 
+### Current gas cost models
+
+```{r}
+print('geth all - current gas')
+lm_validation(validation, explained_variable, 'current_gas', selection_col='env', selection_val='geth')
+print('evmone all - current gas')
+lm_validation(validation, explained_variable, 'current_gas', selection_col='env', selection_val='evmone')
+```
+
 ### Final validation model
 
 We explore the models in two classes of program lengths. We keep the model for the long programs.
@@ -405,6 +429,26 @@ compare_plots(validation, 'env', 'geth', 'cost_ns', labels='dominant')
 compare_plots(validation, 'env', 'evmone', 'cost_ns', labels='dominant')
 ```
 
+A side-by-side comparison of the gas cost model with the `current_gas` model.
+
+```{r fig.width=25}
+par(mfrow=c(2,2))
+compare_plots(validation_no_exp, 'env', 'geth', 'current_gas', labels='dominant')
+compare_plots(validation_no_exp, 'env', 'evmone', 'current_gas', labels='dominant')
+compare_plots(validation_no_exp, 'env', 'geth', 'cost_ns', labels='dominant')
+compare_plots(validation_no_exp, 'env', 'evmone', 'cost_ns', labels='dominant')
+par(mfrow=c(2,2))
+compare_plots(validation, 'env', 'geth', 'current_gas', labels='dominant', log='xy')
+compare_plots(validation, 'env', 'evmone', 'current_gas', labels='dominant', log='xy')
+compare_plots(validation, 'env', 'geth', 'cost_ns', labels='dominant', log='xy')
+compare_plots(validation, 'env', 'evmone', 'cost_ns', labels='dominant', log='xy')
+par(mfrow=c(2,2))
+compare_plots(validation, 'env', 'geth', 'current_gas', labels='dominant')
+compare_plots(validation, 'env', 'evmone', 'current_gas', labels='dominant')
+compare_plots(validation, 'env', 'geth', 'cost_ns', labels='dominant')
+compare_plots(validation, 'env', 'evmone', 'cost_ns', labels='dominant')
+```
+
 ## Model diagnostics
 
 ```{r fig.width=15}
@@ -416,6 +460,10 @@ plot(model_evmone)
 ### Discussion of results so far
 
 Results for `geth` and `evmone` look promising, the correlation is clearly there, the slope coefficient is close to 1 (so there's a good correspondence between a nanosecond of measurement and the nanosecond of validation).
+
+The model diagnosticts aren't ideal, especially for `geth`, where strong non-linearity is present because of the overestimated EXP programs.
+
+The best trait of the model is that it offers a massive improvement over the trivial model.
 
 #### Intercept problem
 
