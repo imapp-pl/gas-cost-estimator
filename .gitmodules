@@ -1,3 +1,6 @@
 [submodule "src/instrumentation_measurement/evmone"]
 	path = src/instrumentation_measurement/evmone
 	url = ../evmone.git
+[submodule "src/instrumentation_measurement/go-ethereum"]
+	path = src/instrumentation_measurement/go-ethereum
+	url = git@github.com:imapp-pl/go-ethereum.git
