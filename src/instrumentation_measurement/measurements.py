@@ -41,10 +41,9 @@ class Measurements(object):
     if bytecode[-11:] == 'unreachable':
       bytecode = bytecode[:-11]
       bytecode += '00'  # STOP
-      # TODO: The -2 - this is only to not hit the hard `MAX_ARG_STRLEN` limit of `131072` bytes,
-      #       c.f. https://tousu.in/qa/?qa=833087/
-      #       Is there a way to get rid of, other than limiting the length of memory args?
-      bytecode += '03' * (((1<<17) - len(bytecode) - 2) // 2)
+      # watch out to not hit the hard `MAX_ARG_STRLEN` limit of `131072` chars,
+      # c.f. https://tousu.in/qa/?qa=833087/
+      bytecode += '03' * ((1<<15) - len(bytecode) // 2)
       return bytecode
     else:
       return bytecode

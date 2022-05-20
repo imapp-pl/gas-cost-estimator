@@ -6,7 +6,7 @@ import sys
 import random
 
 import constants
-from common import prepare_opcodes, get_selection, initial_mstore_bytecode, arity, jump_opcode_combo
+from common import prepare_opcodes, get_selection, initial_mstore_bytecode, arity, jump_opcode_combo, byte_size_push
 
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -211,15 +211,14 @@ class ProgramGenerator(object):
       elif op in ProgramGenerator.memory_ops:
         # `cleanStack` is assumed here, otherwise memory OPCODEs might malfunction on arbitrarily large arguments
         assert cleanStack
-        # PUSH2 produces an argument btw 0 and 64KB, exactly what we need
-        # TODO: parametrize this across the codebase
-        bytecode += ''.join([self._random_push(2, randomizePush) for _ in range(needed_pushes)])
+        # argument btw 0 and 16KB
+        bytecode += ''.join([byte_size_push(2, random.randint(0, (1<<14) - 1)) for _ in range(needed_pushes)])
       elif op in ProgramGenerator.mstore_ops:
         # `cleanStack` is assumed here, otherwise memory OPCODEs might malfunction on arbitrarily large arguments
         assert cleanStack
         # first arg is the stored value, then offset
         bytecode += self._random_push(pushMax, randomizePush)
-        bytecode += self._random_push(2, randomizePush)
+        bytecode += byte_size_push(2, random.randint(0, (1<<14) - 1))
       else:
         # JUMP AND JUMPI are happy to fall in here, as they have their arity (needed pushes) reduced
         # we'll push their destinations later
@@ -250,6 +249,7 @@ class ProgramGenerator(object):
 
     return Program(bytecode, self._operations[dominant]['Mnemonic'] if dominant else None)
 
+  # TODO deprecate in favor of functions from common.py
   def _random_push(self, pushMax, randomizePush):
     if randomizePush:
       push = random.randint(1, pushMax)

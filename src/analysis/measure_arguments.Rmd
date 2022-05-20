@@ -60,10 +60,6 @@ measurements = sqldf("SELECT opcode, op_count, arg0, arg1, arg2, sample_id, run_
                      ")
 measurements$opcode = factor(measurements$opcode, levels=unique(programs$opcode))
 
-# TODO: a stop gap solution to not overflow the code buffer. We must reduce the amount of memory allocated,
-#       because CODECOPY will not handle 128kb due to the Argument list too long error in the OS
-measurements = measurements[which(measurements$opcode != 'CODECOPY' | (measurements$arg1 + measurements$arg2 < 65535)), ]
-
 head(measurements)
 ```
 
