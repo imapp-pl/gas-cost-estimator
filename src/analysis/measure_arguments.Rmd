@@ -89,13 +89,6 @@ Notes:
 3. The `argX` are just auxiliary variables added to exclude the effect of cheaper/more expensive PUSHes. We only want to extract the effect of the argument on the measured OPCODE repeated `op_count` times.
 
 ```{r}
-
-first_pass = data.frame(matrix(ncol = 14, nrow = 0))
-colnames(first_pass) <- c('opcode', 'env', 'has_significant', 'has_impacting', 'estimate_marginal_ns',
-                          'arg0_ns', 'arg1_ns', 'arg2_ns',
-                          'arg0_ns_raw', 'arg1_ns_raw', 'arg2_ns_raw',
-                          'arg0_ns_p', 'arg1_ns_p', 'arg2_ns_p')
-
 # Every `arg` coefficient represents the impact of the argument's byte size growing by 1.
 # We treat as impactful the arguments where p-value is effectively zero. The previous approach was:
 # Treat as impactful the arguments, where:
@@ -175,6 +168,14 @@ analyze_for_env <- function(df, results_df, env) {
   }
   return(results_df)
 }
+```
+
+```{r}
+first_pass = data.frame(matrix(ncol = 14, nrow = 0))
+colnames(first_pass) <- c('opcode', 'env', 'has_significant', 'has_impacting', 'estimate_marginal_ns',
+                          'arg0_ns', 'arg1_ns', 'arg2_ns',
+                          'arg0_ns_raw', 'arg1_ns_raw', 'arg2_ns_raw',
+                          'arg0_ns_p', 'arg1_ns_p', 'arg2_ns_p')
 
 first_pass = analyze_for_env(measurements, first_pass, 'geth')
 first_pass = analyze_for_env(measurements, first_pass, 'evmone')
@@ -182,9 +183,7 @@ first_pass = analyze_for_env(measurements, first_pass, 'evmone')
 proceed_with_opcodes = unique(first_pass[which(first_pass$has_impacting == 'TRUE'), 'opcode'])
 
 models_with_args = first_pass[which(first_pass$has_impacting == 'TRUE'), c('opcode', 'env')]
-```
 
-```{r}
 first_pass[which(first_pass$has_impacting == 'TRUE'), ]
 ```
 
@@ -205,15 +204,6 @@ validation_plot <- function(df, opcode, env, argcol) {
   par(mfrow=c(1,1))
   boxplot(as.formula(paste('measure_total_time_ns ~ ', argcol, sep='')), data=df[which(df$opcode==opcode & df$env==env & df$op_count==max(df$op_count)), ])
 }
-```
-
-### Model with all variables ever
-
-Not immediately useful - commented out because it has too many params
-
-```{r}
-# mega_model = lm(measure_total_time_ns ~ arg0 + arg1 + env + op_count:env:opcode + arg0:op_count:env:opcode + arg1:op_count:env:opcode, data=measurements[which(measurements$opcode %in% binary_opcodes), ])
-# summary(mega_model)
 ```
 
 ### Detailed analysis for selected OPCODEs
@@ -266,9 +256,6 @@ get_aggregate_formula_for <- function(df, opcode, env) {
   args_formula = paste0(argnames, collapse=' * ')
   as.formula(paste0('measure_total_time_ns ~ op_count * env * opcode * ', args_formula))
 }
-```
-
-```{r fig.width=15}
 
 plot_model <- function(df, opcode, env, use_mean) {
   if (missing(use_mean)) {
@@ -304,7 +291,7 @@ plot_model <- function(df, opcode, env, use_mean) {
 }
 ```
 
-```{r fig.width=15}
+```{r fig.width=10}
 for (env in all_envs) {
   for (opcode in proceed_with_opcodes) {
     plot_model(measurements, opcode, env, use_mean=TRUE)
@@ -323,7 +310,8 @@ For those were no argument variable was impacting, we'll only estimate the margi
 add_non_arg_model_estimates <- function(model, results_df, env, opcode) {
   pure_op_count_coeff = summary(model)$coefficients["op_count", 1]
   args_ns = c(NA, NA, NA)
-  results_df[nrow(results_df) + 1, ] = c(opcode, env, FALSE, FALSE, pure_op_count_coeff, args_ns)
+  args_ns_stderr = c(NA, NA, NA)
+  results_df[nrow(results_df) + 1, ] = c(opcode, env, FALSE, FALSE, pure_op_count_coeff, args_ns, args_ns_stderr)
   return(results_df)
 }
 add_arg_model_estimates <- function(model, opcode, env, results_df, df) {
@@ -332,20 +320,22 @@ add_arg_model_estimates <- function(model, opcode, env, results_df, df) {
   pure_op_count_coeff = all_coefficients["op_count", 1]
   # will be filled if any is impacting
   args_ns = c(NA, NA, NA)
+  args_ns_stderr = c(NA, NA, NA)
   
   impact_args = get_impact_args_for(df, opcode, env)
   arg_op_count_names = paste0('op_count:arg', impact_args)
 
   args_ns[impact_args + 1] = all_coefficients[arg_op_count_names, 'Estimate']
-  results_df[nrow(results_df) + 1, ] = c(opcode, env, TRUE, TRUE, pure_op_count_coeff, args_ns)
+  args_ns_stderr[impact_args + 1] = all_coefficients[arg_op_count_names, 'Std. Error']
+  results_df[nrow(results_df) + 1, ] = c(opcode, env, TRUE, TRUE, pure_op_count_coeff, args_ns, args_ns_stderr)
   return(results_df)
 }
 ```
 
 ```{r}
-estimates = data.frame(matrix(ncol = 8, nrow = 0))
+estimates = data.frame(matrix(ncol = 11, nrow = 0))
 colnames(estimates) <- c('opcode', 'env', 'has_significant', 'has_impacting', 'estimate_marginal_ns',
-                         'arg0_ns', 'arg1_ns', 'arg2_ns')
+                         'arg0_ns', 'arg1_ns', 'arg2_ns', 'arg0_ns_stderr', 'arg1_ns_stderr', 'arg2_ns_stderr')
 
 for (env in all_envs) {
   for (opcode in all_opcodes) {
@@ -360,6 +350,8 @@ for (env in all_envs) {
     }
   }
 }
+
+estimates
 ```
 
 ```{r}
