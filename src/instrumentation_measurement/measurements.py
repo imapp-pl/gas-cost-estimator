@@ -89,9 +89,9 @@ class Measurements(object):
     trace_opcodes = "trace"
     benchmark_mode = "benchmark"
 
-    # if not self._check_clocksource():
-    #   print("clocksource should be tsc, found something different. See docker_timer.md somewhere in the docs")
-    #   return
+    if not self._check_clocksource():
+      print("clocksource should be tsc, found something different. See docker_timer.md somewhere in the docs")
+      return
 
     if evm not in {geth, openethereum, evmone, openethereum_ewasm, nethermind}:
       print("Wrong evm parameter. Allowed are: {}, {}, {}, {}".format(geth, openethereum, evmone, openethereum_ewasm, nethermind))
