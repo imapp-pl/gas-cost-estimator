@@ -24,8 +24,8 @@ Invocation similar to: `make measure EVM=geth VOLUME_DIR=/home/user/sources/imap
 
 ```{r fig.width=20}
 setwd("~/sources/imapp/gas-cost-estimator/src")
-# suffix = ""
-suffix = "_lenovo"
+suffix = ""
+# suffix = "_lenovo"
 measurement_codename = paste0("50_1", suffix)
 
 result_geth = load_data_set("geth", program_set_codename, measurement_codename)
