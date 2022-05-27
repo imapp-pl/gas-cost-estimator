@@ -71,18 +71,18 @@ func main() {
 	retWarmUp, _, errWarmUp := runtime.Execute(bytecode, calldata, cfg)
 	// End warm-up
 
-	sampleStart := time.Now()
+	sampleStart := runtimeNano()
 	for i := 0; i < sampleSize; i++ {
 		measureFn(cfg, bytecode, printEach, printCSV, i)
 	}
-	sampleDuration := time.Since(sampleStart)
+	sampleDuration := runtimeNano() - sampleStart
 
 	if errWarmUp != nil {
 		fmt.Fprintln(os.Stderr, errWarmUp)
 	}
 	fmt.Fprintln(os.Stderr, "Program: ", *bytecodePtr)
 	fmt.Fprintln(os.Stderr, "Return:", retWarmUp)
-	fmt.Fprintln(os.Stderr, "Sample duration:", sampleDuration)
+	fmt.Fprintln(os.Stderr, "Sample duration:", time.Duration(sampleDuration))
 
 }
 
