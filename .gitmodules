@@ -8,3 +8,7 @@
 	path = src/instrumentation_measurement/geth_benchmark
 	url = https://github.com/imapp-pl/go-ethereum
 	branch = imapp_benchmark
+[submodule "src/instrumentation_measurement/nethermind_benchmark"]
+	path = src/instrumentation_measurement/nethermind_benchmark
+	url = https://github.com/imapp-pl/nethermind.git
+	branch = imapp_benchmark
