@@ -37,6 +37,18 @@ Compile benchmark program
 cd geth_benchmark\tests\imapp_benchmark
 go build
 ```
+## Erigon
+Compile measurement program
+```
+cd erigon\tests\imapp_measure
+go build
+```
+## Erigon Benchmark
+Compile benchmark program
+```
+cd erigon_benchmark\tests\imapp_benchmark
+go build
+```
 
 ## Nethermind
 Requirements:
