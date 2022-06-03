@@ -517,13 +517,20 @@ for (pivot_opcode in all_opcodes) {
   distance = sqrt(sum((gas_schedule_comparison$geth_gas - gas_schedule_comparison$evmone_gas)^2))
   pivot_results[nrow(pivot_results) + 1, ] = data.frame(pivot_opcode, distance)
 }
+```
 
-# changing from COINBASE originally, b/c it is very expensive in evmone
+```{r fig.width=30, fig.height=5}
 pivot_opcode = "ADDRESS"
 gas_schedule_comparison = get_gas_schedule_comparison(pivot_opcode, estimated_cost)$gas_schedule_comparison
 estimated_cost = get_gas_schedule_comparison(pivot_opcode, estimated_cost)$estimated_cost
-```
 
+maximum_gas_cost = max(gas_schedule_comparison[,!names(gas_schedule_comparison) %in% c('opcode')])
+plot(gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(0,maximum_gas_cost * 1.1))
+axis(1, at=1:nrow(gas_schedule_comparison), labels=gas_schedule_comparison$opcode, las=2)
+points(gas_schedule_comparison$geth_gas, col=geth_color, xaxt='n')
+points(gas_schedule_comparison$evmone_gas, col=evmone_color, xaxt='n')
+
+```
 
 ```{r}
 # just export the final compiled estimations to a file
