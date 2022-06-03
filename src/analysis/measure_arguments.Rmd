@@ -182,7 +182,20 @@ first_pass = analyze_for_env(measurements, first_pass, 'evmone')
 
 proceed_with_opcodes = unique(first_pass[which(first_pass$has_impacting == 'TRUE'), 'opcode'])
 
-models_with_args = first_pass[which(first_pass$has_impacting == 'TRUE'), c('opcode', 'env')]
+models_with_args_automatic = first_pass[which(first_pass$has_impacting == 'TRUE'), c('opcode', 'env')]
+
+# We inspect the automatic choice of models, but then coerce the choice to a fixed list.
+# We drop the division OPCODEs (`DIV` etc.), because their arguments only seem to have an indirect impact
+# via the fact that x / y is trivial if x < y. This makes the `DIV(x, y)` appear costlier for large x
+# and cheaper for large y.
+models_with_args = data.frame(opcode="EXP", env="geth")
+models_with_args = rbind(models_with_args, data.frame(opcode="EXP", env="evmone"))
+models_with_args = rbind(models_with_args, data.frame(opcode="CALLDATACOPY", env="geth"))
+models_with_args = rbind(models_with_args, data.frame(opcode="CALLDATACOPY", env="evmone"))
+models_with_args = rbind(models_with_args, data.frame(opcode="CODECOPY", env="geth"))
+models_with_args = rbind(models_with_args, data.frame(opcode="CODECOPY", env="evmone"))
+models_with_args = rbind(models_with_args, data.frame(opcode="RETURNDATACOPY", env="geth"))
+models_with_args = rbind(models_with_args, data.frame(opcode="RETURNDATACOPY", env="evmone"))
 
 first_pass[which(first_pass$has_impacting == 'TRUE'), ]
 ```
@@ -339,7 +352,7 @@ colnames(estimates) <- c('opcode', 'env', 'has_significant', 'has_impacting', 'e
 
 for (env in all_envs) {
   for (opcode in all_opcodes) {
-    is_modeled_with_args = !is.null(get_impact_args_for(first_pass, opcode, env))
+    is_modeled_with_args = nrow(merge(data.frame(opcode=opcode, env=env), models_with_args)) > 0
     model = arg_lm(measurements, opcode, env, get_model_formula_for(first_pass, opcode, env))
     print(c(opcode, env))
     print(summary(model))
