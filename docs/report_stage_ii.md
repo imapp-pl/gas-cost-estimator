@@ -414,6 +414,11 @@ Since this situation occurs less likely as `x` increases (or `y` decreases), the
 
 **TODO** plots
 
+This prompts us to model the division OPCODEs using a meta-variable `expensive = 1 if x > y 0 otherwise`.
+This variable's coefficient estimate is clearly significant.
+
+**TODO** model summary
+
 ### Validation results
 
 The estimates obtained by our procedure tend to estimate the computational cost of validation well and much better than both the trivial model and the current gas cost schedule model.

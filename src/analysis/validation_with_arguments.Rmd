@@ -214,9 +214,9 @@ arg2_linear_opcodes = c('CALLDATACOPY', 'RETURNDATACOPY', 'CODECOPY')
 arg0_estimated_cost_log = estimated_traces$arg0_ns * log(estimated_traces$arg0 + 1, 256) * !(estimated_traces$op %in% arg0_linear_opcodes)
 arg1_estimated_cost_log = estimated_traces$arg1_ns * log(estimated_traces$arg1 + 1, 256) * !(estimated_traces$op %in% arg1_linear_opcodes)
 arg2_estimated_cost_log = estimated_traces$arg2_ns * log(estimated_traces$arg2 + 1, 256) * !(estimated_traces$op %in% arg2_linear_opcodes)
-arg0_estimated_cost_lin = estimated_traces$arg0_ns * estimated_traces$arg0 * (estimated_traces$op %in% arg0_linear_opcodes)
-arg1_estimated_cost_lin = estimated_traces$arg1_ns * estimated_traces$arg1 * (estimated_traces$op %in% arg1_linear_opcodes)
-arg2_estimated_cost_lin = estimated_traces$arg2_ns * estimated_traces$arg2 * (estimated_traces$op %in% arg2_linear_opcodes)
+arg0_estimated_cost_lin = estimated_traces$arg0_ns * estimated_traces$arg0 / 32 * (estimated_traces$op %in% arg0_linear_opcodes)
+arg1_estimated_cost_lin = estimated_traces$arg1_ns * estimated_traces$arg1 / 32 * (estimated_traces$op %in% arg1_linear_opcodes)
+arg2_estimated_cost_lin = estimated_traces$arg2_ns * estimated_traces$arg2 / 32 * (estimated_traces$op %in% arg2_linear_opcodes)
 arg0_estimated_cost = arg0_estimated_cost_log + arg0_estimated_cost_lin
 arg1_estimated_cost = arg1_estimated_cost_log + arg1_estimated_cost_lin
 arg2_estimated_cost = arg2_estimated_cost_log + arg2_estimated_cost_lin
@@ -486,18 +486,22 @@ get_gas_schedule_comparison <- function(pivot_opcode, df) {
     df$arg0_ns_rel[which(df$env==env)] = df$arg0_ns[which(df$env == env)] / pivot_statistics[env, 'estimate_marginal_ns']
     df$arg1_ns_rel[which(df$env==env)] = df$arg1_ns[which(df$env == env)] / pivot_statistics[env, 'estimate_marginal_ns']
     df$arg2_ns_rel[which(df$env==env)] = df$arg2_ns[which(df$env == env)] / pivot_statistics[env, 'estimate_marginal_ns']
+    df$expensive_ns_rel[which(df$env==env)] = df$expensive_ns[which(df$env == env)] / pivot_statistics[env, 'estimate_marginal_ns']
     df$estimate_marginal_gas[which(df$env==env)] = df$estimate_marginal_ns_rel[which(df$env == env)] * pivot_gas_cost
     df$arg0_gas[which(df$env==env)] = df$arg0_ns_rel[which(df$env == env)] * pivot_gas_cost
     df$arg1_gas[which(df$env==env)] = df$arg1_ns_rel[which(df$env == env)] * pivot_gas_cost
     df$arg2_gas[which(df$env==env)] = df$arg2_ns_rel[which(df$env == env)] * pivot_gas_cost
+    df$expensive_gas[which(df$env==env)] = df$expensive_ns_rel[which(df$env == env)] * pivot_gas_cost
     df$estimate_marginal_ns_rel_stderr[which(df$env==env)] = df$estimate_marginal_ns_stderr[which(df$env == env)] / pivot_statistics[env, 'estimate_marginal_ns']
     df$arg0_ns_rel_stderr[which(df$env==env)] = df$arg0_ns_stderr[which(df$env == env)] / pivot_statistics[env, 'estimate_marginal_ns']
     df$arg1_ns_rel_stderr[which(df$env==env)] = df$arg1_ns_stderr[which(df$env == env)] / pivot_statistics[env, 'estimate_marginal_ns']
     df$arg2_ns_rel_stderr[which(df$env==env)] = df$arg2_ns_stderr[which(df$env == env)] / pivot_statistics[env, 'estimate_marginal_ns']
+    df$expensive_ns_rel_stderr[which(df$env==env)] = df$expensive_ns_stderr[which(df$env == env)] / pivot_statistics[env, 'estimate_marginal_ns']
     df$estimate_marginal_gas_stderr[which(df$env==env)] = df$estimate_marginal_ns_rel_stderr[which(df$env == env)] * pivot_gas_cost
     df$arg0_gas_stderr[which(df$env==env)] = df$arg0_ns_rel_stderr[which(df$env == env)] * pivot_gas_cost
     df$arg1_gas_stderr[which(df$env==env)] = df$arg1_ns_rel_stderr[which(df$env == env)] * pivot_gas_cost
     df$arg2_gas_stderr[which(df$env==env)] = df$arg2_ns_rel_stderr[which(df$env == env)] * pivot_gas_cost
+    df$expensive_gas_stderr[which(df$env==env)] = df$expensive_ns_rel_stderr[which(df$env == env)] * pivot_gas_cost
   }
   
   gas_schedule_comparison = sqldf("SELECT current_gas_cost.opcode, constant_current_gas, geth.estimate_marginal_gas as geth_gas, evmone.estimate_marginal_gas as evmone_gas
@@ -506,6 +510,7 @@ get_gas_schedule_comparison <- function(pivot_opcode, df) {
                                      ON geth.opcode = current_gas_cost.opcode AND geth.env = 'geth'
                                    INNER JOIN df as evmone
                                      ON evmone.opcode = current_gas_cost.opcode AND evmone.env = 'evmone'")
+  
   return(list("gas_schedule_comparison" = gas_schedule_comparison, "estimated_cost" = df))
 }
 
@@ -519,12 +524,37 @@ for (pivot_opcode in all_opcodes) {
 }
 ```
 
-```{r fig.width=30, fig.height=5}
+```{r fig.width=30, fig.height=10}
 pivot_opcode = "ADDRESS"
 gas_schedule_comparison = get_gas_schedule_comparison(pivot_opcode, estimated_cost)$gas_schedule_comparison
 estimated_cost = get_gas_schedule_comparison(pivot_opcode, estimated_cost)$estimated_cost
 
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
+  data.frame("EXP_arg1_cost", 50, estimated_cost$arg1_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='EXP')],  estimated_cost$arg1_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='EXP')])
+
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
+  data.frame("CALLDATACOPY_arg2_cost", 3, estimated_cost$arg2_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='CALLDATACOPY')],  estimated_cost$arg2_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='CALLDATACOPY')])
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
+  data.frame("RETURNDATACOPY_arg2_cost", 3, estimated_cost$arg2_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='RETURNDATACOPY')],  estimated_cost$arg2_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='RETURNDATACOPY')])
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
+  data.frame("CODECOPY_arg2_cost", 3, estimated_cost$arg2_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='CODECOPY')],  estimated_cost$arg2_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='CODECOPY')])
+
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
+  data.frame("DIV_expensive_cost", 0, estimated_cost$expensive_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='DIV')],  estimated_cost$expensive_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='DIV')])
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
+  data.frame("SDIV_expensive_cost", 0, estimated_cost$expensive_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='SDIV')],  estimated_cost$expensive_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='SDIV')])
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
+  data.frame("MOD_expensive_cost", 0, estimated_cost$expensive_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='MOD')],  estimated_cost$expensive_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='MOD')])
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
+  data.frame("SMOD_expensive_cost", 0, estimated_cost$expensive_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='SMOD')],  estimated_cost$expensive_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='SMOD')])
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
+  data.frame("ADDMOD_expensive_cost", 0, estimated_cost$expensive_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='ADDMOD')],  estimated_cost$expensive_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='ADDMOD')])
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
+  data.frame("MULMOD_expensive_cost", 0, estimated_cost$expensive_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='MULMOD')],  estimated_cost$expensive_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='MULMOD')])
+
 maximum_gas_cost = max(gas_schedule_comparison[,!names(gas_schedule_comparison) %in% c('opcode')])
+
+par(mar=c(15,4,4,2))
 plot(gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(0,maximum_gas_cost * 1.1))
 axis(1, at=1:nrow(gas_schedule_comparison), labels=gas_schedule_comparison$opcode, las=2)
 points(gas_schedule_comparison$geth_gas, col=geth_color, xaxt='n')
