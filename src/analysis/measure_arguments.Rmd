@@ -189,9 +189,9 @@ add_arg_expensive_results <- function(model, opcode, env, results_df, arity) {
   }
   expensive_raw = all_coefficients['op_count:expensiveTRUE', 1]
   expensive_p = all_coefficients['op_count:expensiveTRUE', 4]
-  results_df[which(results_df$opcode == opcode & results_df$env == env), 'expensive'] = expensive
-  results_df[which(results_df$opcode == opcode & results_df$env == env), 'expensive_raw'] = expensive_raw
-  results_df[which(results_df$opcode == opcode & results_df$env == env), 'expensive_p'] = expensive_p
+  results_df[which(results_df$opcode == opcode & results_df$env == env), 'expensive_ns'] = expensive
+  results_df[which(results_df$opcode == opcode & results_df$env == env), 'expensive_ns_raw'] = expensive_raw
+  results_df[which(results_df$opcode == opcode & results_df$env == env), 'expensive_ns_p'] = expensive_p
   return(results_df)
 }
 
@@ -233,9 +233,9 @@ analyze_for_env <- function(df, results_df, env) {
 ```{r}
 first_pass = data.frame(matrix(ncol = 17, nrow = 0))
 colnames(first_pass) <- c('opcode', 'env', 'has_significant', 'has_impacting', 'estimate_marginal_ns',
-                          'arg0_ns', 'arg1_ns', 'arg2_ns', 'expensive',
-                          'arg0_ns_raw', 'arg1_ns_raw', 'arg2_ns_raw', 'expensive_raw',
-                          'arg0_ns_p', 'arg1_ns_p', 'arg2_ns_p',  'expensive_p')
+                          'arg0_ns', 'arg1_ns', 'arg2_ns', 'expensive_ns',
+                          'arg0_ns_raw', 'arg1_ns_raw', 'arg2_ns_raw', 'expensive_ns_raw',
+                          'arg0_ns_p', 'arg1_ns_p', 'arg2_ns_p',  'expensive_ns_p')
 
 first_pass = analyze_for_env(measurements, first_pass, 'geth')
 first_pass = analyze_for_env(measurements, first_pass, 'evmone')
@@ -243,7 +243,7 @@ first_pass = analyze_for_env(measurements, first_pass, 'evmone')
 proceed_with_opcodes = unique(first_pass[which(first_pass$has_impacting == 'TRUE'), 'opcode'])
 
 models_with_args_automatic = first_pass[which(first_pass$has_impacting == 'TRUE'), c('opcode', 'env')]
-models_with_expensive_automatic = first_pass[which(!is.na(first_pass$expensive)), c('opcode', 'env')]
+models_with_expensive_automatic = first_pass[which(!is.na(first_pass$expensive_ns)), c('opcode', 'env')]
 
 # We inspect the automatic choice of models, but then coerce the choice to a fixed list.
 # We drop the division OPCODEs (`DIV` etc.), because their arguments only seem to have an indirect impact
@@ -336,6 +336,13 @@ get_model_formula_for <- function(df, opcode, env) {
   }
 }
 
+get_expensive_model_formula_for <- function(df, opcode, env) {
+  args = get_args_for(df, opcode, env)
+  argnames = paste0('arg', args)
+  args_formula = paste0(argnames, collapse=' + ')
+  as.formula(paste0('measure_total_time_ns ~ op_count +  ', args_formula, ' + expensive:op_count'))
+}
+
 get_aggregate_formula_for <- function(df, opcode, env) {
   args = get_args_for(df, opcode, env)
   argnames = paste0('arg', args)
@@ -397,7 +404,7 @@ add_non_arg_model_estimates <- function(model, results_df, env, opcode) {
   pure_op_count_coeff = summary(model)$coefficients["op_count", 1]
   args_ns = c(NA, NA, NA)
   args_ns_stderr = c(NA, NA, NA)
-  results_df[nrow(results_df) + 1, ] = c(opcode, env, FALSE, FALSE, pure_op_count_coeff, args_ns, args_ns_stderr)
+  results_df[nrow(results_df) + 1, ] = c(opcode, env, FALSE, FALSE, pure_op_count_coeff, args_ns, NA, args_ns_stderr, NA)
   return(results_df)
 }
 add_arg_model_estimates <- function(model, opcode, env, results_df, df) {
@@ -413,27 +420,42 @@ add_arg_model_estimates <- function(model, opcode, env, results_df, df) {
 
   args_ns[impact_args + 1] = all_coefficients[arg_op_count_names, 'Estimate']
   args_ns_stderr[impact_args + 1] = all_coefficients[arg_op_count_names, 'Std. Error']
-  results_df[nrow(results_df) + 1, ] = c(opcode, env, TRUE, TRUE, pure_op_count_coeff, args_ns, args_ns_stderr)
+  results_df[nrow(results_df) + 1, ] = c(opcode, env, TRUE, TRUE, pure_op_count_coeff, args_ns, NA, args_ns_stderr, NA)
+  return(results_df)
+}
+add_expensive_model_estimates <- function(model, opcode, env, results_df, df) {
+  all_coefficients = summary(model)$coefficients
+  pure_op_count_coeff = all_coefficients["op_count", 1]
+  args_ns = c(NA, NA, NA)
+  args_ns_stderr = c(NA, NA, NA)
+  expensive =  all_coefficients['op_count:expensiveTRUE', 'Estimate']
+  expensive_stderr = all_coefficients['op_count:expensiveTRUE', 'Std. Error']
+  results_df[nrow(results_df) + 1, ] = c(opcode, env, TRUE, TRUE, pure_op_count_coeff, args_ns, expensive, args_ns_stderr, expensive_stderr)
   return(results_df)
 }
 ```
 
 ```{r}
-estimates = data.frame(matrix(ncol = 11, nrow = 0))
+estimates = data.frame(matrix(ncol = 13, nrow = 0))
 colnames(estimates) <- c('opcode', 'env', 'has_significant', 'has_impacting', 'estimate_marginal_ns',
-                         'arg0_ns', 'arg1_ns', 'arg2_ns', 'arg0_ns_stderr', 'arg1_ns_stderr', 'arg2_ns_stderr')
+                         'arg0_ns', 'arg1_ns', 'arg2_ns', 'expensive_ns', 'arg0_ns_stderr', 'arg1_ns_stderr', 'arg2_ns_stderr', 'expensive_ns_stderr')
 
 for (env in all_envs) {
   for (opcode in all_opcodes) {
     is_modeled_with_args = nrow(merge(data.frame(opcode=opcode, env=env), models_with_args)) > 0
-    model = arg_lm(measurements, opcode, env, get_model_formula_for(first_pass, opcode, env))
-    print(c(opcode, env))
-    print(summary(model))
-    if (is_modeled_with_args) {
+    is_modeled_with_expensive = nrow(merge(data.frame(opcode=opcode, env=env), models_with_expensive)) > 0
+    if (is_modeled_with_expensive) {
+      model = arg_lm(measurements, opcode, env, get_expensive_model_formula_for(first_pass, opcode, env))
+      estimates = add_expensive_model_estimates(model, opcode, env, estimates, first_pass)
+    } else if (is_modeled_with_args) {
+      model = arg_lm(measurements, opcode, env, get_model_formula_for(first_pass, opcode, env))
       estimates = add_arg_model_estimates(model, opcode, env, estimates, first_pass)
     } else {
+      model = arg_lm(measurements, opcode, env, get_model_formula_for(first_pass, opcode, env))
       estimates = add_non_arg_model_estimates(model, estimates, env, opcode)
     }
+    print(c(opcode, env))
+    print(summary(model))
   }
 }
 
