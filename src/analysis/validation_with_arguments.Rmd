@@ -71,6 +71,7 @@ explained_variable = 'avg_measure_total_time_ns'
 suffix = ""
 # suffix = "_lenovo"
 all_envs = c('geth', 'evmone')
+div_opcodes = c('DIV', 'MOD', 'SDIV', 'SMOD')
 ```
 
 ```{r}
@@ -171,12 +172,14 @@ overview_plots(measurements, 'env', 'evmone')
 estimated_cost$arg0_ns[which(is.na(estimated_cost$arg0_ns))] = 0
 estimated_cost$arg1_ns[which(is.na(estimated_cost$arg1_ns))] = 0
 estimated_cost$arg2_ns[which(is.na(estimated_cost$arg2_ns))] = 0
+estimated_cost$expensive_ns[which(is.na(estimated_cost$expensive_ns))] = 0
 
 estimated_traces = sqldf("SELECT
                             program_id, sample_id, instruction_id, op,
                             arg_0 as arg0, arg_1 as arg1, arg_2 as arg2,
                             env,
                             arg0_ns, arg1_ns, arg2_ns, estimate_marginal_ns,
+                            expensive_ns,
                             constant_current_gas
                           FROM traces
                           INNER JOIN estimated_cost ON
@@ -185,10 +188,24 @@ estimated_traces = sqldf("SELECT
                             traces.op == current_gas_cost.opcode")
 
 # TODO: very crude, how can this be made more robust?
-
 estimated_traces$arg0[which(is.na(estimated_traces$arg0))] = 0
 estimated_traces$arg1[which(is.na(estimated_traces$arg1))] = 0
 estimated_traces$arg2[which(is.na(estimated_traces$arg2))] = 0
+
+estimated_traces$expensive = NA
+estimated_traces[which(estimated_traces$op %in% div_opcodes), ]$expensive =
+  estimated_traces[which(estimated_traces$op %in% div_opcodes), ]$arg0 >
+  estimated_traces[which(estimated_traces$op %in% div_opcodes), ]$arg1
+# remember that argX is the byte-size of the argument in these estimated_traces
+estimated_traces[which(estimated_traces$op == 'ADDMOD'), ]$expensive =
+  8**estimated_traces[which(estimated_traces$op == 'ADDMOD'), ]$arg0 +
+  8**estimated_traces[which(estimated_traces$op == 'ADDMOD'), ]$arg1 > 
+  8**estimated_traces[which(estimated_traces$op == 'ADDMOD'), ]$arg2
+estimated_traces[which(estimated_traces$op == 'MULMOD'), ]$expensive =
+  estimated_traces[which(estimated_traces$op == 'MULMOD'), ]$arg0 +
+  estimated_traces[which(estimated_traces$op == 'MULMOD'), ]$arg1 >
+  estimated_traces[which(estimated_traces$op == 'MULMOD'), ]$arg2
+estimated_traces$expensive[which(is.na(estimated_traces$expensive))] = 0
 
 arg0_linear_opcodes = c('CALLDATALOAD', 'CALLDATACOPY', 'RETURNDATACOPY', 'MLOAD', 'MSTORE', 'MSTORE8', 'CODECOPY')
 arg1_linear_opcodes = c('CALLDATACOPY', 'RETURNDATACOPY', 'CODECOPY')
@@ -203,10 +220,14 @@ arg2_estimated_cost_lin = estimated_traces$arg2_ns * estimated_traces$arg2 * (es
 arg0_estimated_cost = arg0_estimated_cost_log + arg0_estimated_cost_lin
 arg1_estimated_cost = arg1_estimated_cost_log + arg1_estimated_cost_lin
 arg2_estimated_cost = arg2_estimated_cost_log + arg2_estimated_cost_lin
+
+expensive_estimated_cost = estimated_traces$expensive_ns * estimated_traces$expensive
+
 estimated_traces$cost_ns = estimated_traces$estimate_marginal_ns + 
                            arg0_estimated_cost +
                            arg1_estimated_cost +
-                           arg2_estimated_cost
+                           arg2_estimated_cost +
+                           expensive_estimated_cost
 ```
 
 ```{r}
