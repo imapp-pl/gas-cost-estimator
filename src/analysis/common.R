@@ -1,0 +1,59 @@
+
+library(sqldf)
+library(nlme)
+library(mixtools)
+
+# prevent scientific notation
+options(scipen = 100)
+
+load_data_set <- function(env, program_set_codename, measurement_codename) {
+  setwd("~/sources/imapp/gas-cost-estimator/src")
+  data_set_codename = paste(program_set_codename, "_", measurement_codename, sep="")
+  filepath = paste("../../local/", env, "_", data_set_codename, ".csv", sep="")
+  result = read.csv(filepath)
+  result$env = env
+  return(result)
+}
+
+remove_outliers <- function(df, col, for_validation) {
+  if (missing(for_validation)) {
+    for_validation = FALSE
+  }
+  if (for_validation) {
+    boxplot_result = boxplot(df[, col] ~ df[, 'program_id'] + df[, 'env'], plot=FALSE)
+  } else {
+    boxplot_result = boxplot(df[, col] ~ df[, 'op_count'] + df[, 'env'] + df[, 'opcode'], plot=FALSE)
+  }
+  outliers = boxplot_result$out
+  names = boxplot_result$names[boxplot_result$group]
+  if (for_validation) {
+    all_row_identifiers = paste(df[, col], df[, 'program_id'], df[, 'env'], sep='.')
+  } else {
+    all_row_identifiers = paste(df[, col], df[, 'op_count'], df[, 'env'], df[, 'opcode'], sep='.')
+  }
+  outlier_row_identifiers = paste(outliers, names, sep='.')
+  no_outliers = df[-which(all_row_identifiers %in% outlier_row_identifiers), ]
+  return(no_outliers)
+}
+
+remove_compare_outliers <- function(df, col, all_envs, for_validation) {
+  if (missing(for_validation)) {
+    for_validation = FALSE
+  }
+  if (for_validation) {
+    category_col = 'program_id'
+  } else {
+    category_col = 'opcode'
+  }
+  par(mfrow=c(length(all_envs), 2))
+  # before
+  for (env in all_envs) {
+    boxplot(df[which(df$env == env), col] ~ df[which(df$env == env), category_col], las=2, outline=TRUE, log='y')
+  }
+  no_outliers = remove_outliers(df, col, for_validation)
+  # after
+  for (env in all_envs) {
+    boxplot(no_outliers[which(no_outliers$env == env), col] ~ no_outliers[which(no_outliers$env == env), category_col], las=2, outline=TRUE, log='y')
+  }
+  return(no_outliers)
+}

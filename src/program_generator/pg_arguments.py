@@ -109,9 +109,9 @@ class ProgramGenerator(object):
   def _generate_program_triplet(self, operation, op_count):
     opcode = operation['Mnemonic']
     if opcode in constants.MEMORY_OPCODES:
-      # memory-copying OPCODEs need arguments to indicate up to 64KB of memory
-      args = [random.randint(0, (1<<16) - 1) for _ in range(0, arity(operation))]
-      single_op_pushes = [byte_size_push(3, arg) for arg in args]
+      # memory-copying OPCODEs need arguments to indicate up to 16KB of memory
+      args = [random.randint(0, (1<<14) - 1) for _ in range(0, arity(operation))]
+      single_op_pushes = [byte_size_push(2, arg) for arg in args]
       # for these OPCODEs the important size variable is just the argument
       arg_sizes = args
     else:
