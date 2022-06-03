@@ -12,11 +12,3 @@
 	path = src/instrumentation_measurement/nethermind_benchmark
 	url = https://github.com/imapp-pl/nethermind.git
 	branch = imapp_benchmark
-[submodule "src/instrumentation_measurement/erigon_benchmark"]
-	path = src/instrumentation_measurement/erigon_benchmark
-	url = https://github.com/imapp-pl/erigon.git
-	branch = imapp_benchmark
-[submodule "src/instrumentation_measurement/erigon"]
-	path = src/instrumentation_measurement/erigon
-	url = https://github.com/imapp-pl/erigon
-	branch = wallclock_total

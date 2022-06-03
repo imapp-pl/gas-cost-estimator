@@ -83,7 +83,6 @@ class Measurements(object):
     openethereum_ewasm = "openethereum_ewasm"
     evmone = "evmone"
     nethermind = "nethermind"
-    erigon = "erigon"
 
     measure_total = "total"
     measure_all = "all"
@@ -94,7 +93,7 @@ class Measurements(object):
       print("clocksource should be tsc, found something different. See docker_timer.md somewhere in the docs")
       return
 
-    if evm not in {geth, openethereum, evmone, openethereum_ewasm, nethermind, erigon}:
+    if evm not in {geth, openethereum, evmone, openethereum_ewasm, nethermind}:
       print("Wrong evm parameter. Allowed are: {}, {}, {}, {}".format(geth, openethereum, evmone, openethereum_ewasm, nethermind))
       return
 
@@ -116,8 +115,6 @@ class Measurements(object):
     elif mode == benchmark_mode:
         if evm == geth:
             header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,mem_allocs_count,mem_allocs_bytes"
-        if evm == erigon:
-            header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,mem_allocs_count,mem_allocs_bytes"
         elif evm == nethermind:
             header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,std_dev_time_ns,mem_allocs_count,mem_allocs_bytes"
         print(header)
@@ -127,11 +124,6 @@ class Measurements(object):
       for sample_id in range(nSamples):
         instrumenter_result = None
         if evm == geth:
-          if mode == benchmark_mode:
-            instrumenter_result = self.run_geth_benchmark(program, sampleSize)
-          else:
-            instrumenter_result = self.run_geth(mode, program, sampleSize)
-        if evm == erigon:
           if mode == benchmark_mode:
             instrumenter_result = self.run_geth_benchmark(program, sampleSize)
           else:
@@ -171,33 +163,6 @@ class Measurements(object):
 
   def run_geth_benchmark(self, program, sampleSize):
     geth_benchmark = ['./instrumentation_measurement/geth_benchmark/tests/imapp_benchmark/imapp_benchmark']
-
-    # alternative just-in-time compilation (could run 50% slower)
-    # geth_benchmark = ['go', 'run', './instrumentation_measurement/geth_benchmark/tests/imapp_benchmark/imapp_bench.go']
-
-    args = ['--sampleSize', '{}'.format(sampleSize)]
-    bytecode_arg = ['--bytecode', program.bytecode]
-    invocation = geth_benchmark + args + bytecode_arg
-    result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
-    assert result.returncode == 0
-    # strip the final newline
-    instrumenter_result = result.stdout.split('\n')[:-1]
-    return instrumenter_result
-
-  def run_erigon(self, mode, program, sampleSize):
-    golang_main = ['./instrumentation_measurement/erigon/tests/imapp_measure/imapp_measure']
-    args = ['--mode', mode, '--printCSV', '--printEach=false', '--sampleSize={}'.format(sampleSize)]
-    bytecode_arg = ['--bytecode', program.bytecode]
-    invocation = golang_main + args + bytecode_arg
-    result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
-    assert result.returncode == 0
-    # strip the final newline
-    instrumenter_result = result.stdout.split('\n')[:-1]
-
-    return instrumenter_result
-
-  def run_erigon_benchmark(self, program, sampleSize):
-    geth_benchmark = ['./instrumentation_measurement/erigon_benchmark/tests/imapp_benchmark/imapp_benchmark']
 
     # alternative just-in-time compilation (could run 50% slower)
     # geth_benchmark = ['go', 'run', './instrumentation_measurement/geth_benchmark/tests/imapp_benchmark/imapp_bench.go']
