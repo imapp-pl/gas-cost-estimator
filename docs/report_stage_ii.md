@@ -145,7 +145,7 @@ The layout of the `measure_marginal` generated program is an evolution of this t
 | `POP` | `max_op_count - op_count` times |
 
 An `op_count + 1` program differs from an `op_count` program by only a single instance of the `OPCODE` instruction.
-At the same time, we have full control over the stack arguments prepared for each instance of the `OPCODE` instruction - in the simplest case we always push the the same value.
+At the same time, we have full control over the stack arguments prepared for each instance of the `OPCODE` instruction - in the simplest case we always push the same value.
 
 This layout is naturally extended to `OPCODE`s which remove from and push to the stack different numbers of values.
 
@@ -157,11 +157,11 @@ It turns out, that a simple linear regression is capable of capturing such trend
 
 #### Additional features of `measure_marginal` programs
 
-There is a couple of additional measures taken at the step of generation of `measure_marginal` programs:
+There is a couple of additional measures taken when generating `measure_marginal` programs:
 
 1. For each of the OPCODEs which perform memory operations we want to preallocate memory at the start of the program.
    This is motivated by how we want to capture just the marginal OPCODE cost, irrespective of the cost of memory allocation, which is priced separately.
-   The caveat here is to not do this for OPCODEs which do not require it, as the preallocation is a rather expensive operation, in terms of time of execution, and it adds a prohibitive amount of noise to computationally cheak OPCODEs. Luckily, we only require the preallocation for the rather expensive OPCODEs.
+   The caveat here is to not do this for OPCODEs which do not require it, as the preallocation is a rather expensive operation in terms of time of execution, and it adds a prohibitive amount of noise to computationally cheap OPCODEs. Luckily, we only require the preallocation for the rather expensive OPCODEs.
    These OPCODEs are: `CALLDATALOAD`, `CALLDATACOPY`, `RETURNDATACOPY`, `MLOAD`, `MSTORE`, `MSTORE8`, `CODECOPY`.
 2. `CALLDATACOPY` programs require us to keep a block of memory as the transaction call data.
    This is trivial to accomplish, given the ability to modify the EVM implementation (which we do anyway).
@@ -203,6 +203,7 @@ The assessment of the models and discussion about the results is given in the se
 
 The cost of some OPCODEs relies on the arguments taken off the stack.
 Within the scope of this research, this is the case for `EXP` and the memory OPCODEs which copy variable portions of memory `CALLDATACOPY`, `RETURNDATACOPY` and `CODECOPY`.
+During the course of our research, we have established this is somewhat the case for the division OPCODES: `DIV`, `MOD`, `SDIV`, `SMOD`, `ADDMOD`, `MULMOD`.
 We have however analyzed the entire set of OPCODEs in scope in order to both establish a healthy proportion of the argument cost to the OPCODE execution cost, and assess whether new arguments should be added to the list of costs.
 
 In order to be able to measure and estimate the impact of OPCODE arguments we propose
@@ -212,14 +213,15 @@ In order to be able to measure and estimate the impact of OPCODE arguments we pr
 - randomize the size of arguments put on the stack using `PUSH` for the OPCODEs to use. Each instance of the measured OPCODE instruction within a single program always executes with the same arguments, but they vary from generated program to generated program. We draw a random sample of such programs for every given OPCODE.
 
 The reason to do this is to manage the dimensionality problem, which would arise if we were to analyze the marginal increase for every `op_count`.
-It is also not necessary to do so, since we have reliably establish the cost of executing the OPCODE instruction using `measure_marginal`.
+It is also not necessary to do so, since we have reliably established the constant cost of executing the OPCODE instruction using `measure_marginal`.
 We are also not measuring the argument impact for a mesh of points of the argument space (e.g. spaced in equal distances), firstly to reduce the dimensionality for the OPCODEs taking two or three arguments, secondly to prevent any undesired behavior of the statistical models due to the regularity of the mesh (e.g. where OPCODE would consequently cost less for arguments being multiples of 64 and we chose these points as our mesh).
 
 We need to be wary of different potential functional forms of the relation between the argument value and cost.
 For simplicity we derive this form based on the inspection of the code executing the OPCODEs.
-We chose two functions:
+We chose these functions:
 - `argument_cost(arg) = arg` - for memory OPCODEs: `CALLDATALOAD`, `CALLDATACOPY`, `RETURNDATACOPY`, `MLOAD`, `MSTORE`, `MSTORE8`, `CODECOPY`
 - `argument_cost(arg) = log(arg)` - for OPCODEs where the cost is proportional to the bytesize of the argument (remainder of OPCODEs)
+- `argument_cost(arg) = numerator_arg > denominator_arg` - gauged towards the division OPCODES. This means that the arguments "cost" more if the OPCODE involves a `numerator / denominator` operation, and the `numerator` part is bigger.
 
 #### Estimation procedure for `measure_arguments`
 
@@ -237,10 +239,6 @@ The procedure to estimate the argument cost is as follows:
 It is worth noting, that we neglect to check the impact of the size of the second `pc_destination` argument of `JUMP` and `JUMPI` OPCODEs on purpose.
 It would be quite unfeasible to compose programs which actually execute as expected, fit into the framework of our measurement method and explore the dynamics of this argument.
 At the same time we find it unlikely for this argument to play a role in the cost of execution of this OPCODE.
-
-### Combining the final estimations
-
-**TODO**
 
 ### Measurement setup and environments
 
@@ -301,8 +299,8 @@ Each program has a randomly chosen _dominant OPCODE_, which appears in the progr
 This is done to ensure that the random programs will vary enough in between them in terms of which OPCODEs have been randomly chosen.
 If not for the dominant OPCODE, the programs cost would tend to average out for longer programs.
 
-Lastly, `PUSHx`, `DUPx`, `SWAPx` groups are chosen randomly with the same probability as regular OPCODEs, and if when they do, the precise variant is chosen randomly in the next step.
-This is to overcome the high frequency of these `PUSHx`, `DUPx`, `SWAPx` OPCODEs, should they have been treated separately and on par with others.
+Lastly, `PUSHx`, `DUPx`, `SWAPx` groups are given the same probability as regular OPCODEs, and when selected, the precise variant is chosen randomly in a next step.
+This is to overcome the high frequency of these `PUSHx`, `DUPx`, `SWAPx` OPCODEs, should they have been treated separately and on par with other OPCODEs.
 
 #### Estimation procedure for `measure_validation`
 
@@ -336,7 +334,7 @@ The cost related to the size of arguments is taken from the `measure_arguments` 
 
 The reason for this is that `measure_arguments` performs much worse in estimating the marginal _constant_ cost of the OPCODE.
 It includes interaction terms of the form `a * op_count * argument_cost(arg)`, so the `op_count` coefficient `d` (from `d * op_count` term) is the estimation of marginal increase of `measure_total_time` for each unit increase of `op_count`, but _assuming `argument_cost(arg) = 0`_.
-Since we don't want to rely on this assumption and include the error it brings in the estimation procedure, we simply ignore `d` in favor of the `measure_marginal` result.
+Since we don't want to rely on this assumption and include the error it brings into the estimation procedure, we simply ignore `d` in favor of the `measure_marginal` result.
 
 Another aspect of this is the discrimination between OPCODEs which do and do not have arguments impacting the cost.
 We're having the estimation script pick the OPCODE-environment pairs automatically by looking at the p-value of the `a` coefficient in the `measure_arguments` model.
