@@ -3,22 +3,19 @@ title: "R Notebook: exploration of validation of measurements - with varying arg
 output: html_document
 ---
 
-```{r include=FALSE, fig.width=20}
-library(sqldf)
-library(nlme)
-
-# prevent scientific notation
-options(scipen = 100)
+```{r}
+source('common.R')
 ```
 
-### Data preparations
+### Functions
 
 ```{r}
-explained_variable = 'avg_measure_total_time_ns'
-all_envs = c('geth', 'evmone')
-```
+overview_plots <- function(df, selection_col, selection_val) {
+  subset = df[which(df[, selection_col] == selection_val), ]
+  boxplot(measure_total_time_ns ~ program_id, data=subset, main=selection_val)
+  boxplot(measure_total_time_ns ~ run_id, data=subset, las=2, main=selection_val)
+}
 
-```{r}
 plot_validation <- function(df, yvar, xvar, labels, colors, set_asp, log) {
   if (missing(labels)) {
     labels = 'program_id'
@@ -37,9 +34,23 @@ plot_validation <- function(df, yvar, xvar, labels, colors, set_asp, log) {
   scatter.smooth(df[, xvar], df[, yvar], col=df[, colors], asp=asp, log=log)
   text(df[, yvar] ~ df[, xvar], data=df, labels=df[, labels], cex=0.6, pos=4, font=2)
 }
-```
 
-```{r}
+compare_plots <- function(df, selection_col, selection_val, estimate_var, labels, colors, log) {
+  if (missing(labels)) {
+    labels = 'program_id'
+  }
+  if (missing(colors)) {
+    colors = 'has_exp'
+  }
+  if (missing(log)) {
+    log = ''
+  }
+  subset = df[which(df[, selection_col] == selection_val), ]
+  # TODO: set_asp=TRUE works better when models are sane
+  plot_validation(subset, explained_variable, estimate_var, labels=labels, colors=colors, log=log) #, set_asp=TRUE)
+  title(main=paste(selection_val, 'estimate by', estimate_var))
+}
+
 lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
   if (! missing(selection_col) & ! missing(selection_val)) {
     subset = df[which(df[, selection_col] == selection_val), ]
@@ -50,18 +61,25 @@ lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
   print(summary(model))
   return(model)
 }
+
+```
+
+### Data preparations
+
+```{r}
+explained_variable = 'avg_measure_total_time_ns'
+# suffix = ""
+suffix = "_lenovo"
+all_envs = c('geth', 'evmone')
 ```
 
 ```{r}
 setwd("~/sources/imapp/gas-cost-estimator/src")
 
-estimated_cost = read.csv("../../local/argument_estimated_cost.csv")
+estimated_cost = read.csv(paste0("../../local/argument_estimated_cost", suffix, ".csv"))
 # those are only the constant gas costs, we'll calculate arg portion of the cost later
 current_gas_cost = read.csv("program_generator/data/current_gas_cost.csv")
-# from measure_marginal.Rmd, not currently used except experimentation with mixing (see below)
-marginal = read.csv("../../local/marginal_estimated_cost.csv")
-
-# TODO: PUSHes aren't estimated and are prevalent in the validation programs. Rectify this.
+marginal = read.csv(paste0("../../local/marginal_estimated_cost", suffix, ".csv"))
 ```
 
 #### Mix marginal and argument measurements?
@@ -115,16 +133,16 @@ setwd("~/sources/imapp/gas-cost-estimator/src")
 # program_set_codename = "arythmetic_c100_ops30_clean_smallpush"
 # measurement_codename = "50_1"
 
-program_set_codename = "full5_c100_randOps1500_clean_prejump_randominant"
-measurement_codename = "200_8"
+program_set_codename = "pg_validation_full5_c100_randOps1500_clean_prejump_randominant"
+measurement_codename = paste0("200_8", suffix)
 
-programs = read.csv(paste("../../local/pg_validation_", program_set_codename, ".csv", sep=""))
+programs = read.csv(paste("../../local/", program_set_codename, ".csv", sep=""))
 
-traces = read.csv(paste("../../local/trace_pg_validation_", program_set_codename, ".csv", sep=""))
+traces = read.csv(paste("../../local/trace_", program_set_codename, ".csv", sep=""))
 head(traces)
-total_measurements_geth = read.csv(paste("../../local/geth_pg_validation_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
+total_measurements_geth = read.csv(paste("../../local/geth_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
 head(total_measurements_geth)
-total_measurements_evmone = read.csv(paste("../../local/evmone_pg_validation_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
+total_measurements_evmone = read.csv(paste("../../local/evmone_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
 head(total_measurements_evmone)
 
 total_measurements_geth$env = 'geth'
@@ -136,30 +154,17 @@ head(measurements)
 ### Remove outliers
 
 ```{r fig.width=15}
-remove_outliers <- function(df, col) {
-  boxplot_result = boxplot(df[, col] ~ df[, 'program_id'] + df[, 'env'], plot=FALSE)
-  outliers = boxplot_result$out
-  names = boxplot_result$names[boxplot_result$group]
-  all_row_identifiers = paste(df[, col], df[, 'program_id'], df[, 'env'], sep='.')
-  outlier_row_identifiers = paste(outliers, names, sep='.')
-  no_outliers = df[-which(all_row_identifiers %in% outlier_row_identifiers), ]
-  return(no_outliers)
-}
-
 removed_outliers = TRUE
 
 if (removed_outliers) {
-  # before
-  par(mfrow=c(2,2))
-  boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'geth'), ], las=2, outline=TRUE, log='y')
-  boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'evmone'), ], las=2, outline=TRUE, log='y')
-
-  measurements = remove_outliers(measurements, 'measure_total_time_ns')
-  
-  # after
-  boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'geth'), ], las=2, outline=TRUE, log='y')
-  boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'evmone'), ], las=2, outline=TRUE, log='y')
+  measurements = remove_compare_outliers(measurements, 'measure_total_time_ns', all_envs, for_validation=TRUE)
 }
+```
+
+```{r fig.width=15}
+par(mfrow=c(2,2))
+overview_plots(measurements, 'env', 'geth')
+overview_plots(measurements, 'env', 'evmone')
 ```
 
 ```{r}
@@ -274,34 +279,14 @@ has_jump <- function(x) {
 count_zero_args <- function(x) {
   sum(!is.na(x$arg_0) & x$arg_0 == 0 | !is.na(x$arg_1) & x$arg_1 == 0 | !is.na(x$arg_2) & x$arg_2 == 0)
 }
+program_length <- function(x) {
+  max(x$instruction_id)
+}
 validation$fingerprint = gapply(traces, c('op', 'program_id'), FUN=function(x) fingerprint(x), groups=traces$program_id)
 validation$fingerprint_no_push = gapply(traces, c('op', 'program_id'), FUN=function(x) fingerprint_no_push(x), groups=traces$program_id)
 validation$has_exp = gapply(traces, c('op'), FUN=function(x) has_exp(x), groups=traces$program_id)
 validation$has_jump = gapply(traces, c('op'), FUN=function(x) has_jump(x), groups=traces$program_id)
 validation$n_zero_args = gapply(traces, c('op', 'program_id', 'arg_0', 'arg_1', 'arg_2'), FUN=function(x) count_zero_args(x), groups=traces$program_id)
-```
-
-```{r fig.width=15}
-# we've removed outliers so picking the right ylim / OUTLINE no longer required
-par(mfrow=c(2,2))
-overview_plots <- function(df, selection_col, selection_val) {
-  subset = df[which(df[, selection_col] == selection_val), ]
-  boxplot(measure_total_time_ns ~ program_id, data=subset, main=selection_val)
-  boxplot(measure_total_time_ns ~ run_id, data=subset, las=2, main=selection_val)
-}
-overview_plots(measurements, 'env', 'geth')
-overview_plots(measurements, 'env', 'evmone')
-```
-
-### Check estimation using trivial variables
-
-Based on the plots alone, it does not appear like our estimation only relies on trivial variables.
-
-```{r}
-program_length <- function(x) {
-  max(x$instruction_id)
-}
-# the "trivial" variables to check if we are not doing trivial estimation
 validation$program_length = gapply(traces, c('program_id', 'instruction_id'), FUN=function(x) program_length(x), groups=traces$program_id)
 ```
 
@@ -313,22 +298,10 @@ validation_short = validation[which(validation$program_length <= 100), ]
 validation_no_exp = validation[which(validation$dominant != 'EXP'), ]
 ```
 
-```{r fig.width=15}
-trivial_variable_plots <- function(df, selection_col, selection_val, labels, colors, log) {
-  if (missing(labels)) {
-    labels = 'program_id'
-  }
-  if (missing(colors)) {
-    colors = 'has_exp'
-  }
-  if (missing(log)) {
-    log = ''
-  }
-  subset = df[which(df[, selection_col] == selection_val), ]
-  plot_validation(subset, explained_variable, 'program_length', labels=labels, colors=colors, log=log)
-  title(main=paste(selection_val, 'program_length'))
-}
-```
+### Check estimation using trivial variables
+
+Based on the plots alone, it does not appear like our estimation only relies on trivial variables.
+
 Trivial variable plots are interesting, after we have introduced varying program length. `openethereum` in particular has a good correlation there, which is caused by the large, constant cost of running an instruction (~250ns, regardless of OPCODE).
 
 We add the 'no EXP' version to make sure that the improvement of the estimated gas model over program length model isn't only because of the extreme EXP case.
@@ -360,22 +333,6 @@ lm_validation(validation, explained_variable, 'current_gas', selection_col='env'
 We explore the models in two classes of program lengths. We keep the model for the long programs.
 
 ```{r}
-compare_plots <- function(df, selection_col, selection_val, estimate_var, labels, colors, log) {
-  if (missing(labels)) {
-    labels = 'program_id'
-  }
-  if (missing(colors)) {
-    colors = 'has_exp'
-  }
-  if (missing(log)) {
-    log = ''
-  }
-  subset = df[which(df[, selection_col] == selection_val), ]
-  # TODO: set_asp=TRUE works better when models are sane
-  plot_validation(subset, explained_variable, estimate_var, labels=labels, colors=colors, log=log) #, set_asp=TRUE)
-  title(main=paste(selection_val, ' estimate'))
-}
-
 print('geth short')
 lm_validation(validation_short, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
 print('evmone short')
@@ -413,18 +370,18 @@ A side-by-side comparison of the gas cost model with the `program_length` model.
 
 ```{r fig.width=25}
 par(mfrow=c(2,2))
-trivial_variable_plots(validation_no_exp, 'env', 'geth', labels='dominant')
-trivial_variable_plots(validation_no_exp, 'env', 'evmone', labels='dominant')
+compare_plots(validation_no_exp, 'env', 'geth', 'program_length', labels='dominant')
+compare_plots(validation_no_exp, 'env', 'evmone', 'program_length', labels='dominant')
 compare_plots(validation_no_exp, 'env', 'geth', 'cost_ns', labels='dominant')
 compare_plots(validation_no_exp, 'env', 'evmone', 'cost_ns', labels='dominant')
 par(mfrow=c(2,2))
-trivial_variable_plots(validation, 'env', 'geth', labels='dominant', log='xy')
-trivial_variable_plots(validation, 'env', 'evmone', labels='dominant', log='xy')
+compare_plots(validation, 'env', 'geth', 'program_length', labels='dominant', log='xy')
+compare_plots(validation, 'env', 'evmone', 'program_length', labels='dominant', log='xy')
 compare_plots(validation, 'env', 'geth', 'cost_ns', labels='dominant', log='xy')
 compare_plots(validation, 'env', 'evmone', 'cost_ns', labels='dominant', log='xy')
 par(mfrow=c(2,2))
-trivial_variable_plots(validation, 'env', 'geth', labels='dominant')
-trivial_variable_plots(validation, 'env', 'evmone', labels='dominant')
+compare_plots(validation, 'env', 'geth', 'program_length', labels='dominant')
+compare_plots(validation, 'env', 'evmone', 'program_length', labels='dominant')
 compare_plots(validation, 'env', 'geth', 'cost_ns', labels='dominant')
 compare_plots(validation, 'env', 'evmone', 'cost_ns', labels='dominant')
 ```
@@ -492,5 +449,5 @@ Lastly, increasing the sample size on the estimation set (`marginal/arguments`),
 ```{r}
 # just export the final compiled estimations to a file
 setwd("~/sources/imapp/gas-cost-estimator/src")
-write.csv(estimated_cost, "../../local/final_estimated_cost.csv", quote=FALSE, row.names=FALSE)
+write.csv(estimated_cost, paste0("../../local/final_estimated_cost", suffix, ".csv"), quote=FALSE, row.names=FALSE)
 ```
