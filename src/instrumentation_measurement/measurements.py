@@ -177,7 +177,7 @@ class Measurements(object):
 
   def run_nethermind(self, program, sampleSize):
     geth_benchmark = ['./instrumentation_measurement/nethermind_benchmark/src/Nethermind/Imapp.Measurement.Runner/bin/Release/net6.0/Imapp.Measurement.Runner']
-    args = [program.bytecode, '{}'.format(sampleSize)]
+    args = ['--bytecode', program.bytecode, '--print-csv', '--sample-size={}'.format(sampleSize)]
     invocation = geth_benchmark + args
     result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
     assert result.returncode == 0
@@ -187,7 +187,7 @@ class Measurements(object):
 
   def run_nethermind_benchmark(self, program, sampleSize):
     geth_benchmark = ['./instrumentation_measurement/nethermind_benchmark/src/Nethermind/Imapp.Benchmark.Runner/bin/Release/net6.0/Imapp.Benchmark.Runner']
-    args = [program.bytecode, '{}'.format(sampleSize)]
+    args = ['--bytecode', program.bytecode, '--print-csv', '--sample-size={}'.format(sampleSize)]
     invocation = geth_benchmark + args
     result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
     assert result.returncode == 0
