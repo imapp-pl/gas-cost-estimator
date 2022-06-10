@@ -58,10 +58,9 @@ func main() {
 	// Warm-up. **NOTE** we're keeping tracing on during warm-up, otherwise measurements are off
 	cfg.EVMConfig.Debug = false
 	cfg.EVMConfig.Instrumenter = vm.NewInstrumenterLogger()
-	retWarmUp, _, errWarmUp := runtime.Execute(bytecode, calldata, cfg)
+	_, _, errWarmUp := runtime.Execute(bytecode, calldata, cfg)
 	// End warm-up
 
-	sampleStart := time.Now()
 	for i := 0; i < sampleSize; i++ {
 		if mode == "all" {
 			MeasureAll(cfg, bytecode, printEach, printCSV, i)
@@ -71,16 +70,9 @@ func main() {
 			TraceBytecode(cfg, bytecode, printCSV, i)
 		}
 	}
-
-	sampleDuration := time.Since(sampleStart)
-
 	if errWarmUp != nil {
 		fmt.Fprintln(os.Stderr, errWarmUp)
 	}
-	fmt.Fprintln(os.Stderr, "Program: ", *bytecodePtr)
-	fmt.Fprintln(os.Stderr, "Return:", retWarmUp)
-	fmt.Fprintln(os.Stderr, "Sample duration:", sampleDuration)
-
 }
 
 func TraceBytecode(cfg *runtime.Config, bytecode []byte, printCSV bool, sampleId int) {
