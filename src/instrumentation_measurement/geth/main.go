@@ -6,7 +6,6 @@ import (
 	"math"
 	"math/big"
 	"os"
-	go_runtime "runtime"
 	"strings"
 	"time"
 
@@ -110,7 +109,10 @@ func TraceBytecode(cfg *runtime.Config, bytecode []byte, printCSV bool, sampleId
 
 func MeasureTotal(cfg *runtime.Config, bytecode []byte, printEach bool, printCSV bool, sampleId int) {
 	cfg.EVMConfig.Instrumenter = vm.NewInstrumenterLogger()
-	go_runtime.GC()
+
+	// We're not collecting in between runs anymore. If the pressure on memory is OK, this has been chosen as the best approach.
+	// (Assuming GOGC=off, which is well enough aligned with default go GC behavior).
+	// go_runtime.GC()
 
 	_, _, err := runtime.Execute(bytecode, calldata, cfg)
 
@@ -125,7 +127,10 @@ func MeasureTotal(cfg *runtime.Config, bytecode []byte, printEach bool, printCSV
 
 func MeasureAll(cfg *runtime.Config, bytecode []byte, printEach bool, printCSV bool, sampleId int) {
 	cfg.EVMConfig.Instrumenter = vm.NewInstrumenterLogger()
-	go_runtime.GC()
+
+	// see above
+	// go_runtime.GC()
+
 	start := time.Now()
 	_, _, err := runtime.Execute(bytecode, calldata, cfg)
 	duration := time.Since(start)
