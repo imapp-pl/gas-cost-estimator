@@ -1,9 +1,13 @@
+src/instrumentation_measurement/bin/geth_main
+
 src/instrumentation_measurement/openethereum/ethcore/res/wasm-tests
 src/instrumentation_measurement/openethereum/ethcore/res/ethereum/tests
 src/instrumentation_measurement/openethereum/crates/ethcore/res/json_tests
 src/instrumentation_measurement/openethereum/target
 
 src/instrumentation_measurement/evmone/build
+
+src/instrumentation_measurement/nethermind_benchmark/src/Nethermind/bin
 
 /.dockerignore
 /Dockerfile*
