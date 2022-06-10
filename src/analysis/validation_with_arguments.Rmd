@@ -559,7 +559,12 @@ plot(gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(
 axis(1, at=1:nrow(gas_schedule_comparison), labels=gas_schedule_comparison$opcode, las=2)
 points(gas_schedule_comparison$geth_gas, col=geth_color, xaxt='n')
 points(gas_schedule_comparison$evmone_gas, col=evmone_color, xaxt='n')
+```
 
+```{r}
+gas_schedule_comparison$relative_diff = abs(gas_schedule_comparison$geth_gas - gas_schedule_comparison$evmone_gas) / gas_schedule_comparison$evmone_gas
+
+gas_schedule_comparison$close = gas_schedule_comparison$relative_diff < 0.15
 ```
 
 ```{r}
