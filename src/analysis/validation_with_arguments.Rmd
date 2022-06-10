@@ -68,8 +68,8 @@ lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
 
 ```{r}
 explained_variable = 'avg_measure_total_time_ns'
-# suffix = ""
-suffix = "_lenovo"
+suffix = ""
+# suffix = "_lenovo"
 all_envs = c('geth', 'evmone')
 ```
 
@@ -102,8 +102,8 @@ Therefore, in the end, we stick with only-"arguments" measurements, and leave "m
 order1 = order(estimated_cost$opcode, estimated_cost$env)
 order2 = order(marginal$op, marginal$env)
 
-# commented out - we **don't** mix
 estimated_cost[order1, 'estimate_marginal_ns'] = marginal[order2, 'estimate_marginal_ns']
+estimated_cost[order1, 'estimate_marginal_ns_stderr'] = marginal[order2, 'estimate_marginal_ns_stderr']
 
 head(estimated_cost)
 head(marginal)
@@ -445,9 +445,68 @@ Another note is that increasing sample size and/or number of samples for the val
 
 Lastly, increasing the sample size on the estimation set (`marginal/arguments`), improves the validation model further, and also makes the estimates much more reasonable.
 
+### Final results
+
+```{r}
+all_envs = c("geth", "evmone")
+extract_opcodes <- function() {
+  unique(estimated_cost$opcode)
+}
+all_opcodes = extract_opcodes()
+
+get_gas_schedule_comparison <- function(pivot_opcode, df) {
+  pivot_statistics = sqldf(paste0("SELECT estimate_marginal_ns, env FROM df WHERE opcode='", pivot_opcode, "'"))
+  pivot_gas_cost = current_gas_cost$constant_current_gas[which(current_gas_cost$opcode==pivot_opcode)]
+    
+  row.names(pivot_statistics) = pivot_statistics$env
+  # 
+  for (env in all_envs) {
+    df$estimate_marginal_ns_rel[which(df$env==env)] = df$estimate_marginal_ns[which(df$env == env)] / pivot_statistics[env, 'estimate_marginal_ns']
+    df$arg0_ns_rel[which(df$env==env)] = df$arg0_ns[which(df$env == env)] / pivot_statistics[env, 'estimate_marginal_ns']
+    df$arg1_ns_rel[which(df$env==env)] = df$arg1_ns[which(df$env == env)] / pivot_statistics[env, 'estimate_marginal_ns']
+    df$arg2_ns_rel[which(df$env==env)] = df$arg2_ns[which(df$env == env)] / pivot_statistics[env, 'estimate_marginal_ns']
+    df$estimate_marginal_gas[which(df$env==env)] = df$estimate_marginal_ns_rel[which(df$env == env)] * pivot_gas_cost
+    df$arg0_gas[which(df$env==env)] = df$arg0_ns_rel[which(df$env == env)] * pivot_gas_cost
+    df$arg1_gas[which(df$env==env)] = df$arg1_ns_rel[which(df$env == env)] * pivot_gas_cost
+    df$arg2_gas[which(df$env==env)] = df$arg2_ns_rel[which(df$env == env)] * pivot_gas_cost
+    df$estimate_marginal_ns_rel_stderr[which(df$env==env)] = df$estimate_marginal_ns_stderr[which(df$env == env)] / pivot_statistics[env, 'estimate_marginal_ns']
+    df$arg0_ns_rel_stderr[which(df$env==env)] = df$arg0_ns_stderr[which(df$env == env)] / pivot_statistics[env, 'estimate_marginal_ns']
+    df$arg1_ns_rel_stderr[which(df$env==env)] = df$arg1_ns_stderr[which(df$env == env)] / pivot_statistics[env, 'estimate_marginal_ns']
+    df$arg2_ns_rel_stderr[which(df$env==env)] = df$arg2_ns_stderr[which(df$env == env)] / pivot_statistics[env, 'estimate_marginal_ns']
+    df$estimate_marginal_gas_stderr[which(df$env==env)] = df$estimate_marginal_ns_rel_stderr[which(df$env == env)] * pivot_gas_cost
+    df$arg0_gas_stderr[which(df$env==env)] = df$arg0_ns_rel_stderr[which(df$env == env)] * pivot_gas_cost
+    df$arg1_gas_stderr[which(df$env==env)] = df$arg1_ns_rel_stderr[which(df$env == env)] * pivot_gas_cost
+    df$arg2_gas_stderr[which(df$env==env)] = df$arg2_ns_rel_stderr[which(df$env == env)] * pivot_gas_cost
+  }
+  
+  gas_schedule_comparison = sqldf("SELECT current_gas_cost.opcode, constant_current_gas, geth.estimate_marginal_gas as geth_gas, evmone.estimate_marginal_gas as evmone_gas
+                                   FROM current_gas_cost 
+                                   INNER JOIN df as geth
+                                     ON geth.opcode = current_gas_cost.opcode AND geth.env = 'geth'
+                                   INNER JOIN df as evmone
+                                     ON evmone.opcode = current_gas_cost.opcode AND evmone.env = 'evmone'")
+  return(list("gas_schedule_comparison" = gas_schedule_comparison, "estimated_cost" = df))
+}
+
+
+pivot_results = data.frame(matrix(ncol=2, nrow=0))
+colnames(pivot_results) = c('pivot_opcode', 'distance')
+for (pivot_opcode in all_opcodes) {
+  gas_schedule_comparison = get_gas_schedule_comparison(pivot_opcode, estimated_cost)$gas_schedule_comparison
+  distance = sqrt(sum((gas_schedule_comparison$geth_gas - gas_schedule_comparison$evmone_gas)^2))
+  pivot_results[nrow(pivot_results) + 1, ] = data.frame(pivot_opcode, distance)
+}
+
+# changing from COINBASE originally, b/c it is very expensive in evmone
+pivot_opcode = "ADDRESS"
+gas_schedule_comparison = get_gas_schedule_comparison(pivot_opcode, estimated_cost)$gas_schedule_comparison
+estimated_cost = get_gas_schedule_comparison(pivot_opcode, estimated_cost)$estimated_cost
+```
+
 
 ```{r}
 # just export the final compiled estimations to a file
 setwd("~/sources/imapp/gas-cost-estimator/src")
 write.csv(estimated_cost, paste0("../../local/final_estimated_cost", suffix, ".csv"), quote=FALSE, row.names=FALSE)
+write.csv(gas_schedule_comparison, paste0("../../local/gas_schedule_comparison", suffix, ".csv"), quote=FALSE, row.names=FALSE)
 ```
