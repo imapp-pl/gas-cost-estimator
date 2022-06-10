@@ -57,3 +57,6 @@ remove_compare_outliers <- function(df, col, all_envs, for_validation) {
   }
   return(no_outliers)
 }
+
+geth_color = rgb(0.1,0.1,0.7,0.5)
+evmone_color = rgb(0.8,0.1,0.3,0.6)
