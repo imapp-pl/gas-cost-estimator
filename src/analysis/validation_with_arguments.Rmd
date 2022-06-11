@@ -31,7 +31,8 @@ plot_validation <- function(df, yvar, xvar, labels, colors, set_asp, log) {
   if (missing(log)) {
     log = ''
   }
-  scatter.smooth(df[, xvar], df[, yvar], col=df[, colors], asp=asp, log=log)
+  plot(df[, xvar], df[, yvar], col=df[, colors], asp=asp, log=log)
+  abline(lm(df[, yvar] ~ df[, xvar]), asp=asp, untf=TRUE)
   text(df[, yvar] ~ df[, xvar], data=df, labels=df[, labels], cex=0.6, pos=4, font=2)
 }
 
@@ -140,6 +141,10 @@ overview_plots(measurements, 'env', 'geth')
 overview_plots(measurements, 'env', 'evmone')
 ```
 
+### Estimate the program cost
+
+Here we use the traced arguments to calculate the cost of each program, as estimated by our model.
+
 ```{r}
 estimated_cost$arg0_ns[which(is.na(estimated_cost$arg0_ns))] = 0
 estimated_cost$arg1_ns[which(is.na(estimated_cost$arg1_ns))] = 0
@@ -177,7 +182,8 @@ estimated_traces = sqldf("SELECT
                           INNER JOIN current_gas_cost ON
                             traces.op == current_gas_cost.opcode")
 
-# TODO: very crude, how can this be made more robust?
+# wherever the argument did not apply we ended up with NA, we need 0 to calculate
+# overall cost of the program
 estimated_traces$arg0[which(is.na(estimated_traces$arg0))] = 0
 estimated_traces$arg1[which(is.na(estimated_traces$arg1))] = 0
 estimated_traces$arg2[which(is.na(estimated_traces$arg2))] = 0
@@ -216,6 +222,8 @@ estimated_traces$cost_ns = estimated_traces$estimate_marginal_ns +
                            expensive_estimated_cost
 ```
 
+Here we do the same, only using the current gas cost schedule.
+
 ```{r}
 arg1_current_gas = (estimated_traces$arg1 != 0) * 50 * (log(estimated_traces$arg1, 256) + 1) * (estimated_traces$op == 'EXP')
 arg2_current_gas = 3 * ceiling(estimated_traces$arg2 / 32) * (estimated_traces$op %in% arg2_linear_opcodes)
@@ -246,7 +254,6 @@ aggregate_measurements = sqldf("SELECT
 
 # ORDER BY is needed here, so that the programs are ordered by program_id numerically
 # this is a hacky way of ensuring we can merge it with other program data like fingerprints
-# TODO: make this more robust
 validation = sqldf("SELECT
                       estimated_programs.program_id,
                       avg_measure_total_time_ns,
@@ -297,11 +304,9 @@ validation$n_zero_args = gapply(traces, c('op', 'program_id', 'arg_0', 'arg_1', 
 validation$program_length = gapply(traces, c('program_id', 'instruction_id'), FUN=function(x) program_length(x), groups=traces$program_id)
 ```
 
-We divide the validation data into classes with respect to the length of the program:
+We divide the validation data into classes with respect to whether we are dealing with an `EXP`-dominated program:
 
 ```{r}
-validation_long = validation[which(validation$program_length > 400), ]
-validation_short = validation[which(validation$program_length <= 100), ]
 validation_no_exp = validation[which(validation$dominant != 'EXP'), ]
 ```
 
@@ -340,16 +345,6 @@ lm_validation(validation, explained_variable, 'current_gas', selection_col='env'
 We explore the models in two classes of program lengths. We keep the model for the long programs.
 
 ```{r}
-print('geth short')
-lm_validation(validation_short, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
-print('evmone short')
-lm_validation(validation_short, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
-
-print('geth long')
-lm_validation(validation_long, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
-print('evmone long')
-lm_validation(validation_long, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
-
 print('geth all - no EXP')
 lm_validation(validation_no_exp, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
 print('evmone all - no EXP')
@@ -359,18 +354,6 @@ print('geth all')
 model_geth = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
 print('evmone all')
 model_evmone = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
-```
-
-```{r fig.width=15}
-par(mfrow=c(4,2))
-compare_plots(validation_short, 'env', 'geth', 'cost_ns')
-compare_plots(validation_short, 'env', 'evmone', 'cost_ns')
-compare_plots(validation_long, 'env', 'geth', 'cost_ns')
-compare_plots(validation_long, 'env', 'evmone', 'cost_ns')
-compare_plots(validation_no_exp, 'env', 'geth', 'cost_ns')
-compare_plots(validation_no_exp, 'env', 'evmone', 'cost_ns')
-compare_plots(validation, 'env', 'geth', 'cost_ns')
-compare_plots(validation, 'env', 'evmone', 'cost_ns')
 ```
 
 A side-by-side comparison of the gas cost model with the `program_length` model.
@@ -425,19 +408,20 @@ plot(model_evmone)
 
 Results for `geth` and `evmone` look promising, the correlation is clearly there, the slope coefficient is close to 1 (so there's a good correspondence between a nanosecond of measurement and the nanosecond of validation).
 
-The model diagnosticts aren't ideal, especially for `geth`, where strong non-linearity is present because of the overestimated EXP programs.
+The model diagnosticts aren't ideal, especially for `geth`, where some non-linearity is present..
 
-The best trait of the model is that it offers a massive improvement over the trivial model.
+The best trait of the model is that it offers a massive improvement over the trivial model and a substantial improvement over the current gas cost model.
 
 #### Intercept problem
 
-**NOTE** this has been solved, see last paragrapsh
+**NOTE** this has been solved, see last paragraph.
 
 The worrying part is the intercept coefficient which is far away from zero (should be the cost of an empty EVM program). If we use a validation set with only small arguments (`smallpush`), then the intercept problem goes away, so it seems that it might be coming from the estimates of the arguments impact.
 
 The intercept problem has been explained by randomizing the length of the random program. We can see on the plots of the entire program set, that the relation between estimated cost and actual program execution time is non-linear (the longer the program, the more efficient the execution and the slope coefficient approaches 1.0). At the same time, the shorter the program, the smaller the intercept.
 
 **NOTE** After including memory OPCODEs the intercept is back, because we're allocating a considerable chunk of memory at start of every program.
+This isn't an issue.
 
 #### `openethereum` problem
 
@@ -491,8 +475,11 @@ get_gas_schedule_comparison <- function(pivot_opcode, df) {
   
   return(list(gas_schedule_comparison, df))
 }
+```
 
+Here we choose the pivot which allows us to have an alternative gas cost schedule with the least divergence between EVMs.
 
+```{r}
 pivot_results = data.frame(matrix(ncol=3, nrow=0))
 colnames(pivot_results) = c('pivot_opcode', 'distance', 'distance2')
 for (pivot_opcode in all_opcodes) {
@@ -503,7 +490,9 @@ for (pivot_opcode in all_opcodes) {
 }
 ```
 
-```{r fig.width=30, fig.height=10}
+We select the pivot by inspection of the `pivot_results` and later continue to fill in the additional special entries of our gas cost schedule, being the costs of the arguments.
+
+```{r}
 pivot_opcode = "ADDRESS"
 c(gas_schedule_comparison, estimated_cost) %<-% get_gas_schedule_comparison(pivot_opcode, estimated_cost)
 
@@ -533,7 +522,11 @@ gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
   data.frame("ADDMOD_expensive_cost", 8, expensive_division_cost(estimated_cost, 'geth', 'ADDMOD'),  expensive_division_cost(estimated_cost, 'evmone', 'ADDMOD'))
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
   data.frame("MULMOD_expensive_cost", 8, expensive_division_cost(estimated_cost, 'geth', 'MULMOD'),  expensive_division_cost(estimated_cost, 'evmone', 'MULMOD'))
+```
 
+Plot the alternative gas cost schedule.
+
+```{r fig.width=30, fig.height=10}
 maximum_gas_cost = max(gas_schedule_comparison[,!names(gas_schedule_comparison) %in% c('opcode')])
 
 par(mar=c(15,4,4,2))
@@ -542,6 +535,8 @@ axis(1, at=1:nrow(gas_schedule_comparison), labels=gas_schedule_comparison$opcod
 points(gas_schedule_comparison$geth_gas, col=geth_color, xaxt='n')
 points(gas_schedule_comparison$evmone_gas, col=evmone_color, xaxt='n')
 ```
+
+In order to be able to tell which OPCODEs diverge by the least, we do:
 
 ```{r}
 gas_schedule_comparison$relative_diff = abs(gas_schedule_comparison$geth_gas - gas_schedule_comparison$evmone_gas) / gas_schedule_comparison$evmone_gas
