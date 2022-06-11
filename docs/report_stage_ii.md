@@ -116,6 +116,12 @@ The benefits of measuring the entire execution of the interpreter loop are the f
 
 The main drawback is that we need to take special measures in order to be able to draw useful conclusions from the measurement obtained.
 
+For the implementation of the instrumentation tools follow the links:
+- [`geth` measurement executable](https://github.com/imapp-pl/gas-cost-estimator/tree/master/src/instrumentation_measurement/geth)
+- [`wallclock-total` branch in forked go-ethereum repository](https://github.com/imapp-pl/go-ethereum/tree/wallclock-total)
+- [`wallclock` branch in forked evmone repository](https://github.com/imapp-pl/evmone/tree/wallclock)
+- [convenience `Makefile`](https://github.com/imapp-pl/gas-cost-estimator/tree/master/Makefile) allowing to build Docker images and run measurements within them
+
 - if we end up using `bench` - provide rationale and discussion **TODO**
 
 ### `measure_marginal` method
@@ -251,7 +257,7 @@ At the same time we find it unlikely for this argument to play a role in the cos
 ### Measurement setup and environments
 
 The instrumentation and measurement were performed for these EVMs:
-1. `geth` - [ethereum/go-ethereum](https://github.com/ethereum/go-ethereum) at [`TODO`](https://github.com/ethereum/go-ethereum/releases/tag/TODO) with [additional changes implementing the instrumentation](https://github.com/imapp-pl/evmone/commit/TODO).
+1. `geth` - [ethereum/go-ethereum](https://github.com/ethereum/go-ethereum) at [`TODO`](https://github.com/ethereum/go-ethereum/releases/tag/TODO) with [additional changes implementing the instrumentation](https://github.com/imapp-pl/go-ethereum/commit/TODO).
 2. `evmone` - [ethereum/evmone](https://github.com/ethereum/evmone) at [`TODO`](https://github.com/ethereum/evmone/commit/TODO) with [additional changes implementing the instrumentation](https://github.com/imapp-pl/evmone/commit/TODO).
 3. `nethermind` - ?? TODO
 
