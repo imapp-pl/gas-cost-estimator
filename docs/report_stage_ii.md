@@ -197,6 +197,11 @@ The procedure to estimate the marginal cost is as follows:
    `a` is the marginal cost estimation we are looking for.
    The model is fit separately for each OPCODE and environment.
 
+The benefits of using `measure_marginal` as the measurement method are the following:
+1. Everything given as the benefits of `measure_total` in section **TODO**
+2. Stability of the estimation and natural way of spotting OPCODEs and environments which have inaccurate measurements - the model provides us with plenty of standard linear regression diagnostics as well as an elegant plot to validate the model.
+3. The ability to measure the different OPCODEs in almost complete isolation, as we're de-facto measuring only the individual measured OPCODEs, and the impact of all the accompanying OPCODEs is filtered out by the regression model as constant intercept.
+
 The assessment of the models and discussion about the results is given in the section **TODO**.
 
 ### describe `measure_arguments`
@@ -253,9 +258,13 @@ running in these environments:
 
 `dockerized` means we are running the measurements within a Docker container with the flags `--privileged --security-opt seccomp:unconfined`. See TODO link to Makefile for the exact invocations.
 
+**NOTE** during the analysis we noticed the differences in the results obtained in various environments were small, one order of magnitude lower than the differences between various EVM implementations.
+We will focus on citing and discussing only the results coming from the `AWS` setup and prioritize the challenge of equilibrating the gas cost schedule to cater for various EVMs.
+
 #### Garbage collection
 
-For the Go EVM `geth` we turn garbage collection off using the `GOGC=off` environment variable and we run `runtime.GC()` manually after each measurement, excluding it's execution from the captured time.
+For the Go EVM `geth` we turn garbage collection off using the `GOGC=off` environment variable but we _haven't_ run `runtime.GC()` at all.
+See gc section **TODO** for the details.
 
 #### Timer
 
@@ -433,12 +442,6 @@ From the linear regression model summaries we see that the R squared coefficient
 
 **TODO** model summary
 
-#### Discussion
-
-There is a number of points which might raise questions in these results:
-
-We observe a non-linearity in the model for `geth`, with the expensive OPCODEs (mainly `EXP`) overpriced. **TODO** details
-
 #### Alternative gas cost schedule
 
 Using the estimates obtained so far, we proceed to chose the pivot OPCODE and calculate an alternative gas cost schedule.
@@ -472,8 +475,21 @@ We can summarize the findings about the alternative gas cost schedule:
 
 Note, that the above statements should always be understood relatively to the cost of the pivot OPCODE.
 
-- discuss OPCODE fairness
+#### Discussion
 
+We can now assess our results from the standpoint of the criteria posed in the State I Report:
+
+- **Estimate is proportional to the OPCODE's computational cost, or otherwise balanced when compared to other OPCODEs.** - we believe so, since the `measure_marginal` models are so well fitted in all cases. The slope coefficient from the validation models being close to `1` also reinfornces this belief.
+- **It is modeled to explain the variation in computational cost coming from different circumstances and/or parameters.** - we modeled and estimated the impact of arguments and we have also analyzed the impact of our measurement programs on cache in-depth, and we believe that our data represents the circumstances well enough to give adequate estimates.
+- **It is adequate for all implementations and environments.** - yes, thanks to the application of `measure_total` the approach should be easily applicable to other implementations of the EVM, with small intervention in the EVM code.
+- **It can be clearly stated, when no such value exists because of differences in implementations.** - calibration of the results using the gas cost of the pivot OPCODE allows us to judge whether and which OPCODEs can have their gas cost updated across implementations. It turns out that very few.
+- **It should have the measurement overhead and noise under control and "fair" for all OPCODEs.** - thanks to the properties of `measure_marginal`, we are able to measure the different OPCODEs costs with very low noise and without having to take any other measures to achieve fairness. The idea of the marginal increase of cost caused by an increase of OPCODEs in the program is exactly the kind of measurement which reflects the idea of charging gas for computation. As the results of the cache (**TODO** reference) section show, the synthetical nature of the `measure_marginal` programs should have no unfair impact on the OPCODEs.
+   It is worth noting that there are OPCODEs where the estimates are more noisy (namely the memory OPCODEs). However, the properties of the `measure_marginal` fitted models indicate that the estimate should still be accurate.
+
+There is a number of points which might raise questions in these results:
+
+We observe a non-linearity in the validation model for `geth`, with `ADDMOD` somewhat underpriced.
+Similarly `CALLDATACOPY` is slightly underpriced for `evmone`, but neither of these deviations is alarming.
 
 ## Appendix B: OPCODEs subset
 

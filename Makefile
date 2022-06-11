@@ -24,7 +24,4 @@ measure:
 		sh -c "cd src && cat /srv/local/${PROGRAMS}.csv | python3 instrumentation_measurement/measurements.py measure --evm ${EVM} --mode ${MEASUREMENT_MODE} --sampleSize=${SAMPLESIZE} --nSamples=${NSAMPLES} > /srv/local/${EVM}_${PROGRAMS}_${SAMPLESIZE}_${NSAMPLES}${MEASUREMENT_SUFFIX}.csv"
 
 trace:
-	docker run --rm \
-		-v ${VOLUME_DIR}:/srv/local \
-		-it gas-cost-estimator/geth_total:${IMAGE_VERSION} \
-		sh -c "cd src && cat /srv/local/${PROGRAMS}.csv | python3 instrumentation_measurement/measurements.py measure --evm geth --mode trace --sampleSize 1 > /srv/local/trace_${PROGRAMS}${MEASUREMENT_SUFFIX}.csv"
+	cd src; cat ${VOLUME_DIR}/${PROGRAMS}.csv | python3 instrumentation_measurement/measurements.py measure --evm geth --mode trace --sampleSize 1 > ${VOLUME_DIR}/trace_${PROGRAMS}.csv; cd ..

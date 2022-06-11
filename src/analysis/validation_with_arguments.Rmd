@@ -83,21 +83,15 @@ current_gas_cost = read.csv("program_generator/data/current_gas_cost.csv")
 marginal = read.csv(paste0("../../local/marginal_estimated_cost", suffix, ".csv"))
 ```
 
-#### Mix marginal and argument measurements?
+#### Mix marginal and argument measurements
 
 We originally used only the results coming from the "arguments" measurements. This means that the programs used featured running the OPCODEs with varying arguments (spanning the entire space of uint256).
-For the constant cost of an OPCODE, we'd take the `op_count` variable estimation.
-This turned out to give very coarse estimate of the constant cost (clustered estimations for evmone, grossly overestimated constant cost of MOD and friends).
+For the constant cost of an OPCODE, we'd take the `op_count` variable coefficient.
+This turned out to give very coarse estimate of the constant cost (clustered estimations for `evmone`, grossly overestimated constant cost of MOD and friends).
 
-We next tried to "mix" the two results. Take the constant cost estimated via "measure marginal" (simple, constant arguments, varying length of a series of OPCODEs) and take the estimation of the argument impact from the "measure argument" approach.
+Since the `op_count` variable coefficient from a `measure_arguments` model is an estimate of the marginal cost of OPCODE assuming the arguments being zero, we conclude that `measure_arguments` performs poorly in estimating the constant cost.
 
-The drawbacks of the mixed approach are:
-  - might be OPCODE-unfair
-  - give slightly less healthy results (with the only-"arguments", the slope coefficients are closer to 1)
-  - is more complicated
-  - after the fixes to the "arguments" measurement routine, as well as switching to the `c100_ops300_clean` validation set (which doesn't limit args to `PUSH1`-size), the only-"arguments" method doesn't give bad results anymore
-  
-Therefore, in the end, we stick with only-"arguments" measurements, and leave "marginal" measurements for cross validation only.
+Because of this, we take the constant cost of the OPCODE from `measure_marginal`.
 
 ```{r}
 order1 = order(estimated_cost$opcode, estimated_cost$env)
@@ -109,32 +103,10 @@ estimated_cost[order1, 'estimate_marginal_ns_stderr'] = marginal[order2, 'estima
 head(estimated_cost)
 head(marginal)
 ```
-
-See `individual_vs_total_validation.Rmd` for invocations to generate/trace/measure programs.
-
-We've extended the program length to 30 OPCODEs to accommodate more `PUSH`es and `POP`s.
-
 ```{r fig.width=20}
 setwd("~/sources/imapp/gas-cost-estimator/src")
 
-# we have tried `c900_ops300_clean` too, but it is a bit overkill. No surprises there.
-# program_set_codename = "arythmetic_c100_ops300_clean"
-# measurement_codename = "200_8"
-
-# we randomize the number of instructions in the random programs to capture program length impact on OPCODE performance
-# program_set_codename = "arythmetic_c100_randOps500_clean"
-# measurement_codename = "200_8"
-
-# this dataset (tiny programs) has a radically highler slope coefficient and lower Intercept
-# this prompt us to vary the opsLimit for the validation program generation
-# program_set_codename = "arythmetic_c100_ops10_clean"
-# measurement_codename = "200_8"
-
-# this is the data set without varying argument size. 
-# program_set_codename = "arythmetic_c100_ops30_clean_smallpush"
-# measurement_codename = "50_1"
-
-program_set_codename = "pg_validation_full5_c100_randOps1500_clean_prejump_randominant"
+program_set_codename = "pg_validation_full5_c500_randOps1500"
 measurement_codename = paste0("200_8", suffix)
 
 programs = read.csv(paste("../../local/", program_set_codename, ".csv", sep=""))
