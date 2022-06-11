@@ -4,16 +4,11 @@
 
 **Abstract**
 
-We summarize the findings of the second stage of the "Gas Cost Estimator" research project. A method of estimating gas costs of EVM OPCODEs (a subset of) is proposed, where we estimate marginal OPCODE execution cost. We provide arguments for this method to be a feasible way of assessing the costs of EVM OPCODEs. The procedure to obtain the measurements is also standardized and tooling provided. We discuss the difference between different EVM implementations and compare the obtained alternative gas cost schedule with the current one.
+We summarize the findings of the second stage of the "Gas Cost Estimator" research project. A method of estimating gas costs of EVM OPCODEs by means of estimating their marginal execution cost is proposed. We provide arguments for this method to be a feasible way of assessing the costs of EVM OPCODEs. The procedure to obtain the measurements is also standardized and tooling provided. We discuss the difference between different EVM implementations and compare the obtained alternative gas cost schedule with the current one.
 
 ## Introduction
 
 > **NOTE** This report copies some generic portions of the "Stage I Report".
-
-**TODO** should we provide a summary contrasting stage II vs stage I?
-  - ewasm
-  - indiviual measurements
-  - answer the Q-questions
 
 EVM (Ethereum Virtual Machine) is instrumental to the functioning of the Ethereum blockchain.
 It is responsible for carrying out the computations associated with transactions on the Ethereum blockchain, namely those related to the functioning of smart contracts.
@@ -29,11 +24,11 @@ The challenge with this mechanism is to determine adequate gas costs of bytecode
 Currently, gas cost is determined on a per-OPCODE basis, that is, every OPCODE interpreted by the EVM has a predetermined gas cost (sometimes gas cost expressed as a function of instruction's arguments is added).
 This report and the "Gas Cost Estimator" research project aims at devising a method to estimate adequate values for these OPCODE gas costs, by estimating and analyzing the relative computational cost of OPCODEs.
 
-In the remainder of this section we provide our motivation and some background of the literature on the subject. (and some other general requirements towards our results (?) **TODO**)
+In the remainder of this section we provide our motivation and some background of the literature on the subject.
 In section **Estimation Method** we describe the proposed measurement and estimation method.
 In section **Validation** we elaborate on the procedure of validating the results.
 In section **Results** we provide the results obtained in various environments and discuss them in the context of an alternative gas schedule.
-In section **Tooling** we briefly describe the tooling prepared to generate and analyze data, and refer the reader to the respective source code.
+In section **Tooling** we briefly describe the tooling prepared to generate and analyze data, and refer the reader to the respective source code. **TODO** this section?
 
 ### Motivation
 
@@ -89,20 +84,27 @@ To this end, the approach must be well documented and reproducible by the commun
 
 All work has been carried out in the public GitHub repo [imapp-pl/gas-cost-estimator](https://github.com/imapp-pl/gas-cost-estimator).
 
+### Comparison with Stage I
+
+This is a digest of the changes made since the Stage I research and report:
+- Drop Ewasm and Openethereum
+- Abandon the idea of measuring individual instructions in favor of measuring marginal cost
+- Provide a more confident answer to the feasibility of the method and an alternative gas cost schedule
+
 ## Estimation Method
 
 In this section we describe in detail the method applied to estimate the gas costs.
 
-### describe the `measure_total` instrumentation
+### `measure_total` instrumentation
 
-"Measure total" is one of the methods of measurement and instrumentation introduced in the Stage I Report.
+`measure_total` is the name of one of the methods of measurement and instrumentation introduced in the Stage I Report.
 As we will see in the next sections, it is sufficient for the estimation method we are using, at the same time being relatively easy to apply.
-We chose to not pursue the method "Measure all" / "individual instruction measurement" which has been preliminarily chosen during stage I.
+We chose to not pursue the method `measure_all` (aka "Individual instruction measurement") which has been preliminarily chosen during Stage I.
 
-"Measure total" takes the measurement of the interpreter loop in its entirety, starting at just before the first iteration and ending just after the program halts.
+`measure_total` takes the measurement of the interpreter loop in its entirety, starting at just before the first iteration and ending just after the program halts.
 The measurement is taken using a nanosecond precision monotonic timer, as available depending on the particular EVM implementation.
 We also capture the timer overhead by taking two readings of the timer without any code in between.
-The timer overhead is negligible in the "Measure total" approach, orders of magnitude smaller than the measurement itself, we capture the readings of it nevertheless, as it provides a first instance of a sanity check on the collected data.
+The timer overhead is negligible in the `measure_total` approach, orders of magnitude smaller than the measurement itself, we capture the readings of it nevertheless, as it provides a first instance of a sanity check on the collected data.
 
 As during the measurements done for Stage I, each measurement is repeated `sampleSize` times during the lifetime of a single OS process doing the measurement, as well as the measuring OS process is started `nSamples` times, producing the total of `nSamples * sampleSize` measurements for a single program.
 
@@ -111,16 +113,14 @@ The benefits of measuring the entire execution of the interpreter loop are the f
 2. We do not introduce factors which might impact the functioning of the EVM, namely the system calls required to capture the timer, in the middle of a running EVM program.
 3. The instrumentation is much simpler and the amounts of data produced smaller.
 4. The amount of changes in the interpreter code is smaller.
-**TODO** more?
 
 The main drawback is that we need to take special measures in order to be able to draw useful conclusions from the measurement obtained.
 
-
 - if we end up using `bench` - provide rationale and discussion **TODO**
 
-### describe `measure_marginal`
+### `measure_marginal` method
 
-We propose to use the `measure_total` instrumentation to measure programs generated in a particular way, in order to extract the gas cost estimates from it.
+We propose to use the `measure_total` instrumentation to measure programs generated in a particular way, in order to extract the OPCODEs' gas cost estimates from it.
 We call this method `measure_marginal`.
 
 Using the `measure_total` instrumentation, we cannot simply run a single instruction of the OPCODE and halt the program, because in order for the EVM to execute an OPCODE, it must prepare the stack with a suitable number (and value!) of arguments.
@@ -131,9 +131,11 @@ If we want to have control over the values on the stack for subsequent OPCODEs t
 The number of arguments taken off and pushed to the stack is different per every OPCODE.
 If we had naively measured the different OPCODEs with their respective `PUSH`es and `POP`s around, our measurements would have been very unfair and the gas cost estimates would have been impacted by the stack management code.
 
-> **EXAMPLE**: `program_1` is `PUSH1 PUSH1 PUSH1 ADDMOD`, `program_2` is `ADDRESS` - it would take a lot of effort and introduce error, if we were to compare `measure_total` measurements for these two.
+> **EXAMPLE**: `program_1` is `PUSH1 PUSH1 PUSH1 ADDMOD`, `program_2` is `ADDRESS`. It would take a lot of effort and introduce error, if we were to compare `measure_total` measurements for these two.
 
 A natural solution in the example case above would be to prepend three `PUSH1` to the `ADDRESS` program as well.
+They do not impact the program execution (`ADDRESS` takes no arguments), but would balance the measurement with that of the `ADDMOD` program.
+
 The layout of the `measure_marginal` generated program is an evolution of this thinking.
 
 **`measure_marginal` program**: For every `OPCODE`, which removes one value from and pushes one value to the stack, generate `max_op_count` programs, such that for `0 <= op_count <= max_op_count` we have:
@@ -145,12 +147,12 @@ The layout of the `measure_marginal` generated program is an evolution of this t
 | `POP` | `max_op_count - op_count` times |
 
 An `op_count + 1` program differs from an `op_count` program by only a single instance of the `OPCODE` instruction.
-At the same time, we have full control over the stack arguments prepared for each instance of the `OPCODE` instruction - in the simplest case we always push the same value.
+At the same time, we have full control over the stack arguments prepared for each instance of the `OPCODE` instruction - in the simplest case we provide the same set of arguments for each instance of `OPCODE`.
 
-This layout is naturally extended to `OPCODE`s which remove from and push to the stack different numbers of values.
+This layout is naturally extended to OPCODEs which remove from and push to the stack different numbers of values.
 
-Such programs are later used to estimate the marginal cost of the `OPCODE` instruction, for every `OPCODE` we are interested in.
-The estimation is based off a premise, that if we can capture the trend of increasing timer measurements (`measure_total`, see above), in function of growing `op_count`, we can conclude that the slope of this trend is proportional to the computational cost of `OPCODE`.
+Such programs are later used to estimate the marginal cost of every `OPCODE` we are interested in.
+The estimation is based on a premise, that if we can capture the trend of increasing timer measurements (`measure_total`, see above), in function of growing `op_count`, we can conclude that the slope of this trend is proportional to the computational cost of `OPCODE`.
 In other words, we are estimating the marginal increase of computational cost (time spent executing) as a function of the marginal increase of the program (by a single instance of `OPCODE`).
 
 It turns out, that a simple linear regression is capable of capturing such trend very reliably, given some additional data clean-up measures.
@@ -187,7 +189,6 @@ The procedure to estimate the marginal cost is as follows:
    The sequence of measured programs is shuffled randomly, so that any temporary fluctuations of performance of the measuring system (exogenous to our experiment) are more or less scattered and not clustered around neighboring `op_count` values
 3. Remove outliers.
    We remove outliers separately for data subsets, as divided by `op_count`, OPCODE and environment.
-   (**TODO** define environment)
 4. Remove bi-modality from the measurement distribution.
    For a few particular combinations of environment and OPCODE, the distribution of `measure_total` time follows a bi-modal distribution, where for certain values of `op_count` the execution time is far greater than the others.
    We discuss this phenomenon in greater detail later, but the observation here is that the `measure_marginal` trend is easy to recognize visually, i.e. regardless of which "mode" the data point falls into, the cost of execution increases at a stable pace as `op_count` increases.
@@ -200,11 +201,11 @@ The procedure to estimate the marginal cost is as follows:
 The benefits of using `measure_marginal` as the measurement method are the following:
 1. Everything given as the benefits of `measure_total` in section **TODO**
 2. Stability of the estimation and natural way of spotting OPCODEs and environments which have inaccurate measurements - the model provides us with plenty of standard linear regression diagnostics as well as an elegant plot to validate the model.
-3. The ability to measure the different OPCODEs in almost complete isolation, as we're de-facto measuring only the individual measured OPCODEs, and the impact of all the accompanying OPCODEs is filtered out by the regression model as constant intercept.
+3. The ability to measure the different OPCODEs in almost complete isolation, as we are de-facto measuring only the individual measured OPCODEs, and the impact of all the accompanying bytecode is filtered out by the regression model as constant intercept coefficient `b`.
 
 The assessment of the models and discussion about the results is given in the section **TODO**.
 
-### describe `measure_arguments`
+### `measure_arguments` method
 
 The cost of some OPCODEs relies on the arguments taken off the stack.
 Within the scope of this research, this is the case for `EXP` and the memory OPCODEs which copy variable portions of memory `CALLDATACOPY`, `RETURNDATACOPY` and `CODECOPY`.
@@ -222,7 +223,7 @@ It is also not necessary to do so, since we have reliably established the consta
 We are also not measuring the argument impact for a mesh of points of the argument space (e.g. spaced in equal distances), firstly to reduce the dimensionality for the OPCODEs taking two or three arguments, secondly to prevent any undesired behavior of the statistical models due to the regularity of the mesh (e.g. where OPCODE would consequently cost less for arguments being multiples of 64 and we chose these points as our mesh).
 
 We need to be wary of different potential functional forms of the relation between the argument value and cost.
-For simplicity we derive this form based on the inspection of the code executing the OPCODEs.
+For simplicity we derive this form based on the inspection of the code executing the OPCODEs (and of the current gas cost schedule).
 We chose these functions:
 - `argument_cost(arg) = arg` - for memory OPCODEs: `CALLDATALOAD`, `CALLDATACOPY`, `RETURNDATACOPY`, `MLOAD`, `MSTORE`, `MSTORE8`, `CODECOPY`
 - `argument_cost(arg) = log(arg)` - for OPCODEs where the cost is proportional to the bytesize of the argument (remainder of OPCODEs)
@@ -240,6 +241,8 @@ The procedure to estimate the argument cost is as follows:
 4. Fit a linear regression model `measure_total_time = b + a * op_count * argument_cost(arg) + c * argument_cost(arg) + d * op_count`.
    `a` is the estimation of the cost increase for a unit increase of the argument cost (either `arg` or `log(arg)`).
    The model is fit separately for each OPCODE and environment.
+5. Discriminate between OPCODEs where the arguments have and do not have impact.
+   We do this by looking at the p-value of the `a` coefficient.
 
 It is worth noting, that we neglect to check the impact of the size of the second `pc_destination` argument of `JUMP` and `JUMPI` OPCODEs on purpose.
 It would be quite unfeasible to compose programs which actually execute as expected, fit into the framework of our measurement method and explore the dynamics of this argument.
@@ -252,39 +255,39 @@ The instrumentation and measurement were performed for these EVMs:
 2. `evmone` - [ethereum/evmone](https://github.com/ethereum/evmone) at [`TODO`](https://github.com/ethereum/evmone/commit/TODO) with [additional changes implementing the instrumentation](https://github.com/imapp-pl/evmone/commit/TODO).
 3. `nethermind` - ?? TODO
 
-running in these environments:
+running in these machines:
 1. `AWS, Ubuntu 20.04.3, dockerized` - `t2.micro` instance
 2. `Laptop 1, Ubuntu 20.04.4, dockerized` - Intel® Core™ i5-7200U CPU @ 2.50GHz × 4
 
 `dockerized` means we are running the measurements within a Docker container with the flags `--privileged --security-opt seccomp:unconfined`. See TODO link to Makefile for the exact invocations.
 
-**NOTE** during the analysis we noticed the differences in the results obtained in various environments were small, one order of magnitude lower than the differences between various EVM implementations.
+**NOTE** during the analysis we noticed the differences in the results obtained in various meachines were small, one order of magnitude lower than the differences between various EVM implementations.
 We will focus on citing and discussing only the results coming from the `AWS` setup and prioritize the challenge of equilibrating the gas cost schedule to cater for various EVMs.
 
 #### Garbage collection
 
-For the Go EVM `geth` we turn garbage collection off using the `GOGC=off` environment variable but we _haven't_ run `runtime.GC()` at all.
-See gc section **TODO** for the details.
+For the Go EVM `geth` we turn garbage collection off using the `GOGC=off` environment variable but we _don't_ run `runtime.GC()` at all.
+See [section [Garbage collection impact](#Garbage-collection-impact)] for the details.
 
 #### Timer
 
-Care must be taken to always use an efficient, monotonic timer available for the environment.
+Care must be taken to always use an efficient, low-level, monotonic timer available for the environment.
 For the measurements done on Ubuntu OS, we use the `tsc` clocksource.
 For the Go EVM `geth` we use the low-level `runtimeNano()` call.
 For the C EVM `evmone` we use the `std::chrono::steady_clock::now()` call.
 In this setup, the timer overhead measured is in the order of magnitude of 25ns, many times less than the duration of the execution of the program using `measure_total`.
 
-### measuring cache impact
+### Cache impact
 
 - argument that cache behavior is similar between different kinds of programs (marginal/arguments/validation) used and doesn't skew the results
 - argument that cache impact is "fair" between OPCODEs
 
-### measuring warm-up impact
+### Warm-up impact
 
 - recommendation for warm-up handling
 - argument that this warm-up handling reflects typical operation of EVM
 
-### measuring GC impact
+### Garbage collection impact
 
 - argument that GC impact is similar between kinds of programs/OPCODEs and doesn't skew the results
 (or:)
@@ -295,7 +298,7 @@ In this setup, the timer overhead measured is in the order of magnitude of 25ns,
 
 In this section the process of validation of the estimated gas costs is described.
 
-### describe `validation` measurements
+### `validation` measurements
 
 In order to validate the obtained gas cost estimates and to compare them against other approaches, we generate another set of programs using a distinct method.
 
@@ -345,12 +348,6 @@ The reason for this is that `measure_arguments` performs much worse in estimatin
 It includes interaction terms of the form `a * op_count * argument_cost(arg)`, so the `op_count` coefficient `d` (from `d * op_count` term) is the estimation of marginal increase of `measure_total_time` for each unit increase of `op_count`, but _assuming `argument_cost(arg) = 0`_.
 Since we don't want to rely on this assumption and include the error it brings into the estimation procedure, we simply ignore `d` in favor of the `measure_marginal` result.
 
-Another aspect of this is the discrimination between OPCODEs which do and do not have arguments impacting the cost.
-We're having the estimation script pick the OPCODE-environment pairs automatically by looking at the p-value of the `a` coefficient in the `measure_arguments` model.
-The script selects those pairs, where p-value is close to zero.
-
-For reasons given in the following section, we manually fix the OPCODE-environment pairs for the final model, because the automatic selection picks OPCODEs where the relationship is only of statistical nature.
-
 #### Deriving alternative gas cost schedules
 
 In order to be able to express the estimation results in units of gas and compare them across different environments, we must make the estimates relative.
@@ -387,6 +384,8 @@ And the complete summary of the fitted model:
 This case is a clear example of a very strong trend, indicating that we estimate the slope coefficient `a` (the marginal cost of `EXP` for `geth`) well.
 
 In our results, all OPCODEs for all environments have their models well fitted.
+
+**TODO** leave pointers from these sections how to do the validation, linking to the `.Rmd` scripts in the repo.
 
 #### Bi-modality correction for `evmone`
 
@@ -483,7 +482,7 @@ We can now assess our results from the standpoint of the criteria posed in the S
 - **It is modeled to explain the variation in computational cost coming from different circumstances and/or parameters.** - we modeled and estimated the impact of arguments and we have also analyzed the impact of our measurement programs on cache in-depth, and we believe that our data represents the circumstances well enough to give adequate estimates.
 - **It is adequate for all implementations and environments.** - yes, thanks to the application of `measure_total` the approach should be easily applicable to other implementations of the EVM, with small intervention in the EVM code.
 - **It can be clearly stated, when no such value exists because of differences in implementations.** - calibration of the results using the gas cost of the pivot OPCODE allows us to judge whether and which OPCODEs can have their gas cost updated across implementations. It turns out that very few.
-- **It should have the measurement overhead and noise under control and "fair" for all OPCODEs.** - thanks to the properties of `measure_marginal`, we are able to measure the different OPCODEs costs with very low noise and without having to take any other measures to achieve fairness. The idea of the marginal increase of cost caused by an increase of OPCODEs in the program is exactly the kind of measurement which reflects the idea of charging gas for computation. As the results of the cache (**TODO** reference) section show, the synthetical nature of the `measure_marginal` programs should have no unfair impact on the OPCODEs.
+- **It should have the measurement overhead and noise under control and "fair" for all OPCODEs.** - thanks to the properties of `measure_marginal`, we are able to measure the different OPCODEs costs with very low noise and without having to take any other measures to achieve fairness. The idea of the marginal increase of cost caused by an increase of OPCODEs in the program is exactly the kind of measurement which reflects the idea of charging gas for computation. As the results of the [Cache impact section](#Cache-impact) show, the synthetical nature of the `measure_marginal` programs should have no unfair impact on the OPCODEs.
    It is worth noting that there are OPCODEs where the estimates are more noisy (namely the memory OPCODEs). However, the properties of the `measure_marginal` fitted models indicate that the estimate should still be accurate.
 
 There is a number of points which might raise questions in these results:
@@ -492,8 +491,6 @@ We observe a non-linearity in the validation model for `geth`, with `ADDMOD` som
 Similarly `CALLDATACOPY` is slightly underpriced for `evmone`, but neither of these deviations is alarming.
 
 ## Appendix B: OPCODEs subset
-
-**TODO** check and refresh
 
 ### EVM OPCODEs
 
