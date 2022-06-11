@@ -28,7 +28,6 @@ In the remainder of this section we provide our motivation and some background o
 In section **Estimation Method** we describe the proposed measurement and estimation method.
 In section **Validation** we elaborate on the procedure of validating the results.
 In section **Results** we provide the results obtained in various environments and discuss them in the context of an alternative gas schedule.
-In section **Tooling** we briefly describe the tooling prepared to generate and analyze data, and refer the reader to the respective source code. **TODO** this section?
 
 ### Motivation
 
@@ -120,6 +119,7 @@ For the implementation of the instrumentation tools follow the links:
 - [`geth` measurement executable](https://github.com/imapp-pl/gas-cost-estimator/tree/master/src/instrumentation_measurement/geth)
 - [`wallclock-total` branch in forked go-ethereum repository](https://github.com/imapp-pl/go-ethereum/tree/wallclock-total)
 - [`wallclock` branch in forked evmone repository](https://github.com/imapp-pl/evmone/tree/wallclock)
+- [Python script to orchestrate the measurements for a batch of programs](https://github.com/imapp-pl/gas-cost-estimator/tree/master/src/instrumentation_measurement/measurements.py)
 - [convenience `Makefile`](https://github.com/imapp-pl/gas-cost-estimator/tree/master/Makefile) allowing to build Docker images and run measurements within them
 
 - if we end up using `bench` - provide rationale and discussion **TODO**
@@ -163,10 +163,7 @@ In other words, we are estimating the marginal increase of computational cost (t
 
 It turns out, that a simple linear regression is capable of capturing such trend very reliably, given some additional data clean-up measures.
 
-For the implementation of the `measure_marginal` tools follow the links:
-- [program generator](https://github.com/imapp-pl/gas-cost-estimator/tree/master/src/program_generator/pg_marginal.py)
-- [analysis notebook](https://github.com/imapp-pl/gas-cost-estimator/tree/master/src/analysis/measure_marginal.Rmd)
-
+For the implementation of the `measure_marginal` program generator [see here](https://github.com/imapp-pl/gas-cost-estimator/tree/master/src/program_generator/pg_marginal.py)
 
 #### Additional features of `measure_marginal` programs
 
@@ -216,6 +213,8 @@ The benefits of using `measure_marginal` as the measurement method are the follo
 
 The assessment of the models and discussion about the results is given in the section **TODO**.
 
+For the implementation of the `measure_marginal` estimation scripts [see here](https://github.com/imapp-pl/gas-cost-estimator/tree/master/src/analysis/measure_marginal.Rmd)
+
 ### `measure_arguments` method
 
 The cost of some OPCODEs relies on the arguments taken off the stack.
@@ -240,6 +239,8 @@ We chose these functions:
 - `argument_cost(arg) = log(arg)` - for OPCODEs where the cost is proportional to the bytesize of the argument (remainder of OPCODEs)
 - `argument_cost(arg) = numerator_arg > denominator_arg` - gauged towards the division OPCODES. This means that the arguments "cost" more if the OPCODE involves a `numerator / denominator` operation, and the `numerator` part is bigger.
 
+For the implementation of the `measure_arguments` program generator [see here](https://github.com/imapp-pl/gas-cost-estimator/tree/master/src/program_generator/pg_arguments.py)
+
 #### Estimation procedure for `measure_arguments`
 
 The procedure to estimate the argument cost is as follows:
@@ -258,6 +259,8 @@ The procedure to estimate the argument cost is as follows:
 It is worth noting, that we neglect to check the impact of the size of the second `pc_destination` argument of `JUMP` and `JUMPI` OPCODEs on purpose.
 It would be quite unfeasible to compose programs which actually execute as expected, fit into the framework of our measurement method and explore the dynamics of this argument.
 At the same time we find it unlikely for this argument to play a role in the cost of execution of this OPCODE.
+
+For the implementation of the `measure_arguments` estimation scripts [see here](https://github.com/imapp-pl/gas-cost-estimator/tree/master/src/analysis/measure_arguments.Rmd)
 
 ### Measurement setup and environments
 
@@ -325,7 +328,9 @@ If not for the dominant OPCODE, the programs cost would tend to average out for 
 Lastly, `PUSHx`, `DUPx`, `SWAPx` groups are given the same probability as regular OPCODEs, and when selected, the precise variant is chosen randomly in a next step.
 This is to overcome the high frequency of these `PUSHx`, `DUPx`, `SWAPx` OPCODEs, should they have been treated separately and on par with other OPCODEs.
 
-#### Estimation procedure for `measure_validation`
+For the implementation of the `measure_validation` program generator [see here](https://github.com/imapp-pl/gas-cost-estimator/tree/master/src/program_generator/pg_validation.py)
+
+#### Validation procedure
 
 The procedure to calculate the validation models is as follows:
 
@@ -347,6 +352,8 @@ The procedure to calculate the validation models is as follows:
    
    Current gas cost schedule model is `measure_total_time = b + a * current_gas_cost_of_program`.
    Outperforming this model would mean that we can propose an update to the gas cost schedule, which will better approximate the computational cost of EVM programs.
+
+For the implementation of the validation scripts [see here](https://github.com/imapp-pl/gas-cost-estimator/tree/master/src/analysis/validation_with_arguments.Rmd).
 
 #### Details on `estimated_total_time`
 
