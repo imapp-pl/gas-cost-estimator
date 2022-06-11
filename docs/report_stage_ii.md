@@ -498,7 +498,6 @@ Similarly `CALLDATACOPY` is slightly underpriced for `evmone`, but neither of th
 ### EVM OPCODEs
 
 ```
-0x00 STOP
 0x01 ADD
 0x02 MUL
 0x03 SUB
@@ -521,6 +520,9 @@ Similarly `CALLDATACOPY` is slightly underpriced for `evmone`, but neither of th
 0x18 XOR
 0x19 NOT
 0x1a BYTE
+0x1b SHL
+0x1c SHR
+0x1d SAR
 0x30 ADDRESS
 0x32 ORIGIN
 0x33 CALLER
@@ -538,6 +540,8 @@ Similarly `CALLDATACOPY` is slightly underpriced for `evmone`, but neither of th
 0x43 NUMBER
 0x44 DIFFICULTY
 0x45 GASLIMIT
+0x46 CHAINID
+0x47 SELFBALANCE
 0x50 POP
 0x51 MLOAD
 0x52 MSTORE
@@ -612,10 +616,10 @@ Similarly `CALLDATACOPY` is slightly underpriced for `evmone`, but neither of th
 0x9d SWAP14
 0x9e SWAP15
 0x9f SWAP16
-0xf3 RETURN
-0xfd REVERT
-0xfe INVALID
 ```
+
+**NOTE** `0x1b SHL`, `0x1c SHR`, `0x1d SAR`, `0x46 CHAINID`, `0x47 SELFBALANCE` were added, when compared to the Stage I report list.
+`0x00 STOP`, `0xf3 RETURN`, `0xfd REVERT`, `0xfe INVALID` were dropped from the list, since they can ever only be executed once per program and their gas cost doesn't have much impact in practice.
 
 ## Acknowledgements
 
