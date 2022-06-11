@@ -163,6 +163,11 @@ In other words, we are estimating the marginal increase of computational cost (t
 
 It turns out, that a simple linear regression is capable of capturing such trend very reliably, given some additional data clean-up measures.
 
+For the implementation of the `measure_marginal` tools follow the links:
+- [program generator](https://github.com/imapp-pl/gas-cost-estimator/tree/master/src/program_generator/pg_marginal.py)
+- [analysis notebook](https://github.com/imapp-pl/gas-cost-estimator/tree/master/src/analysis/measure_marginal.Rmd)
+
+
 #### Additional features of `measure_marginal` programs
 
 There is a couple of additional measures taken when generating `measure_marginal` programs:
