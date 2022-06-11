@@ -347,9 +347,9 @@ For reasons given in the following section, we manually fix the OPCODE-environme
 In order to be able to express the estimation results in units of gas and compare them across different environments, we must make the estimates relative.
 
 A similar approach to that of Stage I is taken, where a _pivot OPCODE_ is chosen from among all the OPCODEs.
-This time however, we do not try to reason about which OPCODE should this be, instead we pick the one which tends to make differences between estimates stand out _the least_.
+This time however, we do not try to reason about which OPCODE should this be, instead we pick the one which tends to make differences between EVMs stand out _the least_.
 
-We calculate the estimated gas costs by multiplying all the estimates for a given environment by a constant scale factor, so as for the _pivot OPCODE_ estimate to equal the gas cost from the current schedule.
+We calculate the estimated gas costs by multiplying all the estimates for a given environment by a constant scale factor, so that the _pivot OPCODE's_ estimate equals its gas cost from the current schedule.
 
 We chose _pivot OPCODE_ such that the euclidean distance between the estimated gas costs is the smallest between different environments.
 
@@ -439,19 +439,39 @@ There is a number of points which might raise questions in these results:
 
 We observe a non-linearity in the model for `geth`, with the expensive OPCODEs (mainly `EXP`) overpriced. **TODO** details
 
-### Pivot OPCODE choice
+#### Alternative gas cost schedule
 
-For the results it seems `ADDRESS` works best as the pivot OPCODE, providing the most chances for a consistent update to the gas cost schedule:
+Using the estimates obtained so far, we proceed to chose the pivot OPCODE and calculate an alternative gas cost schedule.
+`ADDRESS` works best as the pivot OPCODE, providing the most chances for a consistent update to the gas cost schedule.
+Using this pivot, we calculate the alternative gas cost schedule.
 
-**TODO** table
+**TODO** plot & table for AWS
+**TODO** plot & table for laptop
 
-- choice of pivot OPCODE and implementation-relative measurements
-- present results, for each evm/env pair measured:
-  - relative gas costs - table & plot
-  - validation model results and plot, comparison with trivial model (program_length) and current gas cost schedule model
-- discuss inconsistencies between EVMs (and envs?) - enumerate OPCODEs which don't have consistent pricing 
-- discuss the alternative gas schedule we could propose
-- discuss the OPCODEs which turn out to be argument dependent, while are not as of today (DIV etc)
+We observe, that the final result (the alternative gas cost schedule) doesn't differ much from environment to environment, but it does differ significantly from EVM to EVM.
+
+We can summarize the findings about the alternative gas cost schedule:
+1. The following OPCODEs should have their gas cost left intact:
+  - `CALLDATACOPY`, `CODECOPY` (but not their cost of the arguments)
+  - `SDIV`, `MOD`, `SMOD` (assuming their "non-trivial" version, i.e. `x >= y`; `DIV` could be also put here, although it diverges a bit more from the current shedule)
+2. The following OPCODEs can have their gas cost updated rather consistently, respecting all the EVM implementations (relative difference between `geth` and `evmone` is less than 15%):
+  - `MUL`: 1.2
+  - `SAR`: 1.1
+  - `ADDMOD`: 6 (assuming "non-trivial" version)
+  - `MULMOD`: 7.5 (assuming "non-trivial" version)
+3. The following OPCODEs can have their gas cost discounted whenever the calculation is trivial (`x < y`):
+  - `DIV`, `SDIV`, `MOD`, `SMOD`, `ADDMOD`, `MULMOD`
+   However, the magnitude of the discount is different across different EVMs.
+   As a general trend, `geth` seems to be faster than `evmone` for the trivial cases.
+4. The remainder of the OPCODEs don't seem to have a consistent pricing. Within this group, we can make some soft statements about the visible trends:
+  - comparison OPCODEs are faster in `evmone` than in `geth`
+  - arithmetic OPCODEs are faster in `geth` than in `evmone`, but there are exceptions
+  - stack manipulation OPCODEs are faster in `evmone` than in `geth`
+  - flow control OPCODEs (`JUMP` and `JUMPI`) are currently grossly overpriced
+  - cost of the exponent argument in `EXP` is currently grossly overpriced
+
+Note, that the above statements should always be understood relatively to the cost of the pivot OPCODE.
+
 - discuss OPCODE fairness
 
 

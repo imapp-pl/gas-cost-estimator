@@ -2,6 +2,7 @@
 library(sqldf)
 library(nlme)
 library(mixtools)
+library(zeallot) # for multi-assignment %<-%
 
 # prevent scientific notation
 options(scipen = 100)
