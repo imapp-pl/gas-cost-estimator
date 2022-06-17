@@ -61,3 +61,5 @@ remove_compare_outliers <- function(df, col, all_envs, for_validation) {
 
 geth_color = rgb(0.1,0.1,0.7,0.5)
 evmone_color = rgb(0.8,0.1,0.3,0.6)
+
+env_colors = c(geth_color, evmone_color)

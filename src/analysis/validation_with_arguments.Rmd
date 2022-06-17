@@ -58,7 +58,8 @@ lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
   } else {
     subset = df
   }
-  model = lm(subset[, yvar] ~ subset[,xvar], data=subset)
+  formula = as.formula(paste0(yvar, ' ~ ', xvar))
+  model = lm(formula, data=subset)
   print(summary(model))
   return(model)
 }
@@ -356,40 +357,26 @@ print('evmone all')
 model_evmone = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
 ```
 
-A side-by-side comparison of the gas cost model with the `program_length` model.
+A side-by-side comparison of the gas cost model with the `program_length` model and with the `current_gas` model.
 
-```{r fig.width=25}
-par(mfrow=c(2,2))
+```{r fig.width=25, fig.height=25}
+par(mfrow=c(3,2))
 compare_plots(validation_no_exp, 'env', 'geth', 'program_length', labels='dominant')
 compare_plots(validation_no_exp, 'env', 'evmone', 'program_length', labels='dominant')
-compare_plots(validation_no_exp, 'env', 'geth', 'cost_ns', labels='dominant')
-compare_plots(validation_no_exp, 'env', 'evmone', 'cost_ns', labels='dominant')
-par(mfrow=c(2,2))
-compare_plots(validation, 'env', 'geth', 'program_length', labels='dominant', log='xy')
-compare_plots(validation, 'env', 'evmone', 'program_length', labels='dominant', log='xy')
-compare_plots(validation, 'env', 'geth', 'cost_ns', labels='dominant', log='xy')
-compare_plots(validation, 'env', 'evmone', 'cost_ns', labels='dominant', log='xy')
-par(mfrow=c(2,2))
-compare_plots(validation, 'env', 'geth', 'program_length', labels='dominant')
-compare_plots(validation, 'env', 'evmone', 'program_length', labels='dominant')
-compare_plots(validation, 'env', 'geth', 'cost_ns', labels='dominant')
-compare_plots(validation, 'env', 'evmone', 'cost_ns', labels='dominant')
-```
-
-A side-by-side comparison of the gas cost model with the `current_gas` model.
-
-```{r fig.width=25}
-par(mfrow=c(2,2))
 compare_plots(validation_no_exp, 'env', 'geth', 'current_gas', labels='dominant')
 compare_plots(validation_no_exp, 'env', 'evmone', 'current_gas', labels='dominant')
 compare_plots(validation_no_exp, 'env', 'geth', 'cost_ns', labels='dominant')
 compare_plots(validation_no_exp, 'env', 'evmone', 'cost_ns', labels='dominant')
-par(mfrow=c(2,2))
+par(mfrow=c(3,2))
+compare_plots(validation, 'env', 'geth', 'program_length', labels='dominant', log='xy')
+compare_plots(validation, 'env', 'evmone', 'program_length', labels='dominant', log='xy')
 compare_plots(validation, 'env', 'geth', 'current_gas', labels='dominant', log='xy')
 compare_plots(validation, 'env', 'evmone', 'current_gas', labels='dominant', log='xy')
 compare_plots(validation, 'env', 'geth', 'cost_ns', labels='dominant', log='xy')
 compare_plots(validation, 'env', 'evmone', 'cost_ns', labels='dominant', log='xy')
-par(mfrow=c(2,2))
+par(mfrow=c(3,2))
+compare_plots(validation, 'env', 'geth', 'program_length', labels='dominant')
+compare_plots(validation, 'env', 'evmone', 'program_length', labels='dominant')
 compare_plots(validation, 'env', 'geth', 'current_gas', labels='dominant')
 compare_plots(validation, 'env', 'evmone', 'current_gas', labels='dominant')
 compare_plots(validation, 'env', 'geth', 'cost_ns', labels='dominant')
@@ -530,10 +517,11 @@ Plot the alternative gas cost schedule.
 maximum_gas_cost = max(gas_schedule_comparison[,!names(gas_schedule_comparison) %in% c('opcode')])
 
 par(mar=c(15,4,4,2))
-plot(gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(0,maximum_gas_cost * 1.1))
+plot(gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(0,maximum_gas_cost * 1.1), xlab="", ylab="")
 axis(1, at=1:nrow(gas_schedule_comparison), labels=gas_schedule_comparison$opcode, las=2)
-points(gas_schedule_comparison$geth_gas, col=geth_color, xaxt='n')
-points(gas_schedule_comparison$evmone_gas, col=evmone_color, xaxt='n')
+points(gas_schedule_comparison$geth_gas, col=geth_color, bg=geth_color, xaxt='n', pch=21)
+points(gas_schedule_comparison$evmone_gas, col=evmone_color, bg=evmone_color, xaxt='n', pch=21)
+legend(0, maximum_gas_cost, c("Geth estimate", "Evmone estimate", "Current gas cost schedule"), fill=c(env_colors, 'gray'), cex=2)
 ```
 
 In order to be able to tell which OPCODEs diverge by the least, we do:

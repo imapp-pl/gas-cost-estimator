@@ -270,13 +270,13 @@ The instrumentation and measurement were performed for these EVMs:
 3. `nethermind` - ?? TODO
 
 running in these machines:
-1. `AWS, Ubuntu 20.04.3, dockerized` - `t2.micro` instance
-2. `Laptop 1, Ubuntu 20.04.4, dockerized` - Intel® Core™ i5-7200U CPU @ 2.50GHz × 4
+1. `cloud`: `AWS, Ubuntu 20.04.3, dockerized` - `t2.micro` instance
+2. `laptop`: `Laptop 1, Ubuntu 20.04.4, dockerized` - Intel® Core™ i5-7200U CPU @ 2.50GHz × 4
 
 `dockerized` means we are running the measurements within a Docker container with the flags `--privileged --security-opt seccomp:unconfined`. See TODO link to Makefile for the exact invocations.
 
 **NOTE** during the analysis we noticed the differences in the results obtained in various meachines were small, one order of magnitude lower than the differences between various EVM implementations.
-We will focus on citing and discussing only the results coming from the `AWS` setup and prioritize the challenge of equilibrating the gas cost schedule to cater for various EVMs.
+We will focus on citing and discussing only the results coming from the `cloud` setup and prioritize the challenge of equilibrating the gas cost schedule to cater for various EVMs.
 
 #### Garbage collection
 
@@ -575,19 +575,63 @@ Multiple R-squared:  0.7955,	Adjusted R-squared:  0.7955
 F-statistic: 2.669e+04 on 4 and 27438 DF,  p-value: < 0.00000000000000022
 ```
 
+For the `.Rmd` scripts to obtain the `measure_arguments` estimates see [`measure_arguments.Rmd`](./../src/analysis/measure_arguments.Rmd).
+
 ### Validation results
 
 The estimates obtained by our procedure tend to estimate the computational cost of validation well and much better than both the trivial model and the current gas cost schedule model.
 
 We can see the data points (each for a given `measure_validation` program) much more tightly packed around the linear regression line.
 
-**TODO** plots
+**Figure 4: Comparison of trivial (`program_length`) estimations the current gas cost schedule (`current_gas_cost`) estimations with our estimates.** Logarithmic scale on both axes, the curve represents the estimated regression line. The points represent the validation programs and labels are their respective dominant OPCODEs
 
-The slope coefficient is **TODO** cite
+<img src="./report_stage_ii_assets/validation_compare.png" width="700"/>
 
-From the linear regression model summaries we see that the R squared coefficient is much larger for our estimated model. **TODO** cite exact figures
+The summaries of the linear regression validation models for our estimates are:
 
-**TODO** model summary
+**Figure 4: Final model summaries**
+
+`geth`:
+```
+Coefficients:
+                Estimate   Std. Error t value            Pr(>|t|)    
+(Intercept) 57011.343420   301.612991   189.0 <0.0000000000000002 ***
+cost_ns         1.399401     0.007189   194.7 <0.0000000000000002 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 5349 on 498 degrees of freedom
+Multiple R-squared:  0.987,	Adjusted R-squared:  0.987 
+F-statistic: 3.789e+04 on 1 and 498 DF,  p-value: < 0.00000000000000022
+```
+
+`evmone`:
+```
+Coefficients:
+              Estimate Std. Error t value            Pr(>|t|)    
+(Intercept) 57442.2762   111.6685   514.4 <0.0000000000000002 ***
+cost_ns         0.9939     0.0016   621.0 <0.0000000000000002 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 2342 on 498 degrees of freedom
+Multiple R-squared:  0.9987,	Adjusted R-squared:  0.9987 
+F-statistic: 3.857e+05 on 1 and 498 DF,  p-value: < 0.00000000000000022
+```
+
+The slope coefficient is `1.399` for `geth` and `0.994` for `evmone` for our estimates, which is fairly close to `1`, meaning that each nanosecond spent on the estimating programs computation translate to about a nanosecond spent on the validating (randomized) programs.
+
+From the linear regression model summaries we see that the R squared coefficient is much larger for our estimated model. 
+
+**Table 1: R-squared coefficients compared for models using different variables**
+
+| EVM             | `program_length` trivial model | Current gas cost schedule model | Our final model |
+|-----------------|--------------------------------|---------------------------------|-----------------|
+| `geth`          | 0.2469                         | 0.8458                          | 0.987           |
+| `evmone`        | 0.04324                        | 0.9922                          | 0.9987          |
+
+
+For the `.Rmd` scripts to obtain the validation results see [`validation_with_arguments.Rmd`](./../src/analysis/validation_with_arguments.Rmd).
 
 #### Alternative gas cost schedule
 
@@ -595,15 +639,20 @@ Using the estimates obtained so far, we proceed to chose the pivot OPCODE and ca
 `ADDRESS` works best as the pivot OPCODE, providing the most chances for a consistent update to the gas cost schedule.
 Using this pivot, we calculate the alternative gas cost schedule.
 
-**TODO** plot & table for AWS
-**TODO** plot & table for laptop
+**Figure 4: Comparison of current and alternative gas cost schedules - `cloud`.** Each point represents an OPCODE (or a special cost factor to an OPCODE, like an increase in argument size). The figures are in gas units, relative to the gas cost and estimate of the pivot OPCODE. Results for the `cloud` measurement setup.
+
+<img src="./report_stage_ii_assets/alternative_gas_cost_schedule_cloud.png" width="1000"/>
+
+**Figure 4: Comparison of current and alternative gas cost schedules - `laptop`**
+
+<img src="./report_stage_ii_assets/alternative_gas_cost_schedule_laptop.png" width="1000"/>
 
 We observe, that the final result (the alternative gas cost schedule) doesn't differ much from environment to environment, but it does differ significantly from EVM to EVM.
 
 We can summarize the findings about the alternative gas cost schedule:
 1. The following OPCODEs should have their gas cost left intact:
   - `CALLDATACOPY`, `CODECOPY` (but not their cost of the arguments)
-  - `SDIV`, `MOD`, `SMOD` (assuming their "non-trivial" version, i.e. `x >= y`; `DIV` could be also put here, although it diverges a bit more from the current shedule)
+  - `SDIV`, `MOD`, `SMOD` (assuming their "non-trivial" version, i.e. `x >= y`; `DIV` could be also put here, although it diverges a bit more from the current schedule)
 2. The following OPCODEs can have their gas cost updated rather consistently, respecting all the EVM implementations (relative difference between `geth` and `evmone` is less than 15%):
   - `MUL`: 1.2
   - `SAR`: 1.1
