@@ -387,34 +387,76 @@ Let's pick the result of `EXP` OPCODE in `geth` as a working example.
 
 Here is the boxplot demonstrating the increasing trend captured by the `measure_marginal` model:
 
-**TODO** plot
+**Figure 1: Increasing trend for `EXP` `measure_marginal` for geth and evmone**
+
+<img src="./report_stage_ii_assets/marginal_exp_geth.png" width="425"/> <img src="./report_stage_ii_assets/marginal_exp_evmone.png" width="425"/> 
 
 The trend is easily visible and much stronger than the variation pictured by the boxplots.
 
 The standard linear regression diagnostic plots:
 
-**TODO** plot
+**Figure 2: Linear regression diagnostics for `EXP` `measure_marginal` for geth and evmone**
 
-And the complete summary of the fitted model:
+<img src="./report_stage_ii_assets/marginal_exp_diag_geth.png" width="425"/> <img src="./report_stage_ii_assets/marginal_exp_diag_evmone.png" width="425"/> 
 
-**TODO** model summary
+And the complete summary of the fitted models:
+
+**Figure 3: Linear regression model summaries for `EXP` `measure_marginal`.** The `op_count` estimate provides our value for the constant cost of `EXP` in nanoseconds
+
+`geth`:
+```
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-115.324  -17.724   -1.512   23.845   65.582 
+
+Coefficients:
+             Estimate Std. Error t value            Pr(>|t|)    
+(Intercept) 5775.3243     9.3723   616.2 <0.0000000000000002 ***
+op_count      62.0062     0.3231   191.9 <0.0000000000000002 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 33.96 on 49 degrees of freedom
+Multiple R-squared:  0.9987,	Adjusted R-squared:  0.9986 
+F-statistic: 3.684e+04 on 1 and 49 DF,  p-value: < 0.00000000000000022
+```
+
+`evmone`:
+```
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-72.860 -20.376  -4.328  21.769  82.285 
+
+Coefficients:
+             Estimate Std. Error t value            Pr(>|t|)    
+(Intercept) 2588.6998     8.3237   311.0 <0.0000000000000002 ***
+op_count      80.4677     0.2869   280.5 <0.0000000000000002 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 30.16 on 49 degrees of freedom
+Multiple R-squared:  0.9994,	Adjusted R-squared:  0.9994 
+F-statistic: 7.866e+04 on 1 and 49 DF,  p-value: < 0.00000000000000022
+```
 
 This case is a clear example of a very strong trend, indicating that we estimate the slope coefficient `a` (the marginal cost of `EXP` for `geth`) well.
 
 In our results, all OPCODEs for all environments have their models well fitted.
 
-**TODO** leave pointers from these sections how to do the validation, linking to the `.Rmd` scripts in the repo.
+For the `.Rmd` scripts to obtain the `measure_marginal` estimates see [`measure_marginal.Rmd`](./../src/analysis/measure_marginal.Rmd).
 
 #### Bi-modality correction for `evmone`
 
 A subset of OPCODEs exhibit a bi-modal distribution of measurements:
 
-**TODO** plot
+**Figure 4: Bimodal trend of `JUMP` `measure_marginal` results for `evmone`, along with the bimodal distribution and the corrected `measure_marginal` trend**
 
-We can still visually pick up the constant trend, irrespective of whether we're looking at the "top-mode" or "bottom-mode" measurements.
-Here is the diagnostic plot for the bi-modal model fitted and the results of bringing the "top-mode" observations down to the level of the "bottom-mode" observations:
+<img src="./report_stage_ii_assets/bimodal_PUSH32_evmone.png" width="425"/> <img src="./report_stage_ii_assets/bimodal_PUSH32_evmone_corrected.png" width="425"/> 
 
-**TODO** plot
+In the first plot we can still visually pick up the constant trend, irrespective of whether we're looking at the "top-mode" or "bottom-mode" measurements.
+We also see the two strong batches of measurements clustered around their respective modes.
+
+In second plot we see the results of bringing the "top-mode" observations down to the level of the "bottom-mode" observations.
 
 ### `measure_arguments` dynamics and results
 
