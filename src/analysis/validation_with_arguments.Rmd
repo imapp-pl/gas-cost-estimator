@@ -13,13 +13,16 @@ source('common.R')
 ### Functions
 
 ```{r}
+# Produces some initial overview plots of all the programs costs
 overview_plots <- function(df, selection_col, selection_val) {
   subset = df[which(df[, selection_col] == selection_val), ]
   boxplot(measure_total_time_ns ~ program_id, data=subset, main=selection_val)
   boxplot(measure_total_time_ns ~ run_id, data=subset, las=2, main=selection_val)
 }
 
-plot_validation <- function(df, yvar, xvar, labels, colors, set_asp, log) {
+# Selects a subset of data and plots the validation model results.
+# `set_asp=TRUE` will fix the aspect of the plot to 1:1, but it didn't prove useful
+compare_plots <- function(df, selection_col, selection_val, estimate_var, labels, colors, set_asp, log) {
   if (missing(labels)) {
     labels = 'program_id'
   }
@@ -34,27 +37,15 @@ plot_validation <- function(df, yvar, xvar, labels, colors, set_asp, log) {
   if (missing(log)) {
     log = ''
   }
-  plot(df[, xvar], df[, yvar], col=df[, colors], asp=asp, log=log)
-  abline(lm(df[, yvar] ~ df[, xvar]), asp=asp, untf=TRUE)
-  text(df[, yvar] ~ df[, xvar], data=df, labels=df[, labels], cex=0.6, pos=4, font=2)
-}
-
-compare_plots <- function(df, selection_col, selection_val, estimate_var, labels, colors, log) {
-  if (missing(labels)) {
-    labels = 'program_id'
-  }
-  if (missing(colors)) {
-    colors = 'has_exp'
-  }
-  if (missing(log)) {
-    log = ''
-  }
   subset = df[which(df[, selection_col] == selection_val), ]
-  # TODO: set_asp=TRUE works better when models are sane
-  plot_validation(subset, explained_variable, estimate_var, labels=labels, colors=colors, log=log) #, set_asp=TRUE)
-  title(main=paste(selection_val, 'estimate by', estimate_var), cex.main=3)
+  formula = as.formula(paste0(explained_variable, " ~ ", estimate_var))
+  plot(formula, data=df, col=df[, colors], asp=asp, log=log)
+  abline(lm(formula, data=df), asp=asp, untf=TRUE)
+  text(formula, data=df, labels=df[, labels], cex=0.6, pos=4, font=2)
+  title(main=paste(selection_val, 'estimate by', estimate_var))
 }
 
+# Fits the validation model
 lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
   if (! missing(selection_col) & ! missing(selection_val)) {
     subset = df[which(df[, selection_col] == selection_val), ]
@@ -66,7 +57,6 @@ lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
   print(summary(model))
   return(model)
 }
-
 ```
 
 ### Data preparations
@@ -319,13 +309,13 @@ Trivial variable plots are interesting, after we have introduced varying program
 We add the 'no EXP' version to make sure that the improvement of the estimated gas model over program length model isn't only because of the extreme EXP case.
 
 ```{r}
-print('geth all - only progam length')
+print('geth all - only program length')
 lm_validation(validation, explained_variable, 'program_length', selection_col='env', selection_val='geth')
-print('evmone all - only progam length')
+print('evmone all - only program length')
 lm_validation(validation, explained_variable, 'program_length', selection_col='env', selection_val='evmone')
-print('geth all - only progam length - no EXP')
+print('geth all - only program length - no EXP')
 lm_validation(validation_no_exp, explained_variable, 'program_length', selection_col='env', selection_val='geth')
-print('evmone all - only progam length  - no EXP')
+print('evmone all - only program length  - no EXP')
 lm_validation(validation_no_exp, explained_variable, 'program_length', selection_col='env', selection_val='evmone')
 ```
 
@@ -341,8 +331,6 @@ lm_validation(validation, explained_variable, 'current_gas', selection_col='env'
 ```
 
 ### Final validation model
-
-We explore the models in two classes of program lengths. We keep the model for the long programs.
 
 ```{r}
 print('geth all - no EXP')
