@@ -2,8 +2,11 @@
 title: "R Notebook: exploration of validation of measurements - with varying arguments; for Gas Cost Estimator"
 output: html_document
 ---
+In this script we conduct the validation procedure of the obtained estimates.
 
-```{r}
+```{r, setup, include=FALSE}
+# NOTE: change this to your respective path
+knitr::opts_knit$set(root.dir = '~/sources/imapp/gas-cost-estimator/src')
 source('common.R')
 ```
 
@@ -77,8 +80,6 @@ div_opcodes = c('DIV', 'MOD', 'SDIV', 'SMOD')
 ```
 
 ```{r}
-setwd("~/sources/imapp/gas-cost-estimator/src")
-
 estimated_cost = read.csv(paste0("../../local/argument_estimated_cost", suffix, ".csv"))
 # those are only the constant gas costs, we'll calculate arg portion of the cost later
 current_gas_cost = read.csv("program_generator/data/current_gas_cost.csv")
@@ -106,8 +107,6 @@ head(estimated_cost)
 head(marginal)
 ```
 ```{r fig.width=20}
-setwd("~/sources/imapp/gas-cost-estimator/src")
-
 program_set_codename = "pg_validation_full5_c500_randOps1500"
 measurement_codename = paste0("200_8", suffix)
 
@@ -534,7 +533,6 @@ gas_schedule_comparison$close = gas_schedule_comparison$relative_diff < 0.15
 
 ```{r}
 # just export the final compiled estimations to a file
-setwd("~/sources/imapp/gas-cost-estimator/src")
 write.csv(estimated_cost, paste0("../../local/final_estimated_cost", suffix, ".csv"), quote=FALSE, row.names=FALSE)
 write.csv(gas_schedule_comparison, paste0("../../local/gas_schedule_comparison", suffix, ".csv"), quote=FALSE, row.names=FALSE)
 ```
