@@ -6,7 +6,6 @@ import (
 	"math"
 	"math/big"
 	"os"
-	go_runtime "runtime"
 	"strings"
 	"time"
 
@@ -58,10 +57,9 @@ func main() {
 	// Warm-up. **NOTE** we're keeping tracing on during warm-up, otherwise measurements are off
 	cfg.EVMConfig.Debug = false
 	cfg.EVMConfig.Instrumenter = vm.NewInstrumenterLogger()
-	retWarmUp, _, errWarmUp := runtime.Execute(bytecode, calldata, cfg)
+	_, _, errWarmUp := runtime.Execute(bytecode, calldata, cfg)
 	// End warm-up
 
-	sampleStart := time.Now()
 	for i := 0; i < sampleSize; i++ {
 		if mode == "all" {
 			MeasureAll(cfg, bytecode, printEach, printCSV, i)
@@ -71,16 +69,9 @@ func main() {
 			TraceBytecode(cfg, bytecode, printCSV, i)
 		}
 	}
-
-	sampleDuration := time.Since(sampleStart)
-
 	if errWarmUp != nil {
 		fmt.Fprintln(os.Stderr, errWarmUp)
 	}
-	fmt.Fprintln(os.Stderr, "Program: ", *bytecodePtr)
-	fmt.Fprintln(os.Stderr, "Return:", retWarmUp)
-	fmt.Fprintln(os.Stderr, "Sample duration:", sampleDuration)
-
 }
 
 func TraceBytecode(cfg *runtime.Config, bytecode []byte, printCSV bool, sampleId int) {
@@ -118,7 +109,10 @@ func TraceBytecode(cfg *runtime.Config, bytecode []byte, printCSV bool, sampleId
 
 func MeasureTotal(cfg *runtime.Config, bytecode []byte, printEach bool, printCSV bool, sampleId int) {
 	cfg.EVMConfig.Instrumenter = vm.NewInstrumenterLogger()
-	go_runtime.GC()
+
+	// We're not collecting in between runs anymore. If the pressure on memory is OK, this has been chosen as the best approach.
+	// (Assuming GOGC=off, which is well enough aligned with default go GC behavior).
+	// go_runtime.GC()
 
 	_, _, err := runtime.Execute(bytecode, calldata, cfg)
 
@@ -133,7 +127,10 @@ func MeasureTotal(cfg *runtime.Config, bytecode []byte, printEach bool, printCSV
 
 func MeasureAll(cfg *runtime.Config, bytecode []byte, printEach bool, printCSV bool, sampleId int) {
 	cfg.EVMConfig.Instrumenter = vm.NewInstrumenterLogger()
-	go_runtime.GC()
+
+	// see above
+	// go_runtime.GC()
+
 	start := time.Now()
 	_, _, err := runtime.Execute(bytecode, calldata, cfg)
 	duration := time.Since(start)
