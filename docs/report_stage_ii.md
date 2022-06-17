@@ -275,7 +275,7 @@ running in these machines:
 
 `dockerized` means we are running the measurements within a Docker container with the flags `--privileged --security-opt seccomp:unconfined`. See the [`Makefile`](./../Makefile) for the exact invocations.
 
-**NOTE** during the analysis we noticed the differences in the results obtained in various meachines were small, one order of magnitude lower than the differences between various EVM implementations.
+**NOTE** during the analysis we noticed the differences in the results obtained in various machines were small, one order of magnitude lower than the differences between various EVM implementations.
 We will focus on citing and discussing only the results coming from the `cloud` setup and prioritize the challenge of equilibrating the gas cost schedule to cater for various EVMs.
 
 #### Garbage collection
@@ -293,15 +293,21 @@ In this setup, the timer overhead measured is in the order of magnitude of 25ns,
 
 ### Cache impact
 
+**TODO**
+
 - argument that cache behavior is similar between different kinds of programs (marginal/arguments/validation) used and doesn't skew the results
 - argument that cache impact is "fair" between OPCODEs
 
 ### Warm-up impact
 
+**TODO**
+
 - recommendation for warm-up handling
 - argument that this warm-up handling reflects typical operation of EVM
 
 ### Garbage collection impact
+
+**TODO**
 
 - argument that GC impact is similar between kinds of programs/OPCODEs and doesn't skew the results
 (or:)
@@ -316,14 +322,17 @@ In this section the process of validation of the estimated gas costs is describe
 
 In order to validate the obtained gas cost estimates and to compare them against other approaches, we generate another set of programs using a distinct method.
 
-**`measure_validation` programs**: Programs are composed of a fully randomized OPCODE sequence, each OPCODE is accompanied with its respective `PUSH` and `POP` instructions to manage the stack.
-The stack management is necessary to have full control over the values of OPCODE arguments.
+**`measure_validation` programs**: Each program is a fully randomized OPCODE sequence, each OPCODE is accompanied with its respective `PUSH` and `POP` instructions to manage the stack.
+The stack management is necessary to have full control over the values of OPCODE arguments (otherwise the stack tends to become dominated by zeros).
 The size of the arguments is also randomized, in the same scope of variability as for `measure_arguments`.
 Each program comes with all the measures implemented for the special kinds of OPCODEs like memory opcodes, `CODECOPY`, `JUMP` etc.
 
 Each program has a randomly chosen _dominant OPCODE_, which appears in the program more often than others.
 This is done to ensure that the random programs will vary enough in between them in terms of which OPCODEs have been randomly chosen.
 If not for the dominant OPCODE, the programs cost would tend to average out for longer programs.
+
+We also always prepend at least one `JUMP` instruction at the beginning, since EVM implementations tend to do additional work on first occurrence.
+It is safe to assume that in any real-world scenario, every EVM bytecode will execute `JUMP` at least once.
 
 Lastly, `PUSHx`, `DUPx`, `SWAPx` groups are given the same probability as regular OPCODEs, and when selected, the precise variant is chosen randomly in a next step.
 This is to overcome the high frequency of these `PUSHx`, `DUPx`, `SWAPx` OPCODEs, should they have been treated separately and on par with other OPCODEs.
@@ -431,7 +440,7 @@ Multiple R-squared:  0.9994,	Adjusted R-squared:  0.9994
 F-statistic: 7.866e+04 on 1 and 49 DF,  p-value: < 0.00000000000000022
 ```
 
-This case is a clear example of a very strong trend, indicating that we estimate the slope coefficient `a` (the marginal cost of `EXP` for `geth`) well.
+This case is a clear example of a very strong trend, indicating that we estimate the slope coefficient `a` (the marginal cost of `EXP`) well.
 
 In our results, all OPCODEs for all environments have their models well fitted.
 
@@ -455,7 +464,7 @@ In second plot we see the results of bringing the "top-mode" observations down t
 Continuing to use our working example of `EXP` OPCODE in `geth`, we estimate the `measure_arguments` model to see that the term `a * op_count * argument_cost(arg)` is significant for the second argument (exponent).
 
 
-**Figure 5: Linear regression model summaries for `EXP` `measure_arguments`.** The `op_count:arg1` estimate provides our value for the argument cost of `EXP`'s exponent in nanoseconds per every byte increase in the size of argument. The `op_count:arg0` (base) estimate is orders of magnitude weaker and not very statistically significant.
+**Figure 5: Linear regression model summaries for `EXP` `measure_arguments`.** The `op_count:arg1` estimate provides our value for the argument cost of `EXP`'s exponent in nanoseconds per every byte increase in the size of argument. The `op_count:arg0` (base) estimate is orders of magnitude weaker and not very statistically significant for `geth`.
 
 `geth`:
 
@@ -577,7 +586,7 @@ For the `.Rmd` scripts to obtain the `measure_arguments` estimates see [`measure
 
 ### Validation results
 
-The estimates obtained by our procedure tend to estimate the computational cost of validation well and much better than both the trivial model and the current gas cost schedule model.
+The estimates obtained by our procedure tend to estimate the computational cost of `measure_validation` programs well and much better than both the trivial model and the current gas cost schedule model.
 
 We can see the data points (each for a given `measure_validation` program) much more tightly packed around the linear regression line.
 
@@ -673,7 +682,7 @@ Note, that the above statements should always be understood relatively to the co
 
 We can now assess our results from the standpoint of the criteria posed in the State I Report:
 
-- **Estimate is proportional to the OPCODE's computational cost, or otherwise balanced when compared to other OPCODEs.** - we believe so, since the `measure_marginal` models are so well fitted in all cases. The slope coefficient from the validation models being close to `1` also reinfornces this belief.
+- **Estimate is proportional to the OPCODE's computational cost, or otherwise balanced when compared to other OPCODEs.** - we believe so, since the `measure_marginal` models are so well fitted in all cases. The slope coefficient from the validation models being close to `1` also reinforces this belief.
 - **It is modeled to explain the variation in computational cost coming from different circumstances and/or parameters.** - we modeled and estimated the impact of arguments and we have also analyzed the impact of our measurement programs on cache in-depth, and we believe that our data represents the circumstances well enough to give adequate estimates.
 - **It is adequate for all implementations and environments.** - yes, thanks to the application of `measure_total` the approach should be easily applicable to other implementations of the EVM, with small intervention in the EVM code.
 - **It can be clearly stated, when no such value exists because of differences in implementations.** - calibration of the results using the gas cost of the pivot OPCODE allows us to judge whether and which OPCODEs can have their gas cost updated across implementations. It turns out that very few.
