@@ -405,10 +405,6 @@ And the complete summary of the fitted models:
 
 `geth`:
 ```
-Residuals:
-     Min       1Q   Median       3Q      Max 
--115.324  -17.724   -1.512   23.845   65.582 
-
 Coefficients:
              Estimate Std. Error t value            Pr(>|t|)    
 (Intercept) 5775.3243     9.3723   616.2 <0.0000000000000002 ***
@@ -423,10 +419,6 @@ F-statistic: 3.684e+04 on 1 and 49 DF,  p-value: < 0.00000000000000022
 
 `evmone`:
 ```
-Residuals:
-    Min      1Q  Median      3Q     Max 
--72.860 -20.376  -4.328  21.769  82.285 
-
 Coefficients:
              Estimate Std. Error t value            Pr(>|t|)    
 (Intercept) 2588.6998     8.3237   311.0 <0.0000000000000002 ***
@@ -462,15 +454,77 @@ In second plot we see the results of bringing the "top-mode" observations down t
 
 Continuing to use our working example of `EXP` OPCODE in `geth`, we estimate the `measure_arguments` model to see that the term `a * op_count * argument_cost(arg)` is significant for the second argument (exponent).
 
-**TODO** model summary
+
+**Figure 3: Linear regression model summaries for `EXP` `measure_arguments`.** The `op_count:arg1` estimate provides our value for the argument cost of `EXP`'s exponent in nanoseconds per every byte increase in the size of argument. The `op_count:arg0` (base) estimate is orders of magnitude weaker and not very statistically significant.
+
+`geth`:
+
+```
+Coefficients:
+               Estimate Std. Error t value            Pr(>|t|)    
+(Intercept)   7433.8853   147.7011  50.331 <0.0000000000000002 ***
+op_count        75.1738     7.4855  10.043 <0.0000000000000002 ***
+arg0             1.7786     6.3049   0.282               0.778    
+arg1             7.7179     6.0605   1.273               0.203    
+op_count:arg0    0.5167     0.3192   1.619               0.105    
+op_count:arg1   98.7494     0.3072 321.421 <0.0000000000000002 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 6173 on 28867 degrees of freedom
+Multiple R-squared:  0.9534,	Adjusted R-squared:  0.9534 
+F-statistic: 1.182e+05 on 5 and 28867 DF,  p-value: < 0.00000000000000022
+```
+
+`evmone`:
+
+```
+Coefficients:
+               Estimate Std. Error t value             Pr(>|t|)    
+(Intercept)   8041.0928   141.1517  56.968 < 0.0000000000000002 ***
+op_count       -24.8676     7.1212  -3.492              0.00048 ***
+arg0             0.6908     6.0135   0.115              0.90854    
+arg1             0.5183     5.7617   0.090              0.92833    
+op_count:arg0    2.6909     0.3033   8.873 < 0.0000000000000002 ***
+op_count:arg1  214.2412     0.2914 735.266 < 0.0000000000000002 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 5831 on 28710 degrees of freedom
+Multiple R-squared:  0.9904,	Adjusted R-squared:  0.9904 
+F-statistic: 5.909e+05 on 5 and 28710 DF,  p-value: < 0.00000000000000022
+```
 
 We can contrast this with a model where the relationship is missing:
 
-**TODO** model summary
+**Figure 3: Linear regression model summaries for `ADD` `measure_arguments`.** The `op_count:arg0` and `op_count:arg1` estimate are not statistically significant
+
+`evmone`:
+
+```
+Coefficients:
+                 Estimate  Std. Error  t value             Pr(>|t|)    
+(Intercept)   7914.063099    4.800647 1648.541 < 0.0000000000000002 ***
+op_count        30.238939    0.247612  122.122 < 0.0000000000000002 ***
+arg0             0.293351    0.189638    1.547             0.121899    
+arg1            -0.702762    0.191637   -3.667             0.000246 ***
+op_count:arg0    0.008928    0.009795    0.912             0.362018    
+op_count:arg1   -0.003375    0.009868   -0.342             0.732353    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 176.4 on 26612 degrees of freedom
+Multiple R-squared:  0.8157,	Adjusted R-squared:  0.8157 
+F-statistic: 2.356e+04 on 5 and 26612 DF,  p-value: < 0.00000000000000022
+```
 
 For `EXP` and `geth` we can plot the trend and also the 2-dimensional illustration of the relationship
 
-**TODO** plots.
+**Figure 4: Relation between `EXP` exponent argument and `measure_arguments` program cost.** Second plot demonstrates the relationship between cost and both arguments from low-cost (yellow) to high-cost (red)
+
+<img src="./report_stage_ii_assets/arguments_EXP_evmone.png" width="425"/> <img src="./report_stage_ii_assets/arguments_EXP_evmone_heat.png" width="425"/> 
+
+**TODO** RENUMBER FIGURES
 
 The linear regression diagnostic plots indicate that the model is properly fitted.
 The artifacts visible can be attributed to the fact that our observations are clustered in three distinct groups: `op_count` respectively 0, 15 and 30.
@@ -480,12 +534,46 @@ The automatic selection of OPCODE-environment pairs where the argument is impact
 Closer inspection of the diagnostic plots seems to indicate, that the effect is due to the fact that `DIV(x, y)` is trivial for `x < y`.
 Since this situation occurs less likely as `x` increases (or `y` decreases), the model tends to capture this, indicating that the `a` coefficient is statistically non-zero.
 
-**TODO** plots
+**Figure 4: Relation between `MOD` arguments and `measure_arguments` program cost.** Points below the `y = x` indicate more costly programs, which is exactly where `x > y` for `MOD(x, y)`
+
+<img src="./report_stage_ii_assets/arguments_MOD_evmone_heat.png" width="425"/>
 
 This prompts us to model the division OPCODEs using a meta-variable `expensive = 1 if x > y 0 otherwise`.
 This variable's coefficient estimate is clearly significant.
 
-**TODO** model summary
+`geth`:
+```
+Coefficients:
+                        Estimate Std. Error t value            Pr(>|t|)    
+(Intercept)            6904.6294     9.6123  718.31 <0.0000000000000002 ***
+op_count                 33.0292     0.3475   95.05 <0.0000000000000002 ***
+arg0                     15.1378     0.4012   37.74 <0.0000000000000002 ***
+arg1                     10.4383     0.4021   25.96 <0.0000000000000002 ***
+op_count:expensiveTRUE   84.5255     0.4293  196.88 <0.0000000000000002 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 528.6 on 27417 degrees of freedom
+Multiple R-squared:  0.8541,	Adjusted R-squared:  0.8541 
+F-statistic: 4.013e+04 on 4 and 27417 DF,  p-value: < 0.00000000000000022
+```
+
+`evmone`:
+```
+Coefficients:
+                        Estimate Std. Error t value            Pr(>|t|)    
+(Intercept)            7815.2480     5.6533 1382.42 <0.0000000000000002 ***
+op_count                 31.7147     0.2028  156.40 <0.0000000000000002 ***
+arg0                      2.8955     0.2354   12.30 <0.0000000000000002 ***
+arg1                      3.1751     0.2364   13.43 <0.0000000000000002 ***
+op_count:expensiveTRUE   25.6950     0.2494  103.02 <0.0000000000000002 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 309.4 on 27438 degrees of freedom
+Multiple R-squared:  0.7955,	Adjusted R-squared:  0.7955 
+F-statistic: 2.669e+04 on 4 and 27438 DF,  p-value: < 0.00000000000000022
+```
 
 ### Validation results
 
