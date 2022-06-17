@@ -25,16 +25,28 @@ class Measurements(object):
   """
   Script to conveniently run instrumentation samples.
 
-  To use together with outputs rom the `program_generator.py`, see docs therein.
+  To use together with outputs from the `program_generator/pg_xxx.py` scripts, see docs therein.
 
   Prints measurement CSV in the following format:
   ```
-  | program_id | sample_id | run_id | instruction_id | measure_all_time_ns | measure_one_time_ns |
+  | program_id | sample_id | run_id | instruction_id | measure_all_time_ns | measure_all_timer_time_ns |
   ```
+  or
+  ```
+  | program_id | sample_id | run_id | measure_total_time_ns | measure_total_timer_time_ns |
+  ```
+  Depending on the `mode` parameter.
 
   Expects the EVM measuring executable (e.g. our `src/instrumentation_measurement/geth/main.go`) to provide
   a chunk of this CSV of the format (without header!):
-  | run_id | instruction_id | measure_all_time_ns | measure_one_time_ns |
+  | run_id | instruction_id | measure_all_time_ns | measure_all_timer_time_ns |
+  or
+  | run_id | measure_total_time_ns | measure_total_timer_time_ns |
+
+  There is also a special `mode` parameter value: `trace`, which produces a CSV in the following format:
+  ```
+  | program_id | sample_id | instruction_id | pc | op | stack_depth | arg_0 | arg_... |
+  ```
   """
 
   def _expand_unreachable_code(self, bytecode):
@@ -72,9 +84,9 @@ class Measurements(object):
 
     Parameters:
     sampleSize (integer): size of a sample to pass into the EVM measuring executable
+    mode (string): Measurement mode. Allowed: total, all, trace
     evm (string): which evm use. Default: geth. Allowed: geth, openethereum, evmone
     nSamples (integer): number of samples (individual starts of the EVM measuring executable) to do
-    mode (string): Measurement mode. Allowed: total, all, trace
     """
 
     geth = "geth"
@@ -162,9 +174,6 @@ class Measurements(object):
 
   def run_geth_benchmark(self, program, sampleSize):
     geth_benchmark = ['./instrumentation_measurement/geth_benchmark/tests/imapp_benchmark/imapp_benchmark']
-
-    # alternative just-in-time compilation (could run 50% slower)
-    # geth_benchmark = ['go', 'run', './instrumentation_measurement/geth_benchmark/tests/imapp_benchmark/imapp_bench.go']
 
     args = ['--sampleSize', '{}'.format(sampleSize)]
     bytecode_arg = ['--bytecode', program.bytecode]

@@ -118,7 +118,6 @@ compute_all <- function(measurements, opcode, env, plots, bimodal_opcodes, use_m
   if (plots == "diagnostics" | plots == "all") {
     par(mfrow=c(2,2))
     plot(model_mean)
-    title(main=paste(env, opcode))
   }
   list("slope" = slope, "stderr" = stderr)
 }
