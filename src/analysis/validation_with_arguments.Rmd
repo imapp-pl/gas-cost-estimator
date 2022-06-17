@@ -49,7 +49,7 @@ compare_plots <- function(df, selection_col, selection_val, estimate_var, labels
   subset = df[which(df[, selection_col] == selection_val), ]
   # TODO: set_asp=TRUE works better when models are sane
   plot_validation(subset, explained_variable, estimate_var, labels=labels, colors=colors, log=log) #, set_asp=TRUE)
-  title(main=paste(selection_val, 'estimate by', estimate_var))
+  title(main=paste(selection_val, 'estimate by', estimate_var), cex.main=3)
 }
 
 lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
