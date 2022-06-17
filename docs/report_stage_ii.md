@@ -207,11 +207,11 @@ The procedure to estimate the marginal cost is as follows:
    The model is fit separately for each OPCODE and environment.
 
 The benefits of using `measure_marginal` as the measurement method are the following:
-1. Everything given as the benefits of `measure_total` in section **TODO**
+1. Everything given as the benefits of `measure_total` in section [`measure_total` instrumentation](#measure_total-instrumentation)
 2. Stability of the estimation and natural way of spotting OPCODEs and environments which have inaccurate measurements - the model provides us with plenty of standard linear regression diagnostics as well as an elegant plot to validate the model.
 3. The ability to measure the different OPCODEs in almost complete isolation, as we are de-facto measuring only the individual measured OPCODEs, and the impact of all the accompanying bytecode is filtered out by the regression model as constant intercept coefficient `b`.
 
-The assessment of the models and discussion about the results is given in the section **TODO**.
+The assessment of the models and discussion about the results is given in the [Results section](#Results).
 
 For the implementation of the `measure_marginal` estimation scripts [see here](https://github.com/imapp-pl/gas-cost-estimator/tree/master/src/analysis/measure_marginal.Rmd)
 
@@ -265,15 +265,15 @@ For the implementation of the `measure_arguments` estimation scripts [see here](
 ### Measurement setup and environments
 
 The instrumentation and measurement were performed for these EVMs:
-1. `geth` - [ethereum/go-ethereum](https://github.com/ethereum/go-ethereum) at [`TODO`](https://github.com/ethereum/go-ethereum/releases/tag/TODO) with [additional changes implementing the instrumentation](https://github.com/imapp-pl/go-ethereum/commit/TODO).
-2. `evmone` - [ethereum/evmone](https://github.com/ethereum/evmone) at [`TODO`](https://github.com/ethereum/evmone/commit/TODO) with [additional changes implementing the instrumentation](https://github.com/imapp-pl/evmone/commit/TODO).
+1. `geth` - [ethereum/go-ethereum](https://github.com/ethereum/go-ethereum) at [`v1.10.13`](https://github.com/ethereum/go-ethereum/releases/tag/v1.10.13) with [additional changes implementing the instrumentation in the `wallclock-total` branch](https://github.com/imapp-pl/go-ethereum/commit/64aa7ec3).
+2. `evmone` - [ethereum/evmone](https://github.com/ethereum/evmone) at [`b95f90b4`](https://github.com/ethereum/evmone/commit/b95f90b4) with [additional changes implementing the instrumentation in the `wallclock` branch](https://github.com/imapp-pl/evmone/commit/3092f3be).
 3. `nethermind` - ?? TODO
 
 running in these machines:
 1. `cloud`: `AWS, Ubuntu 20.04.3, dockerized` - `t2.micro` instance
 2. `laptop`: `Laptop 1, Ubuntu 20.04.4, dockerized` - Intel® Core™ i5-7200U CPU @ 2.50GHz × 4
 
-`dockerized` means we are running the measurements within a Docker container with the flags `--privileged --security-opt seccomp:unconfined`. See TODO link to Makefile for the exact invocations.
+`dockerized` means we are running the measurements within a Docker container with the flags `--privileged --security-opt seccomp:unconfined`. See the [`Makefile`](https://github.com/imapp-pl/gas-cost-estimator/tree/master/Makefile) for the exact invocations.
 
 **NOTE** during the analysis we noticed the differences in the results obtained in various meachines were small, one order of magnitude lower than the differences between various EVM implementations.
 We will focus on citing and discussing only the results coming from the `cloud` setup and prioritize the challenge of equilibrating the gas cost schedule to cater for various EVMs.
@@ -455,7 +455,7 @@ In second plot we see the results of bringing the "top-mode" observations down t
 Continuing to use our working example of `EXP` OPCODE in `geth`, we estimate the `measure_arguments` model to see that the term `a * op_count * argument_cost(arg)` is significant for the second argument (exponent).
 
 
-**Figure 3: Linear regression model summaries for `EXP` `measure_arguments`.** The `op_count:arg1` estimate provides our value for the argument cost of `EXP`'s exponent in nanoseconds per every byte increase in the size of argument. The `op_count:arg0` (base) estimate is orders of magnitude weaker and not very statistically significant.
+**Figure 5: Linear regression model summaries for `EXP` `measure_arguments`.** The `op_count:arg1` estimate provides our value for the argument cost of `EXP`'s exponent in nanoseconds per every byte increase in the size of argument. The `op_count:arg0` (base) estimate is orders of magnitude weaker and not very statistically significant.
 
 `geth`:
 
@@ -497,7 +497,7 @@ F-statistic: 5.909e+05 on 5 and 28710 DF,  p-value: < 0.00000000000000022
 
 We can contrast this with a model where the relationship is missing:
 
-**Figure 3: Linear regression model summaries for `ADD` `measure_arguments`.** The `op_count:arg0` and `op_count:arg1` estimate are not statistically significant
+**Figure 6: Linear regression model summaries for `ADD` `measure_arguments`.** The `op_count:arg0` and `op_count:arg1` estimate are not statistically significant
 
 `evmone`:
 
@@ -520,11 +520,9 @@ F-statistic: 2.356e+04 on 5 and 26612 DF,  p-value: < 0.00000000000000022
 
 For `EXP` and `geth` we can plot the trend and also the 2-dimensional illustration of the relationship
 
-**Figure 4: Relation between `EXP` exponent argument and `measure_arguments` program cost.** Second plot demonstrates the relationship between cost and both arguments from low-cost (yellow) to high-cost (red)
+**Figure 7: Relation between `EXP` exponent argument and `measure_arguments` program cost.** Second plot demonstrates the relationship between cost and both arguments from low-cost (yellow) to high-cost (red)
 
 <img src="./report_stage_ii_assets/arguments_EXP_evmone.png" width="425"/> <img src="./report_stage_ii_assets/arguments_EXP_evmone_heat.png" width="425"/> 
-
-**TODO** RENUMBER FIGURES
 
 The linear regression diagnostic plots indicate that the model is properly fitted.
 The artifacts visible can be attributed to the fact that our observations are clustered in three distinct groups: `op_count` respectively 0, 15 and 30.
@@ -534,7 +532,7 @@ The automatic selection of OPCODE-environment pairs where the argument is impact
 Closer inspection of the diagnostic plots seems to indicate, that the effect is due to the fact that `DIV(x, y)` is trivial for `x < y`.
 Since this situation occurs less likely as `x` increases (or `y` decreases), the model tends to capture this, indicating that the `a` coefficient is statistically non-zero.
 
-**Figure 4: Relation between `MOD` arguments and `measure_arguments` program cost.** Points below the `y = x` indicate more costly programs, which is exactly where `x > y` for `MOD(x, y)`
+**Figure 8: Relation between `MOD` arguments and `measure_arguments` program cost.** Points below the `y = x` indicate more costly programs, which is exactly where `x > y` for `MOD(x, y)`
 
 <img src="./report_stage_ii_assets/arguments_MOD_evmone_heat.png" width="425"/>
 
@@ -583,13 +581,13 @@ The estimates obtained by our procedure tend to estimate the computational cost 
 
 We can see the data points (each for a given `measure_validation` program) much more tightly packed around the linear regression line.
 
-**Figure 4: Comparison of trivial (`program_length`) estimations the current gas cost schedule (`current_gas_cost`) estimations with our estimates.** Logarithmic scale on both axes, the curve represents the estimated regression line. The points represent the validation programs and labels are their respective dominant OPCODEs
+**Figure 9: Comparison of trivial (`program_length`) estimations the current gas cost schedule (`current_gas_cost`) estimations with our estimates.** Logarithmic scale on both axes, the curve represents the estimated regression line. The points represent the validation programs and labels are their respective dominant OPCODEs
 
 <img src="./report_stage_ii_assets/validation_compare.png" width="700"/>
 
 The summaries of the linear regression validation models for our estimates are:
 
-**Figure 4: Final model summaries**
+**Figure 10: Final model summaries**
 
 `geth`:
 ```
@@ -639,11 +637,11 @@ Using the estimates obtained so far, we proceed to chose the pivot OPCODE and ca
 `ADDRESS` works best as the pivot OPCODE, providing the most chances for a consistent update to the gas cost schedule.
 Using this pivot, we calculate the alternative gas cost schedule.
 
-**Figure 4: Comparison of current and alternative gas cost schedules - `cloud`.** Each point represents an OPCODE (or a special cost factor to an OPCODE, like an increase in argument size). The figures are in gas units, relative to the gas cost and estimate of the pivot OPCODE. Results for the `cloud` measurement setup.
+**Figure 11a: Comparison of current and alternative gas cost schedules - `cloud`.** Each point represents an OPCODE (or a special cost factor to an OPCODE, like an increase in argument size). The figures are in gas units, relative to the gas cost and estimate of the pivot OPCODE. Results for the `cloud` measurement setup.
 
 <img src="./report_stage_ii_assets/alternative_gas_cost_schedule_cloud.png" width="1000"/>
 
-**Figure 4: Comparison of current and alternative gas cost schedules - `laptop`**
+**Figure 11b: Comparison of current and alternative gas cost schedules - `laptop`**
 
 <img src="./report_stage_ii_assets/alternative_gas_cost_schedule_laptop.png" width="1000"/>
 
