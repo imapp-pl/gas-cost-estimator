@@ -4,7 +4,7 @@
 
 **Abstract**
 
-We summarize the findings of the second stage of the "Gas Cost Estimator" research project. A method of estimating gas costs of EVM OPCODEs by means of estimating their marginal execution cost is proposed. We provide arguments for this method to be a feasible way of assessing the costs of EVM OPCODEs. The procedure to obtain the measurements is also standardized and tooling provided. We discuss the difference between different EVM implementations and compare the obtained alternative gas cost schedule with the current one.
+We summarize the findings of the second stage of the "Gas Cost Estimator" research project. A method of estimating gas costs of EVM OPCODEs by means of estimating their marginal execution cost is proposed. We provide arguments for this method to be a feasible way of assessing the costs of EVM OPCODEs. The procedure to obtain the measurements is also standardized and tooling is provided. We discuss the difference between different EVM implementations and compare the obtained alternative gas cost schedule with the current one.
 
 ## Introduction
 
@@ -12,37 +12,37 @@ We summarize the findings of the second stage of the "Gas Cost Estimator" resear
 
 EVM (Ethereum Virtual Machine) is instrumental to the functioning of the Ethereum blockchain.
 It is responsible for carrying out the computations associated with transactions on the Ethereum blockchain, namely those related to the functioning of smart contracts.
-Due to Turing completeness of their instruction sets, and the necessity to guarantee that computations can be securely performed in an open, distributed network, a halting mechanism must be provided.
+Due to Turing's completeness of their instruction sets, and the necessity to guarantee that computations can be securely performed in an open, distributed network, a halting mechanism must be provided.
 
-The halting mechanism is provided thanks to gas, which is an Ethereum specific measure of computational cost incurred by the executing environment (Ethereum node connected to the network).
-Gas is priced in Ether (the intrinsic value token of the Ethereum blockchain), each transaction has an allowance of gas prepaid by the transaction sender.
+The halting mechanism is provided thanks to gas, which is an Ethereum specific measure of the computational cost incurred by the executing environment (Ethereum node connected to the network).
+Gas is priced in Ether (the intrinsic value token of the Ethereum blockchain), and each transaction has an allowance of gas prepaid by the transaction sender.
 Every step of computation (as of writing, this corresponds to every bytecode instruction interpreted by EVM) costs a small amount of gas, and if gas allowance is depleted, the computation is halted and its effects are reverted, except for the consumption of the entire gas allowance.
-The gas consumed by computations performed is paid out as transaction fee (in Ether) to the miner (validator), including the transaction.
+The gas consumed by computations performed is paid out as a transaction fee (in Ether) to the miner (validator), including the transaction.
 The unused remainder of the prepaid gas allowance is returned back to the transaction sender.
 
 The challenge with this mechanism is to determine adequate gas costs of bytecode instructions.
-Currently, gas cost is determined on a per-OPCODE basis, that is, every OPCODE interpreted by the EVM has a predetermined gas cost (sometimes gas cost expressed as a function of instruction's arguments is added).
+Currently, the gas cost is determined on a per-OPCODE basis, that is, every OPCODE interpreted by the EVM has a predetermined gas cost (sometimes gas cost expressed as a function of instruction's arguments is added).
 This report and the "Gas Cost Estimator" research project aims at devising a method to estimate adequate values for these OPCODE gas costs, by estimating and analyzing the relative computational cost of OPCODEs.
 
-In the remainder of this section we provide our motivation and some background of the literature on the subject.
+In the remainder of this section, we provide our motivation and some background on the literature on the subject.
 In section **Estimation Method** we describe the proposed measurement and estimation method.
 In section **Validation** we elaborate on the procedure of validating the results.
 In section **Results** we provide the results obtained in various environments and discuss them in the context of an alternative gas schedule.
 
 ### Motivation
 
-The importance of adequate gas costs arises from the nature of computations done on the Ethereum blockchain, and has been discussed by many authors.
+The importance of adequate gas costs arises from the nature of computations done on the Ethereum blockchain and has been discussed by many authors.
 
-It is intuitive that the parties participating in the network, who are responsible for validation of blockchain transactions and maintaining the state of the blockchain, are interested in fair pricing for the service they provide.
+It is intuitive that the parties participating in the network, who are responsible for the validation of blockchain transactions and maintaining the state of the blockchain, are interested in fair pricing for the service they provide.
 This is emphasized in [7].
-Given however, that the transaction fee still is the lesser part of the block reward, as compared to PoW mining reward [1], the importance of this argument might be disputed.
-It can also be stated, that it is the computational cost of PoW mining itself, which constitutes the major part of computational burden on the miner (validator).
+Given, however, that the transaction fee still is the lesser part of the block reward, as compared to PoW mining reward [1], the importance of this argument might be disputed.
+It can also be stated that it is the computational cost of PoW mining itself, which constitutes the major part of the computational burden on the miner (validator).
 
 However, adequate gas cost of computation is paramount from the perspective of network security.
 Gas cost is a natural deterrent from abusing the network's capacity.
-If pricing of computations was inadequate, it would mean that there are operations in EVM which are relatively underpriced, when compared to others.
-This would in turn mean that adversarial actors could craft the transactions in a way which puts significant load on the network, at the same time paying disproportionately low transaction fees.
-This situation opens the door to DoS attacks, which have happened and were given as main motivation for gas cost revisions in [12], [13], [14] and other research done in [8].
+If the pricing of computations was inadequate, it would mean that there are operations in EVM which are relatively underpriced, when compared to others.
+This would in turn mean that adversarial actors could craft the transactions in a way which puts a significant load on the network, at the same time paying disproportionately low transaction fees.
+This situation opens the door to DoS attacks, which have happened and were given as the main motivation for gas cost revisions in [12], [13], [14] and another research done in [8].
 
 To add to this, there is the decentralization factor of having adequate gas costs.
 The computations done by the EVM within the Ethereum network nodes are performed by all nodes in the network, regardless of whether they are mining and earning transaction fees or not.
@@ -61,7 +61,7 @@ This in turn could incentivize parties who include transactions in blocks (miner
 This could lead to a less predictable behavior of the fee market, from the network users' perspective.
 Assuming that transactions can in fact be efficiently categorized in terms of which smart contracts they execute on, one should accept the possibility of such a scenario.
 
-It is interesting to mention that, not entirely related to the motivations of this research but in similar vein, there is also prior work aimed at estimating the computational burden of individual OPCODEs (instructions) of the Java Virtual Machine (CPU), examples are [6], [16], [17], [18].
+It is interesting to mention that, not entirely related to the motivations of this research but in a similar vein, there is also prior work aimed at estimating the computational burden of individual OPCODEs (instructions) of the Java Virtual Machine (CPU), examples are [6], [16], [17], [18].
 
 This report and the entire "Gas Cost Estimator" project are focusing on a subset of EVM OPCODEs.
 The OPCODEs in this subset (see [Appendix B: OPCODEs subset](#appendix-b-opcodes-subset) have in common that they do not include any instructions which access the Ethereum storage (e.g. `SSTORE`, `SLOAD` etc.).
@@ -75,7 +75,7 @@ One of the factors that contribute to the challenge which gas cost estimation pr
 
 By environments in this context we mean:
 - different implementations of the Ethereum node (and EVM/Ewasm in consequence), done in different programming languages and with different mindsets
-- different hardware on which this software is ran; this is exacerbated by the requirement towards the software to run reliably on both server-grade hardware and consumer-grade desktops alike
+- different hardware on which this software is ran; this is exacerbated by the requirement for the software to run reliably on both server-grade hardware and consumer-grade desktops alike
 - different operating systems
 
 Given the inclusive nature of Ethereum, we should strive to cover the broad spectrum of these environments and determine how much does the environment impact the estimated gas costs. It is desirable, that the method devised here is reasonably easily applicable in those varying environments.
@@ -92,7 +92,7 @@ This is a digest of the changes made since the Stage I research and report:
 
 ## Estimation Method
 
-In this section we describe in detail the method applied to estimate the gas costs.
+In this section, we describe in detail the method applied to estimate the gas costs.
 
 ### `measure_total` instrumentation
 
@@ -108,10 +108,10 @@ The timer overhead is negligible in the `measure_total` approach, orders of magn
 As during the measurements done for Stage I, each measurement is repeated `sampleSize` times during the lifetime of a single OS process doing the measurement, as well as the measuring OS process is started `nSamples` times, producing the total of `nSamples * sampleSize` measurements for a single program.
 
 The benefits of measuring the entire execution of the interpreter loop are the following:
-1. We are not concerned with timer resolution or overhead anymore, and we do not need to correct for it as we needed when measuring individual instructions.
+1. We are not concerned with timer resolution or overhead anymore, and we do not need to correct it as we needed when measuring individual instructions.
 2. We do not introduce factors which might impact the functioning of the EVM, namely the system calls required to capture the timer, in the middle of a running EVM program.
 3. The instrumentation is much simpler and the amounts of data produced smaller.
-4. The amount of changes in the interpreter code is smaller.
+4. The number of changes in the interpreter code is smaller.
 
 The main drawback is that we need to take special measures in order to be able to draw useful conclusions from the measurement obtained.
 
@@ -146,7 +146,7 @@ The layout of the `measure_marginal` generated program is an evolution of this t
 
 **`measure_marginal` program**: For every `OPCODE`, which removes one value from and pushes one value to the stack, generate `max_op_count` programs, such that for `0 <= op_count <= max_op_count` we have:
 
-| | | 
+| | |
 |-|-|
 | `PUSH1` | `max_op_count` times |
 | `{OPCODE POP}` | `op_count` times |
@@ -171,7 +171,7 @@ There is a couple of additional measures taken when generating `measure_marginal
 
 1. For each of the OPCODEs which perform memory operations we want to preallocate memory at the start of the program.
    This is motivated by how we want to capture just the marginal OPCODE cost, irrespective of the cost of memory allocation, which is priced separately.
-   The caveat here is to not do this for OPCODEs which do not require it, as the preallocation is a rather expensive operation in terms of time of execution, and it adds a prohibitive amount of noise to computationally cheap OPCODEs. Luckily, we only require the preallocation for the rather expensive OPCODEs.
+   The caveat here is to not do this for OPCODEs which do not require it, as the preallocation is a rather expensive operation in terms of the time of execution, and it adds a prohibitive amount of noise to computationally cheap OPCODEs. Luckily, we only require the preallocation for the rather expensive OPCODEs.
    These OPCODEs are: `CALLDATALOAD`, `CALLDATACOPY`, `RETURNDATACOPY`, `MLOAD`, `MSTORE`, `MSTORE8`, `CODECOPY`.
 2. `CALLDATACOPY` programs require us to keep a block of memory as the transaction call data.
    This is trivial to accomplish, given the ability to modify the EVM implementation (which we do anyway).
@@ -184,7 +184,7 @@ There is a couple of additional measures taken when generating `measure_marginal
    This populates the return data for the OPCODE to copy.
 5. `JUMP` and `JUMPI` programs require us to provide a valid jump destination.
    In order to keep the `measure_marginal` working as expected, we need to make the jump instruction a no-op, in order to not have to worry about managing the loop.
-   We accomplish this by wrapping each instance of the jumping OPCODE in a following sequence: `PUSH3 JUMP(I) JUMPDEST`, where each `PUSH3` is responsible for pushing on the stack the `pc` value pointing to this particular `JUMPDEST`.
+   We accomplish this by wrapping each instance of the jumping OPCODE in the following sequence: `PUSH3 JUMP(I) JUMPDEST`, where each `PUSH3` is responsible for pushing on the stack the `pc` value pointing to this particular `JUMPDEST`.
    This causes the jump to be "trivial", in the sense that it does not impact the program execution.
    **NOTE**, in order to respect the rules of `measure_marginal`, and be able to later reason about the marginal cost of `JUMP` and `JUMPI`, we always pad the program with "empty" sequences `PUSH3 JUMPDEST`, so that the number of `PUSH3` and `JUMPDEST` instructions is kept constant regardless of `op_count`.
 
@@ -201,7 +201,7 @@ The procedure to estimate the marginal cost is as follows:
    For a few particular combinations of environment and OPCODE, the distribution of `measure_total` time follows a bi-modal distribution, where for certain values of `op_count` the execution time is far greater than the others.
    We discuss this phenomenon in greater detail later, but the observation here is that the `measure_marginal` trend is easy to recognize visually, i.e. regardless of which "mode" the data point falls into, the cost of execution increases at a stable pace as `op_count` increases.
    This prompts us to remove the bi-modality by subtracting the higher mode from the measurements which cluster around it.
-   After this procedure the marginal cost model is fitted with high confidence.
+   After this procedure, the marginal cost model is fitted with high confidence.
 5. Fit a linear regression model `measure_total_time = b + a * op_count`.
    `a` is the marginal cost estimation we are looking for.
    The model is fit separately for each OPCODE and environment.
@@ -233,7 +233,7 @@ It is also not necessary to do so, since we have reliably established the consta
 We are also not measuring the argument impact for a mesh of points of the argument space (e.g. spaced in equal distances), firstly to reduce the dimensionality for the OPCODEs taking two or three arguments, secondly to prevent any undesired behavior of the statistical models due to the regularity of the mesh (e.g. where OPCODE would consequently cost less for arguments being multiples of 64 and we chose these points as our mesh).
 
 We need to be wary of different potential functional forms of the relation between the argument value and cost.
-For simplicity we derive this form based on the inspection of the code executing the OPCODEs (and of the current gas cost schedule).
+For simplicity, we derive this form based on the inspection of the code executing the OPCODEs (and of the current gas cost schedule).
 We chose these functions:
 - `argument_cost(arg) = arg` - for memory OPCODEs: `CALLDATALOAD`, `CALLDATACOPY`, `RETURNDATACOPY`, `MLOAD`, `MSTORE`, `MSTORE8`, `CODECOPY`
 - `argument_cost(arg) = log(arg)` - for OPCODEs where the cost is proportional to the bytesize of the argument (remainder of OPCODEs)
@@ -253,12 +253,12 @@ The procedure to estimate the argument cost is as follows:
 4. Fit a linear regression model `measure_total_time = b + a * op_count * argument_cost(arg) + c * argument_cost(arg) + d * op_count`.
    `a` is the estimation of the cost increase for a unit increase of the argument cost (either `arg` or `log(arg)`).
    The model is fit separately for each OPCODE and environment.
-5. Discriminate between OPCODEs where the arguments have and do not have impact.
+5. Discriminate between OPCODEs where the arguments have and do not have an impact.
    We do this by looking at the p-value of the `a` coefficient.
 
 It is worth noting, that we neglect to check the impact of the size of the second `pc_destination` argument of `JUMP` and `JUMPI` OPCODEs on purpose.
 It would be quite unfeasible to compose programs which actually execute as expected, fit into the framework of our measurement method and explore the dynamics of this argument.
-At the same time we find it unlikely for this argument to play a role in the cost of execution of this OPCODE.
+At the same time, we find it unlikely for this argument to play a role in the cost of execution of this OPCODE.
 
 For the implementation of the `measure_arguments` estimation scripts [see here](./../src/analysis/measure_arguments.Rmd)
 
@@ -267,7 +267,7 @@ For the implementation of the `measure_arguments` estimation scripts [see here](
 The instrumentation and measurement were performed for these EVMs:
 1. `geth` - [ethereum/go-ethereum](https://github.com/ethereum/go-ethereum) at [`v1.10.13`](https://github.com/ethereum/go-ethereum/releases/tag/v1.10.13) with [additional changes implementing the instrumentation in the `wallclock-total` branch](https://github.com/imapp-pl/go-ethereum/commit/64aa7ec3).
 2. `evmone` - [ethereum/evmone](https://github.com/ethereum/evmone) at [`b95f90b4`](https://github.com/ethereum/evmone/commit/b95f90b4) with [additional changes implementing the instrumentation in the `wallclock` branch](https://github.com/imapp-pl/evmone/commit/3092f3be).
-3. `nethermind` - ?? TODO
+3. `nethermind` - [NethermindEth/nethermind](https://github.com/NethermindEth/nethermind) at [`v1.13.1`](https://github.com/NethermindEth/nethermind/releases/tag/1.13.1) with [additional changes implementing the instumentaiton in the `imapp_benchmark` branch](https://github.com/imapp-pl/nethermind/tree/imapp_benchmark)
 
 running in these machines:
 1. `cloud`: `AWS, Ubuntu 20.04.3, dockerized` - `t2.micro` instance
@@ -299,11 +299,17 @@ In this setup, the timer overhead measured is in the order of magnitude of 25ns,
 - argument that cache impact is "fair" between OPCODEs
 
 ### Warm-up impact
+The following elements are part of the warm-up:
+- processor cache L1, L2, L3
+- operating system cache
+- disk cache
+- JIT compilation
+- execution framework 
+- loaded libraries
+- allocated memory
+- process priority
 
-**TODO**
-
-- recommendation for warm-up handling
-- argument that this warm-up handling reflects typical operation of EVM
+As shown in the [Results] section, warming up process has significant impact on the execution time. Handling it correctly has the impact on the overall cost estimation. For the runtime cost estimation we assume that there is no warm-up effect. The reasoning for itt
 
 ### Garbage collection impact
 
@@ -312,17 +318,29 @@ In this setup, the timer overhead measured is in the order of magnitude of 25ns,
 - argument that GC impact is similar between kinds of programs/OPCODEs and doesn't skew the results
 (or:)
 - recommendation for GC handling
-- argument that this GC handling reflects typical operation of EVM
+- argument that this GC handling reflects the typical operation of EVM
 
+### Use of benchmarking tools
+The goal of benchmarking mode is to use well known libraries that track performance in reliable and precise manner. They tend to produce reproducible results and help to avoid common pitfalls while measuring execution time. In our approach we use the following tools:
+- evmone: [hayai](https://github.com/nickbruun/hayai)
+- Go Ethereum: [Go Testing](https://pkg.go.dev/testing#Benchmark) package
+- Nethermind: [DotNetBenchmark](https://benchmarkdotnet.org/articles/overview.html)
+
+These tools were selected as industry standards for respective languages. They all minimize influence and variability of: caching, warmups, memory allocation, garbage collection, process management, external programs impact and clock measurements.
+If configured properly, these tools helps to alleviate the unfavorable impacts: cache, warm-up and garbage collector.
+
+### Engine overhead cost
+Not only each instruction bears a cost, but also contract preparation has some impact. For simple functions the cost of preparation can exceed the actual execution cost. Therefore it is necessary to estimate it correctly.
+**code analysis**
 ## Validation
 
-In this section the process of validation of the estimated gas costs is described.
+In this section, the process of validation of the estimated gas costs is described.
 
 ### `validation` measurements
 
 In order to validate the obtained gas cost estimates and to compare them against other approaches, we generate another set of programs using a distinct method.
 
-**`measure_validation` programs**: Each program is a fully randomized OPCODE sequence, each OPCODE is accompanied with its respective `PUSH` and `POP` instructions to manage the stack.
+**`measure_validation` programs**: Each program is a fully randomized OPCODE sequence, each OPCODE is accompanied by its respective `PUSH` and `POP` instructions to manage the stack.
 The stack management is necessary to have full control over the values of OPCODE arguments (otherwise the stack tends to become dominated by zeros).
 The size of the arguments is also randomized, in the same scope of variability as for `measure_arguments`.
 Each program comes with all the measures implemented for the special kinds of OPCODEs like memory opcodes, `CODECOPY`, `JUMP` etc.
@@ -331,10 +349,10 @@ Each program has a randomly chosen _dominant OPCODE_, which appears in the progr
 This is done to ensure that the random programs will vary enough in between them in terms of which OPCODEs have been randomly chosen.
 If not for the dominant OPCODE, the programs cost would tend to average out for longer programs.
 
-We also always prepend at least one `JUMP` instruction at the beginning, since EVM implementations tend to do additional work on first occurrence.
+We also always prepend at least one `JUMP` instruction at the beginning, since EVM implementations tend to do additional work on the first occurrence.
 It is safe to assume that in any real-world scenario, every EVM bytecode will execute `JUMP` at least once.
 
-Lastly, `PUSHx`, `DUPx`, `SWAPx` groups are given the same probability as regular OPCODEs, and when selected, the precise variant is chosen randomly in a next step.
+Lastly, `PUSHx`, `DUPx`, `SWAPx` groups are given the same probability as regular OPCODEs, and when selected, the precise variant is chosen randomly in the next step.
 This is to overcome the high frequency of these `PUSHx`, `DUPx`, `SWAPx` OPCODEs, should they have been treated separately and on par with other OPCODEs.
 
 For the implementation of the `measure_validation` program generator [see here](./../src/program_generator/pg_validation.py)
@@ -347,16 +365,16 @@ The procedure to calculate the validation models is as follows:
 2. Collect the measurement data.
 3. Remove outliers.
    We remove outliers separately for data subsets, as divided by environment.
-4. Trace the `measure_validation` programs, to reliably know which OPCODEs where called with which arguments
+4. Trace the `measure_validation` programs, to reliably know which OPCODEs were called with which arguments
 5. Calculate the estimated cost of each program, using the estimates obtained in the `measure_marginal` and `measure_arguments` stages
 6. Fit a linear regression model `measure_total_time = b + a * estimated_total_time`. `a` is the ratio at which every nanosecond spent in the estimating program corresponds to the nanosecond spent in the validating program.
    I.e. `b = 0` and `a = 1` is the ideal situation, where our model is able to guess the duration of the execution of the program exactly.
-   This is unlikely to occur, but the closer `a` gets to `1` the more confidence we might have in the results, since OPCODEs in the context of the estimating programs cost the roughly the same as in the context of randomized programs.
+   This is unlikely to occur, but the closer `a` gets to `1` the more confidence we might have in the results since OPCODEs in the context of the estimating programs cost roughly the same as in the context of randomized programs.
 7. Compare versus trivial model and current gas schedule model.
    We build two additional models to contrast against the validation model.
    
    Trivial model is `measure_total_time = b + a * program_length`, where `program_length` is the number of instructions executed.
-   It is trivial, because it would imply that it doesn't matter which OPCODEs the program executes, and we can charge gas just for the number of instructions.
+   It is trivial because it would imply that it doesn't matter which OPCODEs the program executes, and we can charge gas just for the number of instructions.
    We expect our proper model to behave much better than the trivial model.
    
    Current gas cost schedule model is `measure_total_time = b + a * current_gas_cost_of_program`.
@@ -380,11 +398,11 @@ Since we don't want to rely on this assumption and include the error it brings i
 In order to be able to express the estimation results in units of gas and compare them across different environments, we must make the estimates relative.
 
 A similar approach to that of Stage I is taken, where a _pivot OPCODE_ is chosen from among all the OPCODEs.
-This time however, we do not try to reason about which OPCODE should this be, instead we pick the one which tends to make differences between EVMs stand out _the least_.
+This time, however, we do not try to reason about which OPCODE it should be. Instead, we pick the one which tends to make differences between EVMs stand out _the least_.
 
-We calculate the estimated gas costs by multiplying all the estimates for a given environment by a constant scale factor, so that the _pivot OPCODE's_ estimate equals its gas cost from the current schedule.
+We calculate the estimated gas costs by multiplying all the estimates for a given environment by a constant scale factor so that the _pivot OPCODE's_ estimate equals its gas cost from the current schedule.
 
-We chose _pivot OPCODE_ such that the euclidean distance between the estimated gas costs is the smallest between different environments.
+We chose _pivot OPCODE_ such that the Euclidean distance between the estimated gas costs is the smallest between different environments.
 
 ## Results
 
@@ -396,9 +414,9 @@ Let's pick the result of `EXP` OPCODE in `geth` as a working example.
 
 Here is the boxplot demonstrating the increasing trend captured by the `measure_marginal` model:
 
-**Figure 1: Increasing trend for `EXP` `measure_marginal` for geth and evmone**
+**Figure 1: The increasing trend for `EXP` `measure_marginal` for geth and evmone**
 
-<img src="./report_stage_ii_assets/marginal_exp_geth.png" width="425"/> <img src="./report_stage_ii_assets/marginal_exp_evmone.png" width="425"/> 
+<img src="./report_stage_ii_assets/marginal_exp_geth.png" width="425"/> <img src="./report_stage_ii_assets/marginal_exp_evmone.png" width="425"/>
 
 The trend is easily visible and much stronger than the variation pictured by the boxplots.
 
@@ -406,7 +424,7 @@ The standard linear regression diagnostic plots:
 
 **Figure 2: Linear regression diagnostics for `EXP` `measure_marginal` for geth and evmone**
 
-<img src="./report_stage_ii_assets/marginal_exp_diag_geth.png" width="425"/> <img src="./report_stage_ii_assets/marginal_exp_diag_evmone.png" width="425"/> 
+<img src="./report_stage_ii_assets/marginal_exp_diag_geth.png" width="425"/> <img src="./report_stage_ii_assets/marginal_exp_diag_evmone.png" width="425"/>
 
 And the complete summary of the fitted models:
 
@@ -422,7 +440,7 @@ op_count      62.0062     0.3231   191.9 <0.0000000000000002 ***
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 Residual standard error: 33.96 on 49 degrees of freedom
-Multiple R-squared:  0.9987,	Adjusted R-squared:  0.9986 
+Multiple R-squared:  0.9987,    Adjusted R-squared:  0.9986
 F-statistic: 3.684e+04 on 1 and 49 DF,  p-value: < 0.00000000000000022
 ```
 
@@ -436,7 +454,7 @@ op_count      80.4677     0.2869   280.5 <0.0000000000000002 ***
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 Residual standard error: 30.16 on 49 degrees of freedom
-Multiple R-squared:  0.9994,	Adjusted R-squared:  0.9994 
+Multiple R-squared:  0.9994,    Adjusted R-squared:  0.9994
 F-statistic: 7.866e+04 on 1 and 49 DF,  p-value: < 0.00000000000000022
 ```
 
@@ -452,19 +470,18 @@ A subset of OPCODEs exhibit a bi-modal distribution of measurements:
 
 **Figure 4: Bimodal trend of `JUMP` `measure_marginal` results for `evmone`, along with the bimodal distribution and the corrected `measure_marginal` trend**
 
-<img src="./report_stage_ii_assets/bimodal_PUSH32_evmone.png" width="425"/> <img src="./report_stage_ii_assets/bimodal_PUSH32_evmone_corrected.png" width="425"/> 
+<img src="./report_stage_ii_assets/bimodal_PUSH32_evmone.png" width="425"/> <img src="./report_stage_ii_assets/bimodal_PUSH32_evmone_corrected.png" width="425"/>
 
 In the first plot we can still visually pick up the constant trend, irrespective of whether we're looking at the "top-mode" or "bottom-mode" measurements.
 We also see the two strong batches of measurements clustered around their respective modes.
 
-In second plot we see the results of bringing the "top-mode" observations down to the level of the "bottom-mode" observations.
+In the second plot we see the results of bringing the "top-mode" observations down to the level of the "bottom-mode" observations.
 
 ### `measure_arguments` dynamics and results
 
 Continuing to use our working example of `EXP` OPCODE in `geth`, we estimate the `measure_arguments` model to see that the term `a * op_count * argument_cost(arg)` is significant for the second argument (exponent).
 
-
-**Figure 5: Linear regression model summaries for `EXP` `measure_arguments`.** The `op_count:arg1` estimate provides our value for the argument cost of `EXP`'s exponent in nanoseconds per every byte increase in the size of argument. The `op_count:arg0` (base) estimate is orders of magnitude weaker and not very statistically significant for `geth`.
+**Figure 5: Linear regression model summaries for `EXP` `measure_arguments`.** The `op_count:arg1` estimate provides our value for the argument cost of `EXP`'s exponent in nanoseconds per every byte increase in the size of the argument. The `op_count:arg0` (base) estimate is orders of magnitude weaker and not very statistically significant for `geth`.
 
 `geth`:
 
@@ -481,7 +498,7 @@ op_count:arg1   98.7494     0.3072 321.421 <0.0000000000000002 ***
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 Residual standard error: 6173 on 28867 degrees of freedom
-Multiple R-squared:  0.9534,	Adjusted R-squared:  0.9534 
+Multiple R-squared:  0.9534,	Adjusted R-squared:  0.9534
 F-statistic: 1.182e+05 on 5 and 28867 DF,  p-value: < 0.00000000000000022
 ```
 
@@ -500,7 +517,7 @@ op_count:arg1  214.2412     0.2914 735.266 < 0.0000000000000002 ***
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 Residual standard error: 5831 on 28710 degrees of freedom
-Multiple R-squared:  0.9904,	Adjusted R-squared:  0.9904 
+Multiple R-squared:  0.9904,	Adjusted R-squared:  0.9904
 F-statistic: 5.909e+05 on 5 and 28710 DF,  p-value: < 0.00000000000000022
 ```
 
@@ -523,18 +540,18 @@ op_count:arg1   -0.003375    0.009868   -0.342             0.732353
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 Residual standard error: 176.4 on 26612 degrees of freedom
-Multiple R-squared:  0.8157,	Adjusted R-squared:  0.8157 
+Multiple R-squared:  0.8157,	Adjusted R-squared:  0.8157
 F-statistic: 2.356e+04 on 5 and 26612 DF,  p-value: < 0.00000000000000022
 ```
 
 For `EXP` and `geth` we can plot the trend and also the 2-dimensional illustration of the relationship
 
-**Figure 7: Relation between `EXP` exponent argument and `measure_arguments` program cost.** Second plot demonstrates the relationship between cost and both arguments from low-cost (yellow) to high-cost (red)
+**Figure 7: Relation between `EXP` exponent argument and `measure_arguments` program cost.** The second plot demonstrates the relationship between cost and both arguments from low-cost (yellow) to high-cost (red)
 
-<img src="./report_stage_ii_assets/arguments_EXP_evmone.png" width="425"/> <img src="./report_stage_ii_assets/arguments_EXP_evmone_heat.png" width="425"/> 
+<img src="./report_stage_ii_assets/arguments_EXP_evmone.png" width="425"/> <img src="./report_stage_ii_assets/arguments_EXP_evmone_heat.png" width="425"/>
 
 The linear regression diagnostic plots indicate that the model is properly fitted.
-The artifacts visible can be attributed to the fact that our observations are clustered in three distinct groups: `op_count` respectively 0, 15 and 30.
+The artefacts visible can be attributed to the fact that our observations are clustered in three distinct groups: `op_count` respectively 0, 15 and 30.
 
 The automatic selection of OPCODE-environment pairs where the argument is impacting the cost indicates, that on top of the expected `EXP`, `CALLDATACOPY`, `RETURNDATACOPY` and `CODECOPY`, also the division OPCODEs `DIV`, `SDIV`, `MOD`, `SMOD`, `ADDMOD`, `MULMOD` have an increasing relationship for their numerator arguments and decreasing relationship for their denominator arguments.
 
@@ -561,7 +578,7 @@ op_count:expensiveTRUE   84.5255     0.4293  196.88 <0.0000000000000002 ***
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 Residual standard error: 528.6 on 27417 degrees of freedom
-Multiple R-squared:  0.8541,	Adjusted R-squared:  0.8541 
+Multiple R-squared:  0.8541,	Adjusted R-squared:  0.8541
 F-statistic: 4.013e+04 on 4 and 27417 DF,  p-value: < 0.00000000000000022
 ```
 
@@ -578,7 +595,7 @@ op_count:expensiveTRUE   25.6950     0.2494  103.02 <0.0000000000000002 ***
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 Residual standard error: 309.4 on 27438 degrees of freedom
-Multiple R-squared:  0.7955,	Adjusted R-squared:  0.7955 
+Multiple R-squared:  0.7955,	Adjusted R-squared:  0.7955
 F-statistic: 2.669e+04 on 4 and 27438 DF,  p-value: < 0.00000000000000022
 ```
 
@@ -590,7 +607,7 @@ The estimates obtained by our procedure tend to estimate the computational cost 
 
 We can see the data points (each for a given `measure_validation` program) much more tightly packed around the linear regression line.
 
-**Figure 9: Comparison of trivial (`program_length`) estimations the current gas cost schedule (`current_gas_cost`) estimations with our estimates.** Logarithmic scale on both axes, the curve represents the estimated regression line. The points represent the validation programs and labels are their respective dominant OPCODEs
+**Figure 9: Comparison of trivial (`program_length`) estimations of the current gas cost schedule (`current_gas_cost`) estimations with our estimates.** Logarithmic scale on both axes, the curve represents the estimated regression line. The points represent the validation programs and labels are their respective dominant OPCODEs
 
 <img src="./report_stage_ii_assets/validation_compare.png" width="700"/>
 
@@ -608,7 +625,7 @@ cost_ns         1.399401     0.007189   194.7 <0.0000000000000002 ***
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 Residual standard error: 5349 on 498 degrees of freedom
-Multiple R-squared:  0.987,	Adjusted R-squared:  0.987 
+Multiple R-squared:  0.987,	Adjusted R-squared:  0.987
 F-statistic: 3.789e+04 on 1 and 498 DF,  p-value: < 0.00000000000000022
 ```
 
@@ -622,13 +639,13 @@ cost_ns         0.9939     0.0016   621.0 <0.0000000000000002 ***
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 Residual standard error: 2342 on 498 degrees of freedom
-Multiple R-squared:  0.9987,	Adjusted R-squared:  0.9987 
+Multiple R-squared:  0.9987,	Adjusted R-squared:  0.9987
 F-statistic: 3.857e+05 on 1 and 498 DF,  p-value: < 0.00000000000000022
 ```
 
-The slope coefficient is `1.399` for `geth` and `0.994` for `evmone` for our estimates, which is fairly close to `1`, meaning that each nanosecond spent on the estimating programs computation translate to about a nanosecond spent on the validating (randomized) programs.
+The slope coefficient is `1.399` for `geth` and `0.994` for `evmone` for our estimates, which is fairly close to `1`, meaning that each nanosecond spent on the estimating program's computation translates to about a nanosecond spent on the validating (randomized) programs.
 
-From the linear regression model summaries we see that the R squared coefficient is much larger for our estimated model. 
+From the linear regression model summaries, we see that the R squared coefficient is much larger for our estimated model.
 
 **Table 1: R-squared coefficients compared for models using different variables**
 
@@ -642,7 +659,7 @@ For the `.Rmd` scripts to obtain the validation results see [`validation_with_ar
 
 #### Alternative gas cost schedule
 
-Using the estimates obtained so far, we proceed to chose the pivot OPCODE and calculate an alternative gas cost schedule.
+Using the estimates obtained so far, we proceed to choose the pivot OPCODE and calculate an alternative gas cost schedule.
 `ADDRESS` works best as the pivot OPCODE, providing the most chances for a consistent update to the gas cost schedule.
 Using this pivot, we calculate the alternative gas cost schedule.
 
@@ -669,7 +686,7 @@ We can summarize the findings about the alternative gas cost schedule:
   - `DIV`, `SDIV`, `MOD`, `SMOD`, `ADDMOD`, `MULMOD`
    However, the magnitude of the discount is different across different EVMs.
    As a general trend, `geth` seems to be faster than `evmone` for the trivial cases.
-4. The remainder of the OPCODEs don't seem to have a consistent pricing. Within this group, we can make some soft statements about the visible trends:
+4. The remainder of the OPCODEs don't seem to have consistent pricing. Within this group, we can make some soft statements about the visible trends:
   - comparison OPCODEs are faster in `evmone` than in `geth`
   - arithmetic OPCODEs are faster in `geth` than in `evmone`, but there are exceptions
   - stack manipulation OPCODEs are faster in `evmone` than in `geth`
@@ -683,7 +700,7 @@ Note, that the above statements should always be understood relatively to the co
 We can now assess our results from the standpoint of the criteria posed in the State I Report:
 
 - **Estimate is proportional to the OPCODE's computational cost, or otherwise balanced when compared to other OPCODEs.** - we believe so, since the `measure_marginal` models are so well fitted in all cases. The slope coefficient from the validation models being close to `1` also reinforces this belief.
-- **It is modeled to explain the variation in computational cost coming from different circumstances and/or parameters.** - we modeled and estimated the impact of arguments and we have also analyzed the impact of our measurement programs on cache in-depth, and we believe that our data represents the circumstances well enough to give adequate estimates.
+- **It is modelled to explain the variation in computational cost coming from different circumstances and/or parameters.** - we modelled and estimated the impact of arguments and we have also analyzed the impact of our measurement programs on cache in-depth, and we believe that our data represents the circumstances well enough to give adequate estimates.
 - **It is adequate for all implementations and environments.** - yes, thanks to the application of `measure_total` the approach should be easily applicable to other implementations of the EVM, with small intervention in the EVM code.
 - **It can be clearly stated, when no such value exists because of differences in implementations.** - calibration of the results using the gas cost of the pivot OPCODE allows us to judge whether and which OPCODEs can have their gas cost updated across implementations. It turns out that very few.
 - **It should have the measurement overhead and noise under control and "fair" for all OPCODEs.** - thanks to the properties of `measure_marginal`, we are able to measure the different OPCODEs costs with very low noise and without having to take any other measures to achieve fairness. The idea of the marginal increase of cost caused by an increase of OPCODEs in the program is exactly the kind of measurement which reflects the idea of charging gas for computation. As the results of the [Cache impact section](#Cache-impact) show, the synthetical nature of the `measure_marginal` programs should have no unfair impact on the OPCODEs.
@@ -865,3 +882,4 @@ Similarly `CALLDATACOPY` is slightly underpriced for `evmone`, but neither of th
 [17] Camesi, Andrea & Hulaas, Jarle & Binder, Walter. (2006). Continuous Bytecode Instruction Counting for CPU Consumption Estimation. Third International Conference on the Quantitative Evaluation of Systems, QEST 2006. 10.1109/QEST.2006.12.
 
 [18] Bernard L. Peuto and Leonard J. Shustek. 1977. An instruction timing model of CPU performance. SIGARCH Comput. Archit. News 5, 7 (March 1977), 165–178. DOI:https://doi.org/10.1145/633615.810667
+
