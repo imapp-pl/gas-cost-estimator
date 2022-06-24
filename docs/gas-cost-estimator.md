@@ -1,4 +1,4 @@
-# Gas Cost Estimator - Stage II Report
+# Gas Cost Estimator
 
 **TODO** fill authors
 
@@ -406,7 +406,7 @@ Here is the boxplot demonstrating the increasing trend captured by the `measure_
 
 **Figure 1: Increasing trend for `EXP` `measure_marginal` for geth and evmone**
 
-<img src="./report_stage_ii_assets/marginal_exp_geth.png" width="425"/> <img src="./report_stage_ii_assets/marginal_exp_evmone.png" width="425"/> 
+<img src="./gas_cost_estimator_doc_assets/marginal_exp_geth.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/marginal_exp_evmone.png" width="425"/> 
 
 The trend is easily visible and much stronger than the variation pictured by the boxplots.
 
@@ -414,7 +414,7 @@ The standard linear regression diagnostic plots:
 
 **Figure 2: Linear regression diagnostics for `EXP` `measure_marginal` for geth and evmone**
 
-<img src="./report_stage_ii_assets/marginal_exp_diag_geth.png" width="425"/> <img src="./report_stage_ii_assets/marginal_exp_diag_evmone.png" width="425"/> 
+<img src="./gas_cost_estimator_doc_assets/marginal_exp_diag_geth.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/marginal_exp_diag_evmone.png" width="425"/> 
 
 And the complete summary of the fitted models:
 
@@ -460,7 +460,7 @@ A subset of OPCODEs exhibit a bi-modal distribution of measurements:
 
 **Figure 4: Bimodal trend of `JUMP` `measure_marginal` results for `evmone`, along with the bimodal distribution and the corrected `measure_marginal` trend**
 
-<img src="./report_stage_ii_assets/bimodal_PUSH32_evmone.png" width="425"/> <img src="./report_stage_ii_assets/bimodal_PUSH32_evmone_corrected.png" width="425"/> 
+<img src="./gas_cost_estimator_doc_assets/bimodal_PUSH32_evmone.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/bimodal_PUSH32_evmone_corrected.png" width="425"/> 
 
 In the first plot we can still visually pick up the constant trend, irrespective of whether we're looking at the "top-mode" or "bottom-mode" measurements.
 We also see the two strong batches of measurements clustered around their respective modes.
@@ -539,7 +539,7 @@ For `EXP` and `geth` we can plot the trend and also the 2-dimensional illustrati
 
 **Figure 7: Relation between `EXP` exponent argument and `measure_arguments` program cost.** Second plot demonstrates the relationship between cost and both arguments from low-cost (yellow) to high-cost (red)
 
-<img src="./report_stage_ii_assets/arguments_EXP_evmone.png" width="425"/> <img src="./report_stage_ii_assets/arguments_EXP_evmone_heat.png" width="425"/> 
+<img src="./gas_cost_estimator_doc_assets/arguments_EXP_evmone.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/arguments_EXP_evmone_heat.png" width="425"/> 
 
 The linear regression diagnostic plots indicate that the model is properly fitted.
 The artifacts visible can be attributed to the fact that our observations are clustered in three distinct groups: `op_count` respectively 0, 15 and 30.
@@ -551,7 +551,7 @@ Since this situation occurs less likely as `x` increases (or `y` decreases), the
 
 **Figure 8: Relation between `MOD` arguments and `measure_arguments` program cost.** Points below the `y = x` indicate more costly programs, which is exactly where `x > y` for `MOD(x, y)`
 
-<img src="./report_stage_ii_assets/arguments_MOD_evmone_heat.png" width="425"/>
+<img src="./gas_cost_estimator_doc_assets/arguments_MOD_evmone_heat.png" width="425"/>
 
 This prompts us to model the division OPCODEs using a meta-variable `expensive = 1 if x > y 0 otherwise`.
 This variable's coefficient estimate is clearly significant.
@@ -600,7 +600,7 @@ We can see the data points (each for a given `measure_validation` program) much 
 
 **Figure 9: Comparison of trivial (`program_length`) estimations the current gas cost schedule (`current_gas_cost`) estimations with our `gas_cost_estimator` estimates (labelled `cost_ns`).** Logarithmic scale on both axes, the curve represents the estimated regression line. The points represent the validation programs and labels are their respective dominant OPCODEs
 
-<img src="./report_stage_ii_assets/validation_compare.png" width="700"/>
+<img src="./gas_cost_estimator_doc_assets/validation_compare.png" width="700"/>
 
 The summaries of the linear regression validation models for our estimates are:
 
@@ -656,11 +656,11 @@ Using this pivot, we calculate the alternative gas cost schedule.
 
 **Figure 11a: Comparison of current and alternative gas cost schedules - `cloud`.** Each point represents an OPCODE (or a special cost factor to an OPCODE, like an increase in argument size). The figures are in gas units, relative to the gas cost and estimate of the pivot OPCODE. Results for the `cloud` measurement setup.
 
-<img src="./report_stage_ii_assets/alternative_gas_cost_schedule_cloud.png" width="1000"/>
+<img src="./gas_cost_estimator_doc_assets/alternative_gas_cost_schedule_cloud.png" width="1000"/>
 
 **Figure 11b: Comparison of current and alternative gas cost schedules - `laptop`**
 
-<img src="./report_stage_ii_assets/alternative_gas_cost_schedule_laptop.png" width="1000"/>
+<img src="./gas_cost_estimator_doc_assets/alternative_gas_cost_schedule_laptop.png" width="1000"/>
 
 We observe, that the final result (the alternative gas cost schedule) doesn't differ much from environment to environment, but it does differ significantly from EVM to EVM.
 
