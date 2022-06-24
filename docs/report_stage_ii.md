@@ -86,13 +86,16 @@ All work has been carried out in the public GitHub repo [imapp-pl/gas-cost-estim
 ### Comparison with Stage I
 
 This is a digest of the changes made since the Stage I research and report:
-- Drop Ewasm and Openethereum
+- Drop Ewasm and OpenEthereum
 - Abandon the idea of measuring individual instructions in favor of measuring marginal cost
 - Provide a more confident answer to the feasibility of the method and an alternative gas cost schedule
 
 ## Estimation Method
 
 In this section we describe in detail the method applied to estimate the gas costs.
+
+The two EVM implementations used for the estimation are [`geth`](https://github.com/ethereum/go-ethereum) and [`evmone`](https://github.com/ethereum/evmone).
+[`nethermind`](https://github.com/NethermindEth/nethermind) has been chosen as the next to be treated, results for which will be given in a supplement to this document.
 
 ### `measure_total` instrumentation
 
@@ -272,7 +275,7 @@ For the implementation of the `measure_arguments` estimation scripts [see here](
 The instrumentation and measurement were performed for these EVMs:
 1. `geth` - [ethereum/go-ethereum](https://github.com/ethereum/go-ethereum) at [`v1.10.13`](https://github.com/ethereum/go-ethereum/releases/tag/v1.10.13) with [additional changes implementing the instrumentation in the `wallclock-total` branch](https://github.com/imapp-pl/go-ethereum/commit/64aa7ec3).
 2. `evmone` - [ethereum/evmone](https://github.com/ethereum/evmone) at [`b95f90b4`](https://github.com/ethereum/evmone/commit/b95f90b4) with [additional changes implementing the instrumentation in the `wallclock` branch](https://github.com/imapp-pl/evmone/commit/3092f3be).
-3. `nethermind` - ?? TODO
+3. `nethermind` - TBD
 
 running in these machines:
 1. `cloud`: `AWS, Ubuntu 20.04.3, dockerized` - `t2.micro` instance
