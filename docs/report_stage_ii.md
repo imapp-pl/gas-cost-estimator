@@ -289,6 +289,7 @@ Care must be taken to always use an efficient, low-level, monotonic timer availa
 For the measurements done on Ubuntu OS, we use the `tsc` clocksource.
 For the Go EVM `geth` we use the low-level `runtimeNano()` call.
 For the C EVM `evmone` we use the `std::chrono::steady_clock::now()` call.
+For the .NET Core `Nethermind` we use the `Stopwatch` class, that in turn use the system underlying timing mechanism.
 In this setup, the timer overhead measured is in the order of magnitude of 25ns, many times less than the duration of the execution of the program using `measure_total`.
 
 ### Cache impact
@@ -299,17 +300,16 @@ In this setup, the timer overhead measured is in the order of magnitude of 25ns,
 - argument that cache impact is "fair" between OPCODEs
 
 ### Warm-up impact
-The following elements are part of the warm-up:
-- processor cache L1, L2, L3
+Warm-up is the effect when immediate subsequent execution of the same bytecode is gradually faster. This is due to:
+- processor cache L1, L2, L3 being pre-loaded with the EVM engine code and data
 - operating system cache
 - disk cache
-- JIT compilation
-- execution framework 
-- loaded libraries
-- allocated memory
+- execution framework (Go, .NET) being fully loaded
+- any dependant libraries being fully loaded
+- all necessary memory being allocated, extra memory pre-allocated
 - process priority
 
-As shown in the [Results] section, warming up process has significant impact on the execution time. Handling it correctly has the impact on the overall cost estimation. For the runtime cost estimation we assume that there is no warm-up effect. The reasoning for itt
+As shown in the [Results section](#Results), warming up process has significant impact on the execution time. Handling it correctly has the impact on the overall cost estimation. For the runtime cost estimation we assume that there is no warm-up effect. The reasoning for itt
 
 ### Garbage collection impact
 
@@ -329,7 +329,7 @@ The goal of benchmarking mode is to use well known libraries that track performa
 These tools were selected as industry standards for respective languages. They all minimize influence and variability of: caching, warmups, memory allocation, garbage collection, process management, external programs impact and clock measurements.
 If configured properly, these tools helps to alleviate the unfavorable impacts: cache, warm-up and garbage collector.
 
-### Engine overhead cost
+### EVM engine overhead cost
 Not only each instruction bears a cost, but also contract preparation has some impact. For simple functions the cost of preparation can exceed the actual execution cost. Therefore it is necessary to estimate it correctly.
 **code analysis**
 ## Validation
