@@ -302,23 +302,6 @@ models_with_expensive = rbind(models_with_expensive, data.frame(opcode="MULMOD",
 
 ## Detailed analysis for selected OPCODEs
 
-```{r fig.width=15}
-validation_plot <- function(df, opcode, env, argcol) {
-  par(mfrow=c(5,7))
-  for (a in 1:32) {
-    by_argcol_data = df[which(df$opcode==opcode & df$env==env & df[, argcol]==a), ]
-    if (nrow(by_argcol_data) > 0) {
-      boxplot(measure_total_time_ns ~ op_count, data=by_argcol_data)
-    } else {
-      plot.new()
-    }
-    title(main=paste(opcode, env, argcol, a, sep=', '))
-  }
-  par(mfrow=c(1,1))
-  boxplot(as.formula(paste('measure_total_time_ns ~ ', argcol, sep='')), data=df[which(df$opcode==opcode & df$env==env & df$op_count==max(df$op_count)), ])
-}
-```
-
 We go through all the OPCODEs which turned out to have impacting arguments in the automatic discrimination procedure, and we plot some validation plots to inspect these relationships.
 
 ```{r}
@@ -399,14 +382,6 @@ plot_model <- function(df, opcode, env, use_mean) {
   par(mfrow=c(2,2))
   plot(model)
   
-  validation_plot(df, opcode, env, 'arg0')
-  if (opcode %in% c(binary_opcodes, ternary_opcodes)) {
-    validation_plot(df, opcode, env, 'arg1')
-  }
-  if (opcode %in% ternary_opcodes) {
-    validation_plot(df, opcode, env, 'arg2')
-  }
-  
   plot_data = df[which(df$env == env & df$opcode == opcode & df$op_count == max(df$op_count)), ]
   if (opcode %in% binary_opcodes) {
     par(mfrow=c(1,1))
@@ -421,7 +396,7 @@ plot_model <- function(df, opcode, env, use_mean) {
 
 Using the functions defined above, we proceed to plot the diagnostic plots of the arguments models
 
-```{r fig.width=10}
+```{r fig.width=15}
 for (env in all_envs) {
   for (opcode in proceed_with_opcodes) {
     plot_model(measurements, opcode, env, use_mean=TRUE)

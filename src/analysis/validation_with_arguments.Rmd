@@ -440,7 +440,11 @@ get_gas_schedule_comparison <- function(pivot_opcode, df) {
     df$expensive_gas_stderr[which(df$env==env)] = df$expensive_ns_stderr[which(df$env == env)] * multiplier
   }
   
-  gas_schedule_comparison = sqldf("SELECT current_gas_cost.opcode, constant_current_gas, geth.estimate_marginal_gas as geth_gas, evmone.estimate_marginal_gas as evmone_gas
+  gas_schedule_comparison = sqldf("SELECT current_gas_cost.opcode, constant_current_gas,
+                                          geth.estimate_marginal_gas as geth_gas,
+                                          evmone.estimate_marginal_gas as evmone_gas,
+                                          geth.estimate_marginal_gas_stderr as geth_gas_stderr,
+                                          evmone.estimate_marginal_gas_stderr as evmone_gas_stderr
                                    FROM current_gas_cost 
                                    INNER JOIN df as geth
                                      ON geth.opcode = current_gas_cost.opcode AND geth.env = 'geth'
@@ -471,31 +475,34 @@ pivot_opcode = "ADDRESS"
 c(gas_schedule_comparison, estimated_cost) %<-% get_gas_schedule_comparison(pivot_opcode, estimated_cost)
 
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
-  data.frame("EXP_arg1_cost", 50, estimated_cost$arg1_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='EXP')],  estimated_cost$arg1_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='EXP')])
+  data.frame("EXP_arg1_cost", 50, estimated_cost$arg1_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='EXP')],  estimated_cost$arg1_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='EXP')], estimated_cost$arg1_gas_stderr[which(estimated_cost$env=='geth' & estimated_cost$opcode=='EXP')],  estimated_cost$arg1_gas_stderr[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='EXP')])
 
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
-  data.frame("CALLDATACOPY_arg2_cost", 3, estimated_cost$arg2_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='CALLDATACOPY')],  estimated_cost$arg2_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='CALLDATACOPY')])
+  data.frame("CALLDATACOPY_arg2_cost", 3, estimated_cost$arg2_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='CALLDATACOPY')],  estimated_cost$arg2_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='CALLDATACOPY')],  estimated_cost$arg2_gas_stderr[which(estimated_cost$env=='geth' & estimated_cost$opcode=='CALLDATACOPY')],  estimated_cost$arg2_gas_stderr[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='CALLDATACOPY')])
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
-  data.frame("RETURNDATACOPY_arg2_cost", 3, estimated_cost$arg2_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='RETURNDATACOPY')],  estimated_cost$arg2_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='RETURNDATACOPY')])
+  data.frame("RETURNDATACOPY_arg2_cost", 3, estimated_cost$arg2_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='RETURNDATACOPY')],  estimated_cost$arg2_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='RETURNDATACOPY')], estimated_cost$arg2_gas_stderr[which(estimated_cost$env=='geth' & estimated_cost$opcode=='RETURNDATACOPY')],  estimated_cost$arg2_gas_stderr[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='RETURNDATACOPY')])
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
-  data.frame("CODECOPY_arg2_cost", 3, estimated_cost$arg2_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='CODECOPY')],  estimated_cost$arg2_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='CODECOPY')])
+  data.frame("CODECOPY_arg2_cost", 3, estimated_cost$arg2_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='CODECOPY')],  estimated_cost$arg2_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='CODECOPY')], estimated_cost$arg2_gas_stderr[which(estimated_cost$env=='geth' & estimated_cost$opcode=='CODECOPY')],  estimated_cost$arg2_gas_stderr[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='CODECOPY')])
 
 expensive_division_cost <- function(df, env, opcode) {
   df$expensive_gas[which(df$env==env & df$opcode==opcode)] + df$estimate_marginal_gas[which(df$env==env & df$opcode==opcode)]
 }
+expensive_division_cost_stderr <- function(df, env, opcode) {
+  sqrt(df$expensive_gas_stderr[which(df$env==env & df$opcode==opcode)]^2 + df$estimate_marginal_gas_stderr[which(df$env==env & df$opcode==opcode)]^2)
+}
 
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
-  data.frame("DIV_expensive_cost", 5, expensive_division_cost(estimated_cost, 'geth', 'DIV'),  expensive_division_cost(estimated_cost, 'evmone', 'DIV'))
+  data.frame("DIV_expensive_cost", 5, expensive_division_cost(estimated_cost, 'geth', 'DIV'),  expensive_division_cost(estimated_cost, 'evmone', 'DIV'), expensive_division_cost_stderr(estimated_cost, 'geth', 'DIV'),  expensive_division_cost_stderr(estimated_cost, 'evmone', 'DIV'))
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
-  data.frame("SDIV_expensive_cost", 5, expensive_division_cost(estimated_cost, 'geth', 'SDIV'),  expensive_division_cost(estimated_cost, 'evmone', 'SDIV'))
+  data.frame("SDIV_expensive_cost", 5, expensive_division_cost(estimated_cost, 'geth', 'SDIV'),  expensive_division_cost(estimated_cost, 'evmone', 'SDIV'), expensive_division_cost_stderr(estimated_cost, 'geth', 'SDIV'),  expensive_division_cost_stderr(estimated_cost, 'evmone', 'SDIV'))
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
-  data.frame("MOD_expensive_cost", 5, expensive_division_cost(estimated_cost, 'geth', 'MOD'),  expensive_division_cost(estimated_cost, 'evmone', 'MOD'))
+  data.frame("MOD_expensive_cost", 5, expensive_division_cost(estimated_cost, 'geth', 'MOD'),  expensive_division_cost(estimated_cost, 'evmone', 'MOD'), expensive_division_cost_stderr(estimated_cost, 'geth', 'MOD'),  expensive_division_cost_stderr(estimated_cost, 'evmone', 'MOD'))
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
-  data.frame("SMOD_expensive_cost", 5, expensive_division_cost(estimated_cost, 'geth', 'SMOD'),  expensive_division_cost(estimated_cost, 'evmone', 'SMOD'))
+  data.frame("SMOD_expensive_cost", 5, expensive_division_cost(estimated_cost, 'geth', 'SMOD'),  expensive_division_cost(estimated_cost, 'evmone', 'SMOD'), expensive_division_cost_stderr(estimated_cost, 'geth', 'SMOD'),  expensive_division_cost_stderr(estimated_cost, 'evmone', 'SMOD'))
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
-  data.frame("ADDMOD_expensive_cost", 8, expensive_division_cost(estimated_cost, 'geth', 'ADDMOD'),  expensive_division_cost(estimated_cost, 'evmone', 'ADDMOD'))
+  data.frame("ADDMOD_expensive_cost", 8, expensive_division_cost(estimated_cost, 'geth', 'ADDMOD'),  expensive_division_cost(estimated_cost, 'evmone', 'ADDMOD'), expensive_division_cost_stderr(estimated_cost, 'geth', 'ADDMOD'),  expensive_division_cost_stderr(estimated_cost, 'evmone', 'ADDMOD'))
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
-  data.frame("MULMOD_expensive_cost", 8, expensive_division_cost(estimated_cost, 'geth', 'MULMOD'),  expensive_division_cost(estimated_cost, 'evmone', 'MULMOD'))
+  data.frame("MULMOD_expensive_cost", 8, expensive_division_cost(estimated_cost, 'geth', 'MULMOD'),  expensive_division_cost(estimated_cost, 'evmone', 'MULMOD'), expensive_division_cost_stderr(estimated_cost, 'geth', 'MULMOD'),  expensive_division_cost_stderr(estimated_cost, 'evmone', 'MULMOD'))
 ```
 
 Plot the alternative gas cost schedule.
