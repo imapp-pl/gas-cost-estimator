@@ -293,6 +293,65 @@ In this setup, the timer overhead measured is in the order of magnitude of 25ns,
 
 ### Cache impact
 
+CPUs employ caches and other optimization to speed up execution. 
+The questions are: do opcodes have comparable cache profiles and do they retain profiles when executed as parts of real life programs.
+In other words: what is the impact of caches on measurements.
+
+We need to collect statistics of caches, of various levels, and other infrastructure.
+The "perf" tool is utilized for this purpose. It is low level software that listens to Linux kernel events.
+The number of cache levels, size and performance differs for environments/CPU architectures. 
+But our goal is not to determine the impact itself, rather to verify that it does not depend on opcode and context,
+and does not interfere the measurements.
+A regular CPU, Intel Celeron J4005, was used as reference for computations. This unit has modest and not excessive cache solutions.
+
+Perf collects statistics of the whole process. We do not measure just program execution. So dedicated modification of EVMs are needed. 
+In particular, a program is executed in a loop inside an EVM instance and unnecessary instrumentation is removed.
+Refer to this (??) version of evmone and this (??) version of geth.
+
+The available statistics are:
+
+- `task_clock` - CPU time
+- `context_switches`
+- `page_faults` - memory page faults
+- `instructions` - the number of executed instructions
+- `branches` - the number of branches in an executed program
+- `branch_misses` - wrong branches taken by the branch predictor
+- `L1_dcache_loads` - hits to the first level data cache
+- `LLC_loads` - hits to the last level cache
+- `LLC_load_misses` - misses at the last level cache
+- `L1_icache_loads` - hits to the first level instruction cache
+- `L1_icache_load_misses` - misses at the first level instruction cache
+- `dTLB_loads` - hits to the data translation lookaside buffer
+- `dTLB_load_misses` - misses at the data translation lookaside buffer
+- `iTLB_loads` - hits to the instruction translation lookaside buffer
+- `iTLB_load_misses` - misses at the instruction translation lookaside buffer
+
+Unfortunately, statistics for the misses at the first level data cache was unavailable.
+Also statistics for an intermediate cache is not collected, if present, as perf is a general tool.
+To have a better picture, relative indicators are needed. As the profile of cache usage we examine the following factors.
+
+- Branch prediction effectiveness. `branch_misses/branches`. These are actually misses so the lower value the better the branch prediction works.
+- L1 icache - instruction cache of the first level - effectiveness. `L1_icache_load_misses/L1_icache_loads`. These are actually misses so the lower value the better cache works. Unfortunately, results for dcache (data cache) are absent.
+- Last Level Cache effectiveness. `LLC_load_misses/LLC_loads`. These are actually misses so the lower value the better cache works.
+- L1 to LLC ratio. `LLC_loads/(L1_icache_loads+L1_dcache_loads)`. It compares loads of L1 and LLC. This demonstrates how request were filtered through cache levels. The lower value, the more requests are are handled by L1 and intermediate level caches.
+- Translation buffers iTLB and dTLB. `iTLB_load_misses/iTLB_loads` and `dTLB_load_misses/dTLB_loads`. These are statistics of less importance.
+
+#### Perf impact
+
+Using an instrumentation has an impact on measurements by itself. 
+We verify this impact by running the same tests with and without perf. Then CPU time is compared.
+As the test, the marginal programs are used. We calculate the relative overhead of perf which is
+
+```
+(with_perf - without_perf) / without_perf
+```
+
+In the case of evmone, the average of the relative overhead in CPU time is `0.00134` and the maximal is `0.00528`. 
+
+
+TODO a graph?
+TODO geth?
+
 **TODO**
 
 - argument that cache behavior is similar between different kinds of programs (marginal/arguments/validation) used and doesn't skew the results
