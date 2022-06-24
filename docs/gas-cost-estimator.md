@@ -454,6 +454,8 @@ In our results, all OPCODEs for all environments have their models well fitted.
 
 For the `.Rmd` scripts to obtain the `measure_marginal` estimates see [`measure_marginal.Rmd`](./../src/analysis/measure_marginal.Rmd).
 
+For the results of the notebook containing all plots and models for all OPCODEs [see here](https://gascost.local.imapp.pl/measure_marginal.html).
+
 #### Bi-modality correction for `evmone`
 
 A subset of OPCODEs exhibit a bi-modal distribution of measurements:
@@ -592,6 +594,8 @@ F-statistic: 2.669e+04 on 4 and 27438 DF,  p-value: < 0.00000000000000022
 
 For the `.Rmd` scripts to obtain the `measure_arguments` estimates see [`measure_arguments.Rmd`](./../src/analysis/measure_arguments.Rmd).
 
+For the results of the notebook containing all plots and models for all OPCODEs [see here](https://gascost.local.imapp.pl/measure_arguments.html).
+
 ### Validation results
 
 The estimates obtained by our procedure tend to estimate the computational cost of `measure_validation` programs well and much better than both the trivial model and the current gas cost schedule model.
@@ -648,6 +652,8 @@ From the linear regression model summaries we see that the R squared coefficient
 
 For the `.Rmd` scripts to obtain the validation results see [`validation_with_arguments.Rmd`](./../src/analysis/validation_with_arguments.Rmd).
 
+For the results of the notebook containing all plots and models for all OPCODEs [see here](https://gascost.local.imapp.pl/validation_with_arguments.html).
+
 #### Alternative gas cost schedule
 
 Using the estimates obtained so far, we proceed to chose the pivot OPCODE and calculate an alternative gas cost schedule.
@@ -686,7 +692,7 @@ We can summarize the findings about the alternative gas cost schedule:
 
 Note, that the above statements should always be understood relatively to the cost of the pivot OPCODE.
 
-All results for all OPCODEs are given in [Appendix B: EVM OPCODEs and their Gas cost estimates](#Appendix-B:-EVM-OPCODEs-and-their-Gas-cost-estimates).
+The entire alternative gas cost schedule resulting from our estimates is given in [Appendix B: EVM OPCODEs and their Gas cost estimates](#Appendix-B:-EVM-OPCODEs-and-their-Gas-cost-estimates).
 
 #### Discussion
 
@@ -842,12 +848,10 @@ MULMOD_expensive_cost | 8 | 7,6 | 7,7 | 0,029 | 0,035 |
 
 ## Acknowledgements
 
-**TODO** refresh.
 [Paweł Bylica](https://github.com/chfast), [Marcin Benke](https://github.com/mbenke), [Radosław Zagórowicz](https://github.com/rodiazet), [Piotr Janiuk](https://github.com/viggith) for invaluable help and contributions throughout the entire project.
 
 ## References
 
-**TODO** refresh
 [1] [https://etherscan.io/block/11660498](https://etherscan.io/block/11660498)
 
 [2] [ETHEREUM: A SECURE DECENTRALISED GENERALISED TRANSACTION LEDGER PETERSBURG VERSION 6424f7d – 2020-12-28DR. GAVIN WOODFOUNDER, ETHEREUM & PARITYGAVIN@PARITY.IO](https://ethereum.github.io/yellowpaper/paper.pdf)
