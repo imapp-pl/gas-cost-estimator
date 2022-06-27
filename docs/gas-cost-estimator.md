@@ -1,4 +1,4 @@
-# Gas Cost Estimator - Stage II Report
+# Gas Cost Estimator
 
 **TODO** fill authors
 
@@ -64,7 +64,7 @@ Assuming that transactions can in fact be efficiently categorized in terms of wh
 It is interesting to mention that, not entirely related to the motivations of this research but in similar vein, there is also prior work aimed at estimating the computational burden of individual OPCODEs (instructions) of the Java Virtual Machine (CPU), examples are [6], [16], [17], [18].
 
 This report and the entire "Gas Cost Estimator" project are focusing on a subset of EVM OPCODEs.
-The OPCODEs in this subset (see [Appendix B: OPCODEs subset](#appendix-b-opcodes-subset) have in common that they do not include any instructions which access the Ethereum storage (e.g. `SSTORE`, `SLOAD` etc.).
+The OPCODEs in this subset (see [Appendix B: EVM OPCODEs and their Gas cost estimates](#Appendix-B:-EVM-OPCODEs-and-their-Gas-cost-estimates) have in common that they do not include any instructions which access the Ethereum storage (e.g. `SSTORE`, `SLOAD` etc.).
 On one hand, the focus on only purely computational instructions is intended and desirable, as seen from the point of view whereby the importance of on-chain computations will increase, while the extensive use of Ethereum storage will diminish.
 This is driven by the current influx of Layer 2 scaling solutions, which only store the minimum amount of data, putting the burden of providing data on the transaction senders and only the burden of validating it on the smart contract [4].
 On the other hand, we might consider extending the method devised here to storage-bound instructions in the future as well.
@@ -86,13 +86,16 @@ All work has been carried out in the public GitHub repo [imapp-pl/gas-cost-estim
 ### Comparison with Stage I
 
 This is a digest of the changes made since the Stage I research and report:
-- Drop Ewasm and Openethereum
+- Drop Ewasm and OpenEthereum
 - Abandon the idea of measuring individual instructions in favor of measuring marginal cost
 - Provide a more confident answer to the feasibility of the method and an alternative gas cost schedule
 
 ## Estimation Method
 
 In this section we describe in detail the method applied to estimate the gas costs.
+
+The two EVM implementations used for the estimation are [`geth`](https://github.com/ethereum/go-ethereum) and [`evmone`](https://github.com/ethereum/evmone).
+[`nethermind`](https://github.com/NethermindEth/nethermind) has been chosen as the next to be treated, results for which will be given in a supplement to this document.
 
 ### `measure_total` instrumentation
 
@@ -203,7 +206,7 @@ The procedure to estimate the marginal cost is as follows:
    This prompts us to remove the bi-modality by subtracting the higher mode from the measurements which cluster around it.
    After this procedure the marginal cost model is fitted with high confidence.
 5. Fit a linear regression model `measure_total_time = b + a * op_count`.
-   `a` is the marginal cost estimation we are looking for.
+   `a` is the marginal cost estimation we are looking for and `b` is the constant intercept coefficient.
    The model is fit separately for each OPCODE and environment.
 
 The benefits of using `measure_marginal` as the measurement method are the following:
@@ -217,7 +220,7 @@ For the implementation of the `measure_marginal` estimation scripts [see here](.
 
 ### `measure_arguments` method
 
-The cost of some OPCODEs relies on the arguments taken off the stack.
+The cost of some OPCODEs relies on the values of arguments taken off the stack.
 Within the scope of this research, this is the case for `EXP` and the memory OPCODEs which copy variable portions of memory `CALLDATACOPY`, `RETURNDATACOPY` and `CODECOPY`.
 During the course of our research, we have established this is somewhat the case for the division OPCODES: `DIV`, `MOD`, `SDIV`, `SMOD`, `ADDMOD`, `MULMOD`.
 We have however analyzed the entire set of OPCODEs in scope in order to both establish a healthy proportion of the argument cost to the OPCODE execution cost, and assess whether new arguments should be added to the list of costs.
@@ -235,9 +238,9 @@ We are also not measuring the argument impact for a mesh of points of the argume
 We need to be wary of different potential functional forms of the relation between the argument value and cost.
 For simplicity we derive this form based on the inspection of the code executing the OPCODEs (and of the current gas cost schedule).
 We chose these functions:
-- `argument_cost(arg) = arg` - for memory OPCODEs: `CALLDATALOAD`, `CALLDATACOPY`, `RETURNDATACOPY`, `MLOAD`, `MSTORE`, `MSTORE8`, `CODECOPY`
-- `argument_cost(arg) = log(arg)` - for OPCODEs where the cost is proportional to the bytesize of the argument (remainder of OPCODEs)
-- `argument_cost(arg) = numerator_arg > denominator_arg` - gauged towards the division OPCODES. This means that the arguments "cost" more if the OPCODE involves a `numerator / denominator` operation, and the `numerator` part is bigger.
+- `weight(arg) = arg` - for memory OPCODEs: `CALLDATALOAD`, `CALLDATACOPY`, `RETURNDATACOPY`, `MLOAD`, `MSTORE`, `MSTORE8`, `CODECOPY`
+- `weight(arg) = log(arg)` - for OPCODEs where the cost is proportional to the bytesize of the argument (remainder of OPCODEs)
+- `weight(arg) = numerator_arg > denominator_arg` - gauged towards the division OPCODES. This means that the arguments "cost" more if the OPCODE involves a `numerator / denominator` operation, and the `numerator` part is bigger.
 
 For the implementation of the `measure_arguments` program generator [see here](./../src/program_generator/pg_arguments.py)
 
@@ -250,11 +253,16 @@ The procedure to estimate the argument cost is as follows:
 2. Collect the measurement data.
 3. Remove outliers.
    We remove outliers separately for data subsets, as divided by `op_count`, OPCODE and environment.
-4. Fit a linear regression model `measure_total_time = b + a * op_count * argument_cost(arg) + c * argument_cost(arg) + d * op_count`.
-   `a` is the estimation of the cost increase for a unit increase of the argument cost (either `arg` or `log(arg)`).
+4. Fit a linear regression model `measure_total_time = b + a * op_count * weight(arg) + c * arg + d * op_count`.
+   `a` is the estimation of the cost increase for a unit increase of the arguments' cost (or of the impact of the binary variable encoding the `numerator > denominator` condition).
+   `b` is the constant intercept coefficient.
+   `c` is the coefficient to capture the constant cost of managing the arguments (i.e. `PUSH`as and `POP`s), so as to not have it influence the value of `a`.
+   `d` is the estimate of the constant, from the point of view of arguments, cost of executing the OPCODE.
    The model is fit separately for each OPCODE and environment.
 5. Discriminate between OPCODEs where the arguments have and do not have impact.
    We do this by looking at the p-value of the `a` coefficient.
+
+We observe that `a` is the cost of the argument, because it tells by how much will the cost of _each_ of the `op_count` OPCODEs increase, if we increase the `weight(arg)` by a unit.
 
 It is worth noting, that we neglect to check the impact of the size of the second `pc_destination` argument of `JUMP` and `JUMPI` OPCODEs on purpose.
 It would be quite unfeasible to compose programs which actually execute as expected, fit into the framework of our measurement method and explore the dynamics of this argument.
@@ -267,7 +275,7 @@ For the implementation of the `measure_arguments` estimation scripts [see here](
 The instrumentation and measurement were performed for these EVMs:
 1. `geth` - [ethereum/go-ethereum](https://github.com/ethereum/go-ethereum) at [`v1.10.13`](https://github.com/ethereum/go-ethereum/releases/tag/v1.10.13) with [additional changes implementing the instrumentation in the `wallclock-total` branch](https://github.com/imapp-pl/go-ethereum/commit/64aa7ec3).
 2. `evmone` - [ethereum/evmone](https://github.com/ethereum/evmone) at [`b95f90b4`](https://github.com/ethereum/evmone/commit/b95f90b4) with [additional changes implementing the instrumentation in the `wallclock` branch](https://github.com/imapp-pl/evmone/commit/3092f3be).
-3. `nethermind` - ?? TODO
+3. `nethermind` - TBD
 
 running in these machines:
 1. `cloud`: `AWS, Ubuntu 20.04.3, dockerized` - `t2.micro` instance
@@ -372,7 +380,7 @@ The constant cost of executing an OPCODE is its respective slope coefficient `a`
 The cost related to the size of arguments is taken from the `measure_arguments` model.
 
 The reason for this is that `measure_arguments` performs much worse in estimating the marginal _constant_ cost of the OPCODE.
-It includes interaction terms of the form `a * op_count * argument_cost(arg)`, so the `op_count` coefficient `d` (from `d * op_count` term) is the estimation of marginal increase of `measure_total_time` for each unit increase of `op_count`, but _assuming `argument_cost(arg) = 0`_.
+It includes interaction terms of the form `a * op_count * weight(arg)`, so the `op_count` coefficient `d` (from `d * op_count` term) is the estimation of marginal increase of `measure_total_time` for each unit increase of `op_count`, but _assuming `weight(arg) = 0`_.
 Since we don't want to rely on this assumption and include the error it brings into the estimation procedure, we simply ignore `d` in favor of the `measure_marginal` result.
 
 #### Deriving alternative gas cost schedules
@@ -398,7 +406,7 @@ Here is the boxplot demonstrating the increasing trend captured by the `measure_
 
 **Figure 1: Increasing trend for `EXP` `measure_marginal` for geth and evmone**
 
-<img src="./report_stage_ii_assets/marginal_exp_geth.png" width="425"/> <img src="./report_stage_ii_assets/marginal_exp_evmone.png" width="425"/> 
+<img src="./gas_cost_estimator_doc_assets/marginal_exp_geth.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/marginal_exp_evmone.png" width="425"/> 
 
 The trend is easily visible and much stronger than the variation pictured by the boxplots.
 
@@ -406,7 +414,7 @@ The standard linear regression diagnostic plots:
 
 **Figure 2: Linear regression diagnostics for `EXP` `measure_marginal` for geth and evmone**
 
-<img src="./report_stage_ii_assets/marginal_exp_diag_geth.png" width="425"/> <img src="./report_stage_ii_assets/marginal_exp_diag_evmone.png" width="425"/> 
+<img src="./gas_cost_estimator_doc_assets/marginal_exp_diag_geth.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/marginal_exp_diag_evmone.png" width="425"/> 
 
 And the complete summary of the fitted models:
 
@@ -446,13 +454,15 @@ In our results, all OPCODEs for all environments have their models well fitted.
 
 For the `.Rmd` scripts to obtain the `measure_marginal` estimates see [`measure_marginal.Rmd`](./../src/analysis/measure_marginal.Rmd).
 
+For the results of the notebook containing all plots and models for all OPCODEs [see here](https://gascost.local.imapp.pl/measure_marginal.html).
+
 #### Bi-modality correction for `evmone`
 
 A subset of OPCODEs exhibit a bi-modal distribution of measurements:
 
 **Figure 4: Bimodal trend of `JUMP` `measure_marginal` results for `evmone`, along with the bimodal distribution and the corrected `measure_marginal` trend**
 
-<img src="./report_stage_ii_assets/bimodal_PUSH32_evmone.png" width="425"/> <img src="./report_stage_ii_assets/bimodal_PUSH32_evmone_corrected.png" width="425"/> 
+<img src="./gas_cost_estimator_doc_assets/bimodal_PUSH32_evmone.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/bimodal_PUSH32_evmone_corrected.png" width="425"/> 
 
 In the first plot we can still visually pick up the constant trend, irrespective of whether we're looking at the "top-mode" or "bottom-mode" measurements.
 We also see the two strong batches of measurements clustered around their respective modes.
@@ -461,7 +471,7 @@ In second plot we see the results of bringing the "top-mode" observations down t
 
 ### `measure_arguments` dynamics and results
 
-Continuing to use our working example of `EXP` OPCODE in `geth`, we estimate the `measure_arguments` model to see that the term `a * op_count * argument_cost(arg)` is significant for the second argument (exponent).
+Continuing to use our working example of `EXP` OPCODE in `geth`, we estimate the `measure_arguments` model to see that the term `a * op_count * weight(arg)` is significant for the second argument (exponent).
 
 
 **Figure 5: Linear regression model summaries for `EXP` `measure_arguments`.** The `op_count:arg1` estimate provides our value for the argument cost of `EXP`'s exponent in nanoseconds per every byte increase in the size of argument. The `op_count:arg0` (base) estimate is orders of magnitude weaker and not very statistically significant for `geth`.
@@ -531,7 +541,7 @@ For `EXP` and `geth` we can plot the trend and also the 2-dimensional illustrati
 
 **Figure 7: Relation between `EXP` exponent argument and `measure_arguments` program cost.** Second plot demonstrates the relationship between cost and both arguments from low-cost (yellow) to high-cost (red)
 
-<img src="./report_stage_ii_assets/arguments_EXP_evmone.png" width="425"/> <img src="./report_stage_ii_assets/arguments_EXP_evmone_heat.png" width="425"/> 
+<img src="./gas_cost_estimator_doc_assets/arguments_EXP_evmone.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/arguments_EXP_evmone_heat.png" width="425"/> 
 
 The linear regression diagnostic plots indicate that the model is properly fitted.
 The artifacts visible can be attributed to the fact that our observations are clustered in three distinct groups: `op_count` respectively 0, 15 and 30.
@@ -543,7 +553,7 @@ Since this situation occurs less likely as `x` increases (or `y` decreases), the
 
 **Figure 8: Relation between `MOD` arguments and `measure_arguments` program cost.** Points below the `y = x` indicate more costly programs, which is exactly where `x > y` for `MOD(x, y)`
 
-<img src="./report_stage_ii_assets/arguments_MOD_evmone_heat.png" width="425"/>
+<img src="./gas_cost_estimator_doc_assets/arguments_MOD_evmone_heat.png" width="425"/>
 
 This prompts us to model the division OPCODEs using a meta-variable `expensive = 1 if x > y 0 otherwise`.
 This variable's coefficient estimate is clearly significant.
@@ -584,19 +594,21 @@ F-statistic: 2.669e+04 on 4 and 27438 DF,  p-value: < 0.00000000000000022
 
 For the `.Rmd` scripts to obtain the `measure_arguments` estimates see [`measure_arguments.Rmd`](./../src/analysis/measure_arguments.Rmd).
 
+For the results of the notebook containing all plots and models for all OPCODEs [see here](https://gascost.local.imapp.pl/measure_arguments.html).
+
 ### Validation results
 
 The estimates obtained by our procedure tend to estimate the computational cost of `measure_validation` programs well and much better than both the trivial model and the current gas cost schedule model.
 
 We can see the data points (each for a given `measure_validation` program) much more tightly packed around the linear regression line.
 
-**Figure 9: Comparison of trivial (`program_length`) estimations the current gas cost schedule (`current_gas_cost`) estimations with our estimates.** Logarithmic scale on both axes, the curve represents the estimated regression line. The points represent the validation programs and labels are their respective dominant OPCODEs
+**Figure 9: Comparison of trivial (`program_length`) estimations the current gas cost schedule (`current_gas_cost`) estimations with our `gas_cost_estimator` estimates (labelled `cost_ns`).** Logarithmic scale on both axes, the curve represents the estimated regression line. The points represent the validation programs and labels are their respective dominant OPCODEs
 
-<img src="./report_stage_ii_assets/validation_compare.png" width="700"/>
+<img src="./gas_cost_estimator_doc_assets/validation_compare.png" width="700"/>
 
 The summaries of the linear regression validation models for our estimates are:
 
-**Figure 10: Final model summaries**
+**Figure 10: Final `gas_cost_estimator` model summaries**
 
 `geth`:
 ```
@@ -632,13 +644,15 @@ From the linear regression model summaries we see that the R squared coefficient
 
 **Table 1: R-squared coefficients compared for models using different variables**
 
-| EVM             | `program_length` trivial model | Current gas cost schedule model | Our final model |
-|-----------------|--------------------------------|---------------------------------|-----------------|
-| `geth`          | 0.2469                         | 0.8458                          | 0.987           |
-| `evmone`        | 0.04324                        | 0.9922                          | 0.9987          |
+| EVM             | `program_length` trivial model | `current_gas_cost` schedule model | Final `gas_cost_estimator` model |
+|-----------------|--------------------------------|-----------------------------------|----------------------------------|
+| `geth`          | 0.2469                         | 0.8458                            | 0.987                            |
+| `evmone`        | 0.04324                        | 0.9922                            | 0.9987                           |
 
 
 For the `.Rmd` scripts to obtain the validation results see [`validation_with_arguments.Rmd`](./../src/analysis/validation_with_arguments.Rmd).
+
+For the results of the notebook containing all plots and models for all OPCODEs [see here](https://gascost.local.imapp.pl/validation_with_arguments.html).
 
 #### Alternative gas cost schedule
 
@@ -648,11 +662,11 @@ Using this pivot, we calculate the alternative gas cost schedule.
 
 **Figure 11a: Comparison of current and alternative gas cost schedules - `cloud`.** Each point represents an OPCODE (or a special cost factor to an OPCODE, like an increase in argument size). The figures are in gas units, relative to the gas cost and estimate of the pivot OPCODE. Results for the `cloud` measurement setup.
 
-<img src="./report_stage_ii_assets/alternative_gas_cost_schedule_cloud.png" width="1000"/>
+<img src="./gas_cost_estimator_doc_assets/alternative_gas_cost_schedule_cloud.png" width="1000"/>
 
 **Figure 11b: Comparison of current and alternative gas cost schedules - `laptop`**
 
-<img src="./report_stage_ii_assets/alternative_gas_cost_schedule_laptop.png" width="1000"/>
+<img src="./gas_cost_estimator_doc_assets/alternative_gas_cost_schedule_laptop.png" width="1000"/>
 
 We observe, that the final result (the alternative gas cost schedule) doesn't differ much from environment to environment, but it does differ significantly from EVM to EVM.
 
@@ -678,6 +692,8 @@ We can summarize the findings about the alternative gas cost schedule:
 
 Note, that the above statements should always be understood relatively to the cost of the pivot OPCODE.
 
+The entire alternative gas cost schedule resulting from our estimates is given in [Appendix B: EVM OPCODEs and their Gas cost estimates](#Appendix-B:-EVM-OPCODEs-and-their-Gas-cost-estimates).
+
 #### Discussion
 
 We can now assess our results from the standpoint of the criteria posed in the State I Report:
@@ -694,142 +710,148 @@ There is a number of points which might raise questions in these results:
 We observe a non-linearity in the validation model for `geth`, with `ADDMOD` somewhat underpriced.
 Similarly `CALLDATACOPY` is slightly underpriced for `evmone`, but neither of these deviations is alarming.
 
-## Appendix B: OPCODEs subset
+## Appendix B: EVM OPCODEs and their Gas cost estimates
 
-### EVM OPCODEs
-
-```
-0x01 ADD
-0x02 MUL
-0x03 SUB
-0x04 DIV
-0x05 SDIV
-0x06 MOD
-0x07 SMOD
-0x08 ADDMOD
-0x09 MULMOD
-0x0a EXP
-0x0b SIGNEXTEND
-0x10 LT
-0x11 GT
-0x12 SLT
-0x13 SGT
-0x14 EQ
-0x15 ISZERO
-0x16 AND
-0x17 OR
-0x18 XOR
-0x19 NOT
-0x1a BYTE
-0x1b SHL
-0x1c SHR
-0x1d SAR
-0x30 ADDRESS
-0x32 ORIGIN
-0x33 CALLER
-0x34 CALLVALUE
-0x35 CALLDATALOAD
-0x36 CALLDATASIZE
-0x37 CALLDATACOPY
-0x38 CODESIZE
-0x39 CODECOPY
-0x3a GASPRICE
-0x3d RETURNDATASIZE
-0x3e RETURNDATACOPY
-0x41 COINBASE
-0x42 TIMESTAMP
-0x43 NUMBER
-0x44 DIFFICULTY
-0x45 GASLIMIT
-0x46 CHAINID
-0x47 SELFBALANCE
-0x50 POP
-0x51 MLOAD
-0x52 MSTORE
-0x53 MSTORE8
-0x56 JUMP
-0x57 JUMPI
-0x58 PC
-0x59 MSIZE
-0x5a GAS
-0x5b JUMPDEST
-0x60 PUSH1
-0x61 PUSH2
-0x62 PUSH3
-0x63 PUSH4
-0x64 PUSH5
-0x65 PUSH6
-0x66 PUSH7
-0x67 PUSH8
-0x68 PUSH9
-0x69 PUSH10
-0x6a PUSH11
-0x6b PUSH12
-0x6c PUSH13
-0x6d PUSH14
-0x6e PUSH15
-0x6f PUSH16
-0x70 PUSH17
-0x71 PUSH18
-0x72 PUSH19
-0x73 PUSH20
-0x74 PUSH21
-0x75 PUSH22
-0x76 PUSH23
-0x77 PUSH24
-0x78 PUSH25
-0x79 PUSH26
-0x7a PUSH27
-0x7b PUSH28
-0x7c PUSH29
-0x7d PUSH30
-0x7e PUSH31
-0x7f PUSH32
-0x80 DUP1
-0x81 DUP2
-0x82 DUP3
-0x83 DUP4
-0x84 DUP5
-0x85 DUP6
-0x86 DUP7
-0x87 DUP8
-0x88 DUP9
-0x89 DUP10
-0x8a DUP11
-0x8b DUP12
-0x8c DUP13
-0x8d DUP14
-0x8e DUP15
-0x8f DUP16
-0x90 SWAP1
-0x91 SWAP2
-0x92 SWAP3
-0x93 SWAP4
-0x94 SWAP5
-0x95 SWAP6
-0x96 SWAP7
-0x97 SWAP8
-0x98 SWAP9
-0x99 SWAP10
-0x9a SWAP11
-0x9b SWAP12
-0x9c SWAP13
-0x9d SWAP14
-0x9e SWAP15
-0x9f SWAP16
-```
+| OPCODE | Current gas | Gas estimate - `geth` | Gas estimate - `evmone` | Stderr. `geth` | Stderr. `evmone` |
+|--------|-------------|-----------------------|-------------------------|----------------|------------------|
+ADD | 3 | 0,8 | 0,3 | 0,014 | 0,017 |
+MUL | 5 | 1,1 | 1,3 | 0,019 | 0,020 | 
+SUB | 3 | 0,8 | 0,3 | 0,013 | 0,018 | 
+DIV | 5 | 0,9 | 2,2 | 0,019 | 0,028 | 
+SDIV | 5 | 1,1 | 3,0 | 0,027 | 0,035 | 
+MOD | 5 | 1,1 | 2,5 | 0,021 | 0,021 | 
+SMOD | 5 | 1,2 | 3,1 | 0,019 | 0,038 | 
+ADDMOD | 8 | 1,8 | 2,7 | 0,015 | 0,027 | 
+MULMOD | 8 | 2,8 | 4,9 | 0,013 | 0,022 | 
+EXP | 10 | 2,6 | 6,1 | 0,014 | 0,022 | 
+SIGNEXTEND | 5 | 1,5 | 0,4 | 0,012 | 0,016 | 
+LT | 3 | 0,8 | 0,3 | 0,012 | 0,015 | 
+GT | 3 | 0,8 | 0,3 | 0,013 | 0,017 | 
+SLT | 3 | 1,0 | 0,3 | 0,012 | 0,017 | 
+SGT | 3 | 1,0 | 0,3 | 0,012 | 0,016 | 
+EQ | 3 | 0,8 | 0,3 | 0,014 | 0,019 | 
+ISZERO | 3 | 0,6 | 0,2 | 0,014 | 0,018 | 
+AND | 3 | 0,8 | 0,2 | 0,012 | 0,018 | 
+OR | 3 | 0,8 | 0,2 | 0,013 | 0,019 | 
+XOR | 3 | 0,8 | 0,2 | 0,012 | 0,020 | 
+NOT | 3 | 0,7 | 0,2 | 0,012 | 0,020 | 
+BYTE | 3 | 0,9 | 0,4 | 0,011 | 0,018 | 
+SHL | 3 | 1,2 | 0,6 | 0,011 | 0,022 | 
+SHR | 3 | 1,2 | 0,6 | 0,014 | 0,020 | 
+SAR | 3 | 1,2 | 1,1 | 0,019 | 0,025 | 
+ADDRESS | 2 | 2,0 | 2,0 | 0,007 | 0,024 | 
+ORIGIN | 2 | 0,9 | 2,8 | 0,009 | 0,020 | 
+CALLER | 2 | 1,2 | 2,0 | 0,014 | 0,022 | 
+CALLVALUE | 2 | 0,8 | 1,2 | 0,010 | 0,020 | 
+CALLDATALOAD | 3 | 0,7 | 1,5 | 0,360 | 0,069 | 
+CALLDATASIZE | 2 | 0,6 | 0,4 | 0,010 | 0,023 | 
+CALLDATACOPY | 2 | 2,2 | 2,2 | 0,330 | 0,084 | 
+CODESIZE | 2 | 0,6 | 0,4 | 0,007 | 0,023 | 
+CODECOPY | 2 | 2,1 | 2,2 | 0,237 | 0,238 | 
+GASPRICE | 2 | 0,8 | 2,0 | 0,007 | 0,023 | 
+RETURNDATASIZE | 2 | 0,6 | 0,4 | 0,011 | 0,022 | 
+RETURNDATACOPY | 3 | 2,7 | 2,0 | 0,481 | 0,169 | 
+COINBASE | 2 | 0,9 | 3,0 | 0,008 | 0,025 | 
+TIMESTAMP | 2 | 0,8 | 1,0 | 0,010 | 0,019 | 
+NUMBER | 2 | 0,8 | 1,0 | 0,009 | 0,019 | 
+DIFFICULTY | 2 | 0,8 | 2,0 | 0,008 | 0,020 | 
+GASLIMIT | 2 | 0,6 | 1,0 | 0,007 | 0,025 | 
+CHAINID | 2 | 0,8 | 2,1 | 0,006 | 0,017 | 
+SELFBALANCE | 5 | 3,6 | 1,9 | 0,008 | 0,023 | 
+POP | 2 | 0,5 | 0,2 | 0,010 | 0,022 | 
+MLOAD | 3 | 1,7 | 1,1 | 0,244 | 0,086 | 
+MSTORE | 3 | 5,3 | 0,7 | 0,209 | 0,081 | 
+MSTORE8 | 3 | 1,2 | 0,3 | 0,299 | 0,083 | 
+JUMP | 8 | 1,0 | 0,2 | 0,042 | 0,048 | 
+JUMPI | 10 | 1,2 | 0,3 | 0,078 | 0,024 | 
+PC | 2 | 0,6 | 0,4 | 0,007 | 0,020 | 
+MSIZE | 2 | 0,6 | 0,4 | 0,006 | 0,019 | 
+GAS | 2 | 0,6 | 0,4 | 0,007 | 0,020 | 
+JUMPDEST | 1 | 0,5 | 0,4 | 0,004 | 0,030 | 
+PUSH1 | 3 | 0,7 | 0,4 | 0,007 | 0,031 | 
+PUSH2 | 3 | 1,0 | 0,4 | 0,010 | 0,051 | 
+PUSH3 | 3 | 1,0 | 0,6 | 0,007 | 0,033 | 
+PUSH4 | 3 | 0,9 | 0,6 | 0,008 | 0,030 | 
+PUSH5 | 3 | 1,0 | 0,5 | 0,006 | 0,041 | 
+PUSH6 | 3 | 1,0 | 0,4 | 0,010 | 0,051 | 
+PUSH7 | 3 | 1,0 | 0,4 | 0,008 | 0,049 | 
+PUSH8 | 3 | 1,0 | 0,5 | 0,007 | 0,044 | 
+PUSH9 | 3 | 1,0 | 0,4 | 0,009 | 0,046 | 
+PUSH10 | 3 | 1,0 | 0,5 | 0,009 | 0,048 | 
+PUSH11 | 3 | 1,0 | 0,5 | 0,008 | 0,045 | 
+PUSH12 | 3 | 1,1 | 0,5 | 0,006 | 0,039 | 
+PUSH13 | 3 | 1,0 | 0,5 | 0,007 | 0,039 | 
+PUSH14 | 3 | 1,0 | 0,6 | 0,009 | 0,042 | 
+PUSH15 | 3 | 1,1 | 0,6 | 0,009 | 0,038 | 
+PUSH16 | 3 | 1,1 | 0,6 | 0,007 | 0,043 | 
+PUSH17 | 3 | 1,0 | 0,7 | 0,009 | 0,040 | 
+PUSH18 | 3 | 1,0 | 0,7 | 0,008 | 0,037 | 
+PUSH19 | 3 | 1,1 | 0,7 | 0,008 | 0,037 | 
+PUSH20 | 3 | 1,1 | 0,7 | 0,010 | 0,040 | 
+PUSH21 | 3 | 1,0 | 0,7 | 0,009 | 0,040 | 
+PUSH22 | 3 | 1,0 | 0,7 | 0,008 | 0,041 | 
+PUSH23 | 3 | 1,1 | 0,7 | 0,008 | 0,052 | 
+PUSH24 | 3 | 1,1 | 0,7 | 0,007 | 0,063 | 
+PUSH25 | 3 | 1,1 | 0,7 | 0,007 | 0,068 | 
+PUSH26 | 3 | 1,0 | 0,8 | 0,008 | 0,078 | 
+PUSH27 | 3 | 1,1 | 0,6 | 0,006 | 0,079 | 
+PUSH28 | 3 | 1,1 | 0,7 | 0,008 | 0,089 | 
+PUSH29 | 3 | 1,1 | 0,6 | 0,009 | 0,088 | 
+PUSH30 | 3 | 1,1 | 0,6 | 0,008 | 0,085 | 
+PUSH31 | 3 | 1,1 | 0,7 | 0,007 | 0,086 | 
+PUSH32 | 3 | 1,2 | 0,6 | 0,008 | 0,087 | 
+DUP1 | 3 | 0,7 | 0,2 | 0,010 | 0,021 | 
+DUP2 | 3 | 0,7 | 0,2 | 0,011 | 0,014 | 
+DUP3 | 3 | 0,7 | 0,2 | 0,017 | 0,023 | 
+DUP4 | 3 | 0,7 | 0,2 | 0,015 | 0,022 | 
+DUP5 | 3 | 0,7 | 0,2 | 0,016 | 0,023 | 
+DUP6 | 3 | 0,7 | 0,2 | 0,023 | 0,017 | 
+DUP7 | 3 | 0,7 | 0,2 | 0,012 | 0,013 | 
+DUP8 | 3 | 0,7 | 0,2 | 0,021 | 0,017 | 
+DUP9 | 3 | 0,7 | 0,2 | 0,010 | 0,024 | 
+DUP10 | 3 | 0,7 | 0,2 | 0,011 | 0,024 | 
+DUP11 | 3 | 0,7 | 0,2 | 0,011 | 0,024 | 
+DUP12 | 3 | 0,7 | 0,2 | 0,011 | 0,023 | 
+DUP13 | 3 | 0,7 | 0,2 | 0,020 | 0,028 | 
+DUP14 | 3 | 0,7 | 0,2 | 0,013 | 0,022 | 
+DUP15 | 3 | 0,7 | 0,2 | 0,012 | 0,022 | 
+DUP16 | 3 | 0,7 | 0,3 | 0,013 | 0,031 | 
+SWAP1 | 3 | 0,7 | 0,4 | 0,015 | 0,022 | 
+SWAP2 | 3 | 0,8 | 0,4 | 0,013 | 0,019 | 
+SWAP3 | 3 | 0,8 | 0,4 | 0,011 | 0,017 | 
+SWAP4 | 3 | 0,8 | 0,3 | 0,013 | 0,018 | 
+SWAP5 | 3 | 0,8 | 0,4 | 0,012 | 0,016 | 
+SWAP6 | 3 | 0,7 | 0,3 | 0,016 | 0,018 | 
+SWAP7 | 3 | 0,8 | 0,3 | 0,018 | 0,018 | 
+SWAP8 | 3 | 0,7 | 0,4 | 0,011 | 0,018 | 
+SWAP9 | 3 | 0,8 | 0,3 | 0,012 | 0,019 | 
+SWAP10 | 3 | 0,7 | 0,4 | 0,015 | 0,025 | 
+SWAP11 | 3 | 0,7 | 0,3 | 0,014 | 0,021 | 
+SWAP12 | 3 | 0,7 | 0,4 | 0,012 | 0,023 | 
+SWAP13 | 3 | 0,7 | 0,3 | 0,012 | 0,018 | 
+SWAP14 | 3 | 0,7 | 0,4 | 0,017 | 0,022 | 
+SWAP15 | 3 | 0,8 | 0,4 | 0,013 | 0,016 | 
+SWAP16 | 3 | 0,8 | 0,3 | 0,013 | 0,017 | 
+EXP_arg1_cost | 50 | 4,2 | 16,2 | 0,013 | 0,022 | 
+CALLDATACOPY_arg2_cost | 3 | 0,0 | 0,1 | 0,000 | 0,000 | 
+RETURNDATACOPY_arg2_cost | 3 | 0,0 | 0,1 | 0,000 | 0,000 | 
+CODECOPY_arg2_cost | 3 | 0,0 | 0,1 | 0,000 | 0,000 | 
+DIV_expensive_cost | 5 | 4,5 | 4,0 | 0,026 | 0,034 | 
+SDIV_expensive_cost | 5 | 5,0 | 5,4 | 0,032 | 0,040 | 
+MOD_expensive_cost | 5 | 4,7 | 4,5 | 0,028 | 0,028 | 
+SMOD_expensive_cost | 5 | 4,8 | 5,3 | 0,026 | 0,042 | 
+ADDMOD_expensive_cost | 8 | 6,1 | 5,7 | 0,023 | 0,035 | 
+MULMOD_expensive_cost | 8 | 7,6 | 7,7 | 0,029 | 0,035 | 
 
 **NOTE** `0x1b SHL`, `0x1c SHR`, `0x1d SAR`, `0x46 CHAINID`, `0x47 SELFBALANCE` were added, when compared to the Stage I report list.
 `0x00 STOP`, `0xf3 RETURN`, `0xfd REVERT`, `0xfe INVALID` were dropped from the list, since they can ever only be executed once per program and their gas cost doesn't have much impact in practice.
 
 ## Acknowledgements
 
-**TODO** refresh.
 [Paweł Bylica](https://github.com/chfast), [Marcin Benke](https://github.com/mbenke), [Radosław Zagórowicz](https://github.com/rodiazet), [Piotr Janiuk](https://github.com/viggith) for invaluable help and contributions throughout the entire project.
 
 ## References
 
-**TODO** refresh
 [1] [https://etherscan.io/block/11660498](https://etherscan.io/block/11660498)
 
 [2] [ETHEREUM: A SECURE DECENTRALISED GENERALISED TRANSACTION LEDGER PETERSBURG VERSION 6424f7d – 2020-12-28DR. GAVIN WOODFOUNDER, ETHEREUM & PARITYGAVIN@PARITY.IO](https://ethereum.github.io/yellowpaper/paper.pdf)
