@@ -1,3 +1,5 @@
+# This scripts contains some common utility functions for the Gas Cost Estimator
+# project `.Rmd` scripts
 
 library(sqldf)
 library(nlme)
