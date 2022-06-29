@@ -275,7 +275,7 @@ For the implementation of the `measure_arguments` estimation scripts [see here](
 The instrumentation and measurement were performed for these EVMs:
 1. `geth` - [ethereum/go-ethereum](https://github.com/ethereum/go-ethereum) at [`v1.10.13`](https://github.com/ethereum/go-ethereum/releases/tag/v1.10.13) with [additional changes implementing the instrumentation in the `wallclock-total` branch](https://github.com/imapp-pl/go-ethereum/commit/64aa7ec3).
 2. `evmone` - [ethereum/evmone](https://github.com/ethereum/evmone) at [`b95f90b4`](https://github.com/ethereum/evmone/commit/b95f90b4) with [additional changes implementing the instrumentation in the `wallclock` branch](https://github.com/imapp-pl/evmone/commit/3092f3be).
-3. `nethermind` - [NethermindEth/nethermind](https://github.com/NethermindEth/nethermind) at [`v1.13.1`](https://github.com/NethermindEth/nethermind/releases/tag/1.13.1) with [additional changes implementing the instrumentation in the `imapp_benchmark` branch](https://github.com/imapp-pl/nethermind/tree/imapp_benchmark)
+3. `nethermind` - TBD
 
 running in these machines:
 1. `cloud`: `AWS, Ubuntu 20.04.3, dockerized` - `t2.micro` instance
@@ -308,16 +308,9 @@ In this setup, the timer overhead measured is in the order of magnitude of 25ns,
 - argument that cache impact is "fair" between OPCODEs
 
 ### Warm-up impact
-Warm-up is the effect when immediate subsequent execution of the same bytecode is gradually faster. This is due to:
-- processor cache L1, L2, L3 being pre-loaded with the EVM engine code and data
-- operating system cache
-- disk cache
-- execution framework (Go, .NET) being fully loaded
-- any dependant libraries being fully loaded
-- all necessary memory being allocated, extra memory pre-allocated
-- process priority
-
-As shown in the [Results section](#Results), warming up process has significant impact on the execution time. Handling it correctly is the key for the precise cost estimation. Any Ethereum node is deemed to be fully warmed up as it is constantly processing contract functions. For this reason the cost estimation should remove the warm up effect.
+**TODO**
+- recommendation for warm-up handling
+- argument that this warm-up handling reflects typical operation of EVM
 
 ### Garbage collection impact
 
@@ -327,76 +320,6 @@ As shown in the [Results section](#Results), warming up process has significant 
 (or:)
 - recommendation for GC handling
 - argument that this GC handling reflects the typical operation of EVM
-
-### Use of benchmarking tools
-The goal of benchmarking mode is to use well known libraries that track performance in reliable and precise manner. They tend to produce reproducible results and help to avoid common pitfalls while measuring execution time. In our approach we use the following tools:
-- evmone: [hayai](https://github.com/nickbruun/hayai)
-- Go Ethereum: [Go Testing](https://pkg.go.dev/testing#Benchmark) package
-- Nethermind: [DotNetBenchmark](https://benchmarkdotnet.org/articles/overview.html)
-
-These tools were selected as industry standards for respective languages. They all minimize influence and variability of: caching, warmups, memory allocation, garbage collection, process management, external programs impact and clock measurements.
-If configured properly, these tools helps to alleviate the unfavorable impacts of cache, warm-up and garbage collector.
-
-### EVM engine overhead cost
-Not only each instruction bears a cost, but also contract preparation has some impact. For simple functions the cost of preparation can exceed the actual execution cost. Therefore it is necessary to estimate it correctly.
-
-These certain 'preparation' steps are executed with every bytecode. They are performed no matter how long or complicated the bytecode is. This tend to be constant, so the longer program takes, the more negligible it becomes.
-
-Ideally the cost of overhead should be estimated and expressed in the same units as opcodes cost. 
-
-#### Geth code analysis
-The list below shows sequences that _might_ contribute towards additional cost of each bytecode execution:
-
-Sequence 1 `runtime.Execute()`:  Prepare environment and sender account
-```go
-var (
-	address = common.BytesToAddress([]byte("contract"))
-	vmenv   = NewEnv(cfg)
-	sender  = vm.AccountRef(cfg.Origin)
-)
-```
-
-Sequence 2 `runtime.Execute()`: Get rule set (London, Berlin) (Note: this seems an obvious candidate for caching. Further analysis has to take place.)
-```go
-rules := cfg.ChainConfig.Rules(vmenv.Context.BlockNumber);
-```
-
-Sequence 3 `runtime.Execute()`: Create a state object. If a state object with the address already exists the balance is carried over to the new account
-```go
-cfg.State.CreateAccount(address)
-```
-
-Sequence 4 `runtime.Execute()`: Set the execution code
-```go
-cfg.State.SetCode(address, code)
-```
-
-Sequence 5 `evm.Call()`: Take snapshot
-```go
-snapshot := evm.StateDB.Snapshot()
-```
-#### Nethermind code analysis
-The list below shows sequences that _might_ contribute towards additional cost of each bytecode execution:
-
-Sequence 1 `Nethermind.Evm.VirtualMachine.Run()`: Get rule set London, Berlin, etc
-```csharp
-_specProvider.GetSpec(state.Env.TxExecutionContext.Header.Number)
-```
-
-Sequence 2 `Nethermind.Evm.VirtualMachine.ExecuteCall()`: Create executing account
-```csharp
-_state.CreateAccount(env.ExecutingAccount, env.TransferValue);
-```
-
-Sequence 3 `Nethermind.Evm.VirtualMachine.ExecuteCall()`: Initiate stack
-```csharp
-vmState.InitStacks();
-```
-
-Sequence 4 (part of state management):  Take snapshot
-```csharp
-_worldState.TakeSnapshot()
-```
 
 ## Validation
 
