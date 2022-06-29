@@ -308,7 +308,7 @@ In this setup, the timer overhead measured is in the order of magnitude of 25ns,
 - argument that cache impact is "fair" between OPCODEs
 
 ### Warm-up impact
-Warm-up is the effect when immediate subsequent execution of the same bytecode is gradually faster. This is due to:
+Warm-up is the effect when immediate subsequent executions of the same bytecode are gradually faster. This is due to:
 - processor cache L1, L2, L3 being pre-loaded with the EVM engine code and data
 - operating system cache
 - disk cache
@@ -317,7 +317,10 @@ Warm-up is the effect when immediate subsequent execution of the same bytecode i
 - all necessary memory being allocated, extra memory pre-allocated
 - process priority
 
-As shown in the [Results section](#Results), warming up process has significant impact on the execution time. Handling it correctly is the key for the precise cost estimation. Any Ethereum node is deemed to be fully warmed up as it is constantly processing contract functions. For this reason the cost estimation should remove the warm up effect.
+Handling the warm-up correctly is the key for the accurate cost estimation. Any Ethereum node is deemed to be fully warmed up as it is constantly processing contract functions. For this reason the cost estimation should remove the warm up effect.
+
+#### Removing warm-up impact
+In the [Results section](#Results) we show that the warm-up has its impact on the first bytecode executions only. Any subsequent iterations tend to be more stable. All our final measurements have been taken as subsequent iterations, thereby discarding any negative impact.
 
 ### Garbage collection impact
 
@@ -334,15 +337,18 @@ The goal of benchmarking mode is to use well known libraries that track performa
 - Go Ethereum: [Go Testing](https://pkg.go.dev/testing#Benchmark) package
 - Nethermind: [DotNetBenchmark](https://benchmarkdotnet.org/articles/overview.html)
 
-These tools were selected as industry standards for respective languages. They all minimize influence and variability of: caching, warmups, memory allocation, garbage collection, process management, external programs impact and clock measurements.
-If configured properly, these tools helps to alleviate the unfavorable impacts of cache, warm-up and garbage collector.
+These tools were selected as industry standards for respective languages. They all minimize influence and variability of: caching, warmups, memory allocation, garbage collection, process management, external programs impact and clock measurements.If configured properly, these tools helps to alleviate the unfavorable impacts of cache, warm-up and garbage collector.
+
+We use benchmarking tools in addition to the main measurements methods. This helps us to confirm that negative impacts have been accurately taken into the account.
 
 ### EVM engine overhead cost
 Not only each instruction bears a cost, but also contract preparation has some impact. For simple functions the cost of preparation can exceed the actual execution cost. Therefore it is necessary to estimate it correctly.
 
-These certain 'preparation' steps are executed with every bytecode. They are performed no matter how long or complicated the bytecode is. This tend to be constant, so the longer program takes, the more negligible it becomes.
+These certain 'preparation' steps are executed with every bytecode. They are performed no matter how long or complicated the bytecode is. This tend to be constant, so the longer program takes, the more negligible it becomes. Ideally the cost of overhead should be estimated and expressed in the same units as opcodes cost. 
 
-Ideally the cost of overhead should be estimated and expressed in the same units as opcodes cost. 
+#### Overhead cost estimation method
+To estimate the overhead we propose to calculate overall execution time of programs made of `PUSHx` and `POP` pairs. We increase the number of pairs from 1 to 100. Knowing how the program cost increases we can calculate the base (overhead) cost. Additionally the same programs are to be measured with the `STOP` opcode prefix. This will terminate the program on the first instruction, giving us the the cost of overhead + single instruction. Then we will also we will also excute random programs with and without `STOP` prefix.
+This method will also serve to prove the hypothesis that the overhead does not depend on the length or the complexity of the bytecode.
 
 #### Geth code analysis
 The list below shows sequences that _might_ contribute towards additional cost of each bytecode execution:
@@ -670,6 +676,19 @@ F-statistic: 2.669e+04 on 4 and 27438 DF,  p-value: < 0.00000000000000022
 For the `.Rmd` scripts to obtain the `measure_arguments` estimates see [`measure_arguments.Rmd`](./../src/analysis/measure_arguments.Rmd).
 
 For the results of the notebook containing all plots and models for all OPCODEs [see here](https://gascost.local.imapp.pl/measure_arguments.html).
+
+### Warm-up results
+Firstly we ran three random programs on freshly booted up system. We can observe that the first executions of the program 0 stand out are significantly slower. The subsequent executions and indeed subsequent programs tend to have more in-line results.
+
+**Figure 9: Execution time (`measure_total_time_ns`) of three random programs (`program_id`) for each run (`run_id`) on fresh system**
+
+<img src="./gas_cost_estimator_doc_assets/a.png" width="700"/>
+
+When executing the same programs again, immediately after the previous test, the warm-up effect disappears.
+
+**Figure 10: Execution time (`measure_total_time_ns`) of three random programs (`program_id`) for each run (`run_id`) on warmed up system**
+
+<img src="./gas_cost_estimator_doc_assets/b.png" width="700"/>
 
 ### Validation results
 
