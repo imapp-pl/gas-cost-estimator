@@ -333,6 +333,7 @@ To have a better picture, relative indicators are needed. As the profile of cach
 - Branch prediction effectiveness. `branch_misses/branches`. These are actually misses so the lower value the better the branch prediction works.
 - L1 icache - instruction cache of the first level - effectiveness. `L1_icache_load_misses/L1_icache_loads`. These are actually misses so the lower value the better cache works. Unfortunately, results for dcache (data cache) are absent.
 - Last Level Cache effectiveness. `LLC_load_misses/LLC_loads`. These are actually misses so the lower value the better cache works.
+- Total cache effectiveness. `LLC_load_misses/(L1_icache_loads+L1_dcache_loads)`. This ratio tells how often memory requests are handled aby any cache. These are actually misses.
 - L1 to LLC ratio. `LLC_loads/(L1_icache_loads+L1_dcache_loads)`. It compares loads of L1 and LLC. This demonstrates how request were filtered through cache levels. The lower value, the more requests are are handled by L1 and intermediate level caches.
 - Translation buffers iTLB and dTLB. `iTLB_load_misses/iTLB_loads` and `dTLB_load_misses/dTLB_loads`. These are statistics of less importance.
 
@@ -358,13 +359,22 @@ So even if using perf tool has an impact on measurements, it is proportional and
 
 #### Measure marginal
 
-For evmone L1 cache effectiveness varies between `0.0008` and `0.0012` and LLC effectiveness varies between `0+` and `0.0004`. 
+For evmone the total cache effectiveness is between `1e-7` and `3e-7`. 
 Recall that these denotes misses ratios. 
-With such low values, computations are executed almost entirely within caches and cache usage profiles are very similar for opcodes.
-The branch prediction effectiveness varies between `0.0008` and `0.0012` also. 
+With such low values, computations are executed almost entirely within caches and cache usage profiles are very similar for all opcodes.
+For the full picture L1 ratio to LLC is between `0.0008` and `0.0016`. 
+This means that L1 cache performance has huge impact on measurements.
+For completeness, the branch prediction effectiveness varies between `0.0008` and `0.0012`. 
 And it may be considered almost equal for all opcodes.
 
+For geth the total cache effectiveness is between `0.00006` and `0.00014`. 
+So in this case also, computations are executed almost entirely within caches and cache usage profiles are very similar for all opcodes.
+For the full picture L1 ratio to LLC is between `0.012` and `0.018`. 
+This means again that L1 cache performance has huge impact on measurements but slighly lower than for evmone.
+For completeness, the branch prediction effectiveness varies between `0.008` and `0.014`. 
+And it may be considered almost equal for all opcodes. 
 
+<img src="./report_stage_ii_assets/evmone_perf_marginal_total_effectiveness.png" width="425"/> <img src="./report_stage_ii_assets/geth_perf_marginal_total_effectiveness.png" width="425"/> 
 
 **TODO**
 
