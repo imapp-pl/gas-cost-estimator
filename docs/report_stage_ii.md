@@ -356,6 +356,16 @@ So even if using perf tool has an impact on measurements, it is proportional and
 
 <img src="./report_stage_ii_assets/evmone_perf_overhead.png" width="425"/> <img src="./report_stage_ii_assets/geth_perf_overhead.png" width="425"/> 
 
+#### Measure marginal
+
+For evmone L1 cache effectiveness varies between `0.0008` and `0.0012` and LLC effectiveness varies between `0+` and `0.0004`. 
+Recall that these denotes misses ratios. 
+With such low values, computations are executed almost entirely within caches and cache usage profiles are very similar for opcodes.
+The branch prediction effectiveness varies between `0.0008` and `0.0012` also. 
+And it may be considered almost equal for all opcodes.
+
+
+
 **TODO**
 
 - argument that cache behavior is similar between different kinds of programs (marginal/arguments/validation) used and doesn't skew the results
