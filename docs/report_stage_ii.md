@@ -346,7 +346,8 @@ As the test, the marginal programs are used. We calculate the relative overhead 
 (with_perf - without_perf) / without_perf
 ```
 
-In the case of evmone, the average of the relative overhead in CPU time is `0.00134` and the maximal is `0.00528`. 
+In the case of evmone, the average of the relative overhead in CPU time is `0.00068` and the maximal value excluding outliers is around `0.005`. 
+This is considered as negligible. 
 
 
 TODO a graph?
