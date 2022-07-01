@@ -359,6 +359,8 @@ So even if using perf tool has an impact on measurements, it is proportional and
 
 #### Measure marginal
 
+In the first step we use measure marginal approach to verify whether cache usage depend on opcode.
+
 For evmone the total cache effectiveness is between `1e-7` and `3e-7`. 
 Recall that these denotes misses ratios. 
 With such low values, computations are executed almost entirely within caches and cache usage profiles are very similar for all opcodes.
@@ -378,12 +380,15 @@ And it may be considered almost equal for all opcodes.
 
 #### Validation
 
+Next we verify how cache usage profiles change when random programs, closer to real world contracts, are executed.
+
+For evmone the total cache effectiveness is between `3e-7` and `4.5e-6`.
+For geth ththis is between `4e-6` and `1.5e-4`. 
+But note that high values are attained for 0 length programs. These are not 0 length in fact, but very short.
+For other programs the ratios significantly drop. 
+So computations are executed almost entirely in caches, also for these programs, regardless the the fact ratios rised compering to marginal programs. 
+
 <img src="./report_stage_ii_assets/evmone_perf_validation_total_effectiveness.png" width="425"/> <img src="./report_stage_ii_assets/geth_perf_validation_total_effectiveness.png" width="425"/> 
-
-**TODO**
-
-- argument that cache behavior is similar between different kinds of programs (marginal/arguments/validation) used and doesn't skew the results
-- argument that cache impact is "fair" between OPCODEs
 
 ### Warm-up impact
 
