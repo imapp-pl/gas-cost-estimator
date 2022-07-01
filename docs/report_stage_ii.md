@@ -376,6 +376,10 @@ And it may be considered almost equal for all opcodes.
 
 <img src="./report_stage_ii_assets/evmone_perf_marginal_total_effectiveness.png" width="425"/> <img src="./report_stage_ii_assets/geth_perf_marginal_total_effectiveness.png" width="425"/> 
 
+#### Validation
+
+<img src="./report_stage_ii_assets/evmone_perf_validation_total_effectiveness.png" width="425"/> <img src="./report_stage_ii_assets/geth_perf_validation_total_effectiveness.png" width="425"/> 
+
 **TODO**
 
 - argument that cache behavior is similar between different kinds of programs (marginal/arguments/validation) used and doesn't skew the results
