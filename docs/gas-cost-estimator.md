@@ -363,7 +363,7 @@ Further investigation is required to explain such difference.
 Looking at the distributions of relative increases, we can say that they are very similar.
 So even if using perf tool has an impact on measurements, it is proportional and does not modify relative comparison.
 
-<img src="./report_stage_ii_assets/evmone_perf_overhead.png" width="425"/> <img src="./report_stage_ii_assets/geth_perf_overhead.png" width="425"/> 
+<img src="./gas_cost_estimator_doc_assets/evmone_perf_overhead.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_overhead.png" width="425"/> 
 
 #### Measure marginal
 
@@ -384,7 +384,7 @@ This means again that L1 cache performance has huge impact on measurements but s
 For completeness, the branch prediction effectiveness varies between `0.008` and `0.014`. 
 And it may be considered almost equal for all opcodes. 
 
-<img src="./report_stage_ii_assets/evmone_perf_marginal_total_effectiveness.png" width="425"/> <img src="./report_stage_ii_assets/geth_perf_marginal_total_effectiveness.png" width="425"/> 
+<img src="./gas_cost_estimator_doc_assets/evmone_perf_marginal_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_marginal_total_effectiveness.png" width="425"/> 
 
 #### Validation
 
@@ -396,7 +396,7 @@ But note that high values are attained for 0 length programs. These are not 0 le
 For other programs the ratios significantly drop. 
 So computations are executed almost entirely in caches, also for these programs, regardless the the fact ratios rised compering to marginal programs. 
 
-<img src="./report_stage_ii_assets/evmone_perf_validation_total_effectiveness.png" width="425"/> <img src="./report_stage_ii_assets/geth_perf_validation_total_effectiveness.png" width="425"/> 
+<img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_validation_total_effectiveness.png" width="425"/> 
 
 ### Warm-up impact
 
