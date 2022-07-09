@@ -2,21 +2,27 @@
 title: "R Notebook: exploration of validation of measurements - with varying arguments; for Gas Cost Estimator"
 output: html_document
 ---
+In this script we conduct the validation procedure of the obtained estimates.
 
-```{r}
+```{r, setup, include=FALSE}
+# NOTE: change this to your respective path
+knitr::opts_knit$set(root.dir = '~/sources/imapp/gas-cost-estimator/src')
 source('common.R')
 ```
 
 ### Functions
 
 ```{r}
+# Produces some initial overview plots of all the programs costs
 overview_plots <- function(df, selection_col, selection_val) {
   subset = df[which(df[, selection_col] == selection_val), ]
   boxplot(measure_total_time_ns ~ program_id, data=subset, main=selection_val)
   boxplot(measure_total_time_ns ~ run_id, data=subset, las=2, main=selection_val)
 }
 
-plot_validation <- function(df, yvar, xvar, labels, colors, set_asp, log) {
+# Selects a subset of data and plots the validation model results.
+# `set_asp=TRUE` will fix the aspect of the plot to 1:1, but it didn't prove useful
+compare_plots <- function(df, selection_col, selection_val, estimate_var, labels, colors, set_asp, log) {
   if (missing(labels)) {
     labels = 'program_id'
   }
@@ -31,27 +37,15 @@ plot_validation <- function(df, yvar, xvar, labels, colors, set_asp, log) {
   if (missing(log)) {
     log = ''
   }
-  plot(df[, xvar], df[, yvar], col=df[, colors], asp=asp, log=log)
-  abline(lm(df[, yvar] ~ df[, xvar]), asp=asp, untf=TRUE)
-  text(df[, yvar] ~ df[, xvar], data=df, labels=df[, labels], cex=0.6, pos=4, font=2)
-}
-
-compare_plots <- function(df, selection_col, selection_val, estimate_var, labels, colors, log) {
-  if (missing(labels)) {
-    labels = 'program_id'
-  }
-  if (missing(colors)) {
-    colors = 'has_exp'
-  }
-  if (missing(log)) {
-    log = ''
-  }
   subset = df[which(df[, selection_col] == selection_val), ]
-  # TODO: set_asp=TRUE works better when models are sane
-  plot_validation(subset, explained_variable, estimate_var, labels=labels, colors=colors, log=log) #, set_asp=TRUE)
-  title(main=paste(selection_val, 'estimate by', estimate_var), cex.main=3)
+  formula = as.formula(paste0(explained_variable, " ~ ", estimate_var))
+  plot(formula, data=df, col=df[, colors], asp=asp, log=log)
+  abline(lm(formula, data=df), asp=asp, untf=TRUE)
+  text(formula, data=df, labels=df[, labels], cex=0.6, pos=4, font=2)
+  title(main=paste(selection_val, 'estimate by', estimate_var))
 }
 
+# Fits the validation model
 lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
   if (! missing(selection_col) & ! missing(selection_val)) {
     subset = df[which(df[, selection_col] == selection_val), ]
@@ -63,7 +57,6 @@ lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
   print(summary(model))
   return(model)
 }
-
 ```
 
 ### Data preparations
@@ -77,8 +70,6 @@ div_opcodes = c('DIV', 'MOD', 'SDIV', 'SMOD')
 ```
 
 ```{r}
-setwd("~/sources/imapp/gas-cost-estimator/src")
-
 estimated_cost = read.csv(paste0("../../local/argument_estimated_cost", suffix, ".csv"))
 # those are only the constant gas costs, we'll calculate arg portion of the cost later
 current_gas_cost = read.csv("program_generator/data/current_gas_cost.csv")
@@ -106,8 +97,6 @@ head(estimated_cost)
 head(marginal)
 ```
 ```{r fig.width=20}
-setwd("~/sources/imapp/gas-cost-estimator/src")
-
 program_set_codename = "pg_validation_full5_c500_randOps1500"
 measurement_codename = paste0("200_8", suffix)
 
@@ -320,13 +309,13 @@ Trivial variable plots are interesting, after we have introduced varying program
 We add the 'no EXP' version to make sure that the improvement of the estimated gas model over program length model isn't only because of the extreme EXP case.
 
 ```{r}
-print('geth all - only progam length')
+print('geth all - only program length')
 lm_validation(validation, explained_variable, 'program_length', selection_col='env', selection_val='geth')
-print('evmone all - only progam length')
+print('evmone all - only program length')
 lm_validation(validation, explained_variable, 'program_length', selection_col='env', selection_val='evmone')
-print('geth all - only progam length - no EXP')
+print('geth all - only program length - no EXP')
 lm_validation(validation_no_exp, explained_variable, 'program_length', selection_col='env', selection_val='geth')
-print('evmone all - only progam length  - no EXP')
+print('evmone all - only program length  - no EXP')
 lm_validation(validation_no_exp, explained_variable, 'program_length', selection_col='env', selection_val='evmone')
 ```
 
@@ -342,8 +331,6 @@ lm_validation(validation, explained_variable, 'current_gas', selection_col='env'
 ```
 
 ### Final validation model
-
-We explore the models in two classes of program lengths. We keep the model for the long programs.
 
 ```{r}
 print('geth all - no EXP')
@@ -453,7 +440,11 @@ get_gas_schedule_comparison <- function(pivot_opcode, df) {
     df$expensive_gas_stderr[which(df$env==env)] = df$expensive_ns_stderr[which(df$env == env)] * multiplier
   }
   
-  gas_schedule_comparison = sqldf("SELECT current_gas_cost.opcode, constant_current_gas, geth.estimate_marginal_gas as geth_gas, evmone.estimate_marginal_gas as evmone_gas
+  gas_schedule_comparison = sqldf("SELECT current_gas_cost.opcode, constant_current_gas,
+                                          geth.estimate_marginal_gas as geth_gas,
+                                          evmone.estimate_marginal_gas as evmone_gas,
+                                          geth.estimate_marginal_gas_stderr as geth_gas_stderr,
+                                          evmone.estimate_marginal_gas_stderr as evmone_gas_stderr
                                    FROM current_gas_cost 
                                    INNER JOIN df as geth
                                      ON geth.opcode = current_gas_cost.opcode AND geth.env = 'geth'
@@ -484,31 +475,34 @@ pivot_opcode = "ADDRESS"
 c(gas_schedule_comparison, estimated_cost) %<-% get_gas_schedule_comparison(pivot_opcode, estimated_cost)
 
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
-  data.frame("EXP_arg1_cost", 50, estimated_cost$arg1_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='EXP')],  estimated_cost$arg1_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='EXP')])
+  data.frame("EXP_arg1_cost", 50, estimated_cost$arg1_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='EXP')],  estimated_cost$arg1_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='EXP')], estimated_cost$arg1_gas_stderr[which(estimated_cost$env=='geth' & estimated_cost$opcode=='EXP')],  estimated_cost$arg1_gas_stderr[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='EXP')])
 
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
-  data.frame("CALLDATACOPY_arg2_cost", 3, estimated_cost$arg2_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='CALLDATACOPY')],  estimated_cost$arg2_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='CALLDATACOPY')])
+  data.frame("CALLDATACOPY_arg2_cost", 3, estimated_cost$arg2_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='CALLDATACOPY')],  estimated_cost$arg2_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='CALLDATACOPY')],  estimated_cost$arg2_gas_stderr[which(estimated_cost$env=='geth' & estimated_cost$opcode=='CALLDATACOPY')],  estimated_cost$arg2_gas_stderr[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='CALLDATACOPY')])
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
-  data.frame("RETURNDATACOPY_arg2_cost", 3, estimated_cost$arg2_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='RETURNDATACOPY')],  estimated_cost$arg2_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='RETURNDATACOPY')])
+  data.frame("RETURNDATACOPY_arg2_cost", 3, estimated_cost$arg2_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='RETURNDATACOPY')],  estimated_cost$arg2_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='RETURNDATACOPY')], estimated_cost$arg2_gas_stderr[which(estimated_cost$env=='geth' & estimated_cost$opcode=='RETURNDATACOPY')],  estimated_cost$arg2_gas_stderr[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='RETURNDATACOPY')])
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
-  data.frame("CODECOPY_arg2_cost", 3, estimated_cost$arg2_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='CODECOPY')],  estimated_cost$arg2_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='CODECOPY')])
+  data.frame("CODECOPY_arg2_cost", 3, estimated_cost$arg2_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='CODECOPY')],  estimated_cost$arg2_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='CODECOPY')], estimated_cost$arg2_gas_stderr[which(estimated_cost$env=='geth' & estimated_cost$opcode=='CODECOPY')],  estimated_cost$arg2_gas_stderr[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='CODECOPY')])
 
 expensive_division_cost <- function(df, env, opcode) {
   df$expensive_gas[which(df$env==env & df$opcode==opcode)] + df$estimate_marginal_gas[which(df$env==env & df$opcode==opcode)]
 }
+expensive_division_cost_stderr <- function(df, env, opcode) {
+  sqrt(df$expensive_gas_stderr[which(df$env==env & df$opcode==opcode)]^2 + df$estimate_marginal_gas_stderr[which(df$env==env & df$opcode==opcode)]^2)
+}
 
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
-  data.frame("DIV_expensive_cost", 5, expensive_division_cost(estimated_cost, 'geth', 'DIV'),  expensive_division_cost(estimated_cost, 'evmone', 'DIV'))
+  data.frame("DIV_expensive_cost", 5, expensive_division_cost(estimated_cost, 'geth', 'DIV'),  expensive_division_cost(estimated_cost, 'evmone', 'DIV'), expensive_division_cost_stderr(estimated_cost, 'geth', 'DIV'),  expensive_division_cost_stderr(estimated_cost, 'evmone', 'DIV'))
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
-  data.frame("SDIV_expensive_cost", 5, expensive_division_cost(estimated_cost, 'geth', 'SDIV'),  expensive_division_cost(estimated_cost, 'evmone', 'SDIV'))
+  data.frame("SDIV_expensive_cost", 5, expensive_division_cost(estimated_cost, 'geth', 'SDIV'),  expensive_division_cost(estimated_cost, 'evmone', 'SDIV'), expensive_division_cost_stderr(estimated_cost, 'geth', 'SDIV'),  expensive_division_cost_stderr(estimated_cost, 'evmone', 'SDIV'))
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
-  data.frame("MOD_expensive_cost", 5, expensive_division_cost(estimated_cost, 'geth', 'MOD'),  expensive_division_cost(estimated_cost, 'evmone', 'MOD'))
+  data.frame("MOD_expensive_cost", 5, expensive_division_cost(estimated_cost, 'geth', 'MOD'),  expensive_division_cost(estimated_cost, 'evmone', 'MOD'), expensive_division_cost_stderr(estimated_cost, 'geth', 'MOD'),  expensive_division_cost_stderr(estimated_cost, 'evmone', 'MOD'))
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
-  data.frame("SMOD_expensive_cost", 5, expensive_division_cost(estimated_cost, 'geth', 'SMOD'),  expensive_division_cost(estimated_cost, 'evmone', 'SMOD'))
+  data.frame("SMOD_expensive_cost", 5, expensive_division_cost(estimated_cost, 'geth', 'SMOD'),  expensive_division_cost(estimated_cost, 'evmone', 'SMOD'), expensive_division_cost_stderr(estimated_cost, 'geth', 'SMOD'),  expensive_division_cost_stderr(estimated_cost, 'evmone', 'SMOD'))
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
-  data.frame("ADDMOD_expensive_cost", 8, expensive_division_cost(estimated_cost, 'geth', 'ADDMOD'),  expensive_division_cost(estimated_cost, 'evmone', 'ADDMOD'))
+  data.frame("ADDMOD_expensive_cost", 8, expensive_division_cost(estimated_cost, 'geth', 'ADDMOD'),  expensive_division_cost(estimated_cost, 'evmone', 'ADDMOD'), expensive_division_cost_stderr(estimated_cost, 'geth', 'ADDMOD'),  expensive_division_cost_stderr(estimated_cost, 'evmone', 'ADDMOD'))
 gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
-  data.frame("MULMOD_expensive_cost", 8, expensive_division_cost(estimated_cost, 'geth', 'MULMOD'),  expensive_division_cost(estimated_cost, 'evmone', 'MULMOD'))
+  data.frame("MULMOD_expensive_cost", 8, expensive_division_cost(estimated_cost, 'geth', 'MULMOD'),  expensive_division_cost(estimated_cost, 'evmone', 'MULMOD'), expensive_division_cost_stderr(estimated_cost, 'geth', 'MULMOD'),  expensive_division_cost_stderr(estimated_cost, 'evmone', 'MULMOD'))
 ```
 
 Plot the alternative gas cost schedule.
@@ -534,7 +528,6 @@ gas_schedule_comparison$close = gas_schedule_comparison$relative_diff < 0.15
 
 ```{r}
 # just export the final compiled estimations to a file
-setwd("~/sources/imapp/gas-cost-estimator/src")
 write.csv(estimated_cost, paste0("../../local/final_estimated_cost", suffix, ".csv"), quote=FALSE, row.names=FALSE)
 write.csv(gas_schedule_comparison, paste0("../../local/gas_schedule_comparison", suffix, ".csv"), quote=FALSE, row.names=FALSE)
 ```
