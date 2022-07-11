@@ -301,7 +301,7 @@ In this setup, the timer overhead measured is in the order of magnitude of 25ns,
 
 ### Cache impact
 
-CPUs employ caches and other optimization to speed up execution. 
+CPUs employ caches and other optimization mechanisms to speed up execution. 
 The questions are: do opcodes have comparable cache profiles and do they retain profiles when executed as parts of real life programs.
 In other words: what is the impact of caches on measurements.
 
