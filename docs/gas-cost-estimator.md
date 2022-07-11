@@ -310,7 +310,7 @@ The "perf" tool is utilized for this purpose. It is low level software that list
 The number of cache levels, size and performance differs for environments/CPU architectures. 
 However, our goal is not to determine the impact itself, rather to verify that it does not depend on opcode and context,
 and does not interfere with the measurements.
-A regular CPU, Intel Celeron J4005, was used as reference for computations. This unit has modest and not excessive cache solutions.
+A regular CPU, Intel Celeron J4005, was used as a reference for computations. This unit has modest and not excessive cache solutions.
 
 Perf collects statistics of the whole process. We do not measure just program execution. So dedicated modification of EVMs are needed. 
 In particular, a program is executed in a loop inside an EVM instance and unnecessary instrumentation is removed.
