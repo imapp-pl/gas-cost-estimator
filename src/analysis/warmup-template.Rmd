@@ -25,9 +25,22 @@ library(nlme)
 ```{r}
 measurements_pre = read.csv("../../local/warmup_results_geth_pre.csv")
 measurements_post = read.csv("../../local/warmup_results_geth_post.csv")
+benchmark_results = read.csv("../../local/benchmark_results.csv")
+benchmark_reference_results = read.csv("../../local/benchmark_reference_results.csv")
 ```
 
 ```{r fig.width=10}
 matplot(do.call(data.frame, split(measurements_pre$measure_total_time_ns, measurements_pre$program_id)), type="l", xlab="runs", ylab="time[ns]")
+legend(x = "topright",
+       legend = c("1", "2", "3"),
+       lty = c(1, 2),
+       col = c(1, 2, 3),
+       lwd = 2) 
 matplot(do.call(data.frame, split(measurements_post$measure_total_time_ns, measurements_post$program_id)), type="l", xlab="runs", ylab="time[ns]")
+```
+
+```{r fig.width=10}
+benchmark_results_a <- subset(benchmark_results, program_id > 0 & program_id < 50)
+boxplot(total_time_ns~program_id ,data=subset(benchmark_reference_results, program_id > 0 & program_id < 50), outline=FALSE)
+lines(benchmark_results_a$program_id, benchmark_results_a$total_time_ns, col=2, type="p")
 ```
