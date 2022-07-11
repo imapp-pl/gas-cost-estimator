@@ -392,7 +392,7 @@ Next we verify how cache usage profiles change when random programs, closer to r
 
 For evmone the total cache effectiveness is between `3e-7` and `4.5e-6`.
 For geth ththis is between `4e-6` and `1.5e-4`. 
-But note that high values are attained for 0 length programs. These are not 0 length in fact, but very short.
+But note that high values are attained for 0-length programs. These are not 0 lengths in fact, but very short.
 For other programs the ratios significantly drop. 
 So computations are executed almost entirely in caches, also for these programs, regardless of the fact ratios rised compering to marginal programs. 
 
