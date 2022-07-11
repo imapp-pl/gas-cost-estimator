@@ -312,7 +312,7 @@ However, our goal is not to determine the impact itself, rather to verify that i
 and does not interfere with the measurements.
 A regular CPU, Intel Celeron J4005, was used as a reference for computations. This unit has modest and not excessive cache solutions.
 
-Perf collects statistics of the whole process. We do not measure just program execution. So dedicated modification of EVMs are needed. 
+Perf collects statistics on the whole process. We do not measure just program execution. So dedicated modification of EVMs is needed. 
 In particular, a program is executed in a loop inside an EVM instance and unnecessary instrumentation is removed.
 Refer to this (??) version of evmone and this (??) version of geth.
 
