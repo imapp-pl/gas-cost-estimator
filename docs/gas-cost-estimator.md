@@ -388,7 +388,7 @@ And it may be considered almost equal for all opcodes.
 
 #### Validation
 
-Next we verify how cache usage profiles change when random programs, closer to real world contracts, are executed.
+Next, we verify how cache usage profiles change when random programs, closer to real-world contracts, are executed.
 
 For evmone the total cache effectiveness is between `3e-7` and `4.5e-6`.
 For geth ththis is between `4e-6` and `1.5e-4`. 
