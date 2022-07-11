@@ -367,7 +367,7 @@ So even if using perf tool has an impact on measurements, it is proportional and
 
 #### Measure marginal
 
-In the first step we use measure marginal approach to verify whether cache usage depend on opcode.
+In the first step, we use measure marginal approach to verify whether cache usage depends on opcode.
 
 For evmone the total cache effectiveness is between `1e-7` and `3e-7`. 
 Recall that this denotes the miss ratios. 
