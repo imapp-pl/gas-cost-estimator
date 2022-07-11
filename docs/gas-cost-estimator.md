@@ -335,7 +335,7 @@ The available statistics are:
 - `iTLB_load_misses` - misses at the instruction translation lookaside buffer
 
 Unfortunately, statistics for the misses at the first level data cache were unavailable.
-Also statistics for an intermediate cache is not collected, if present, as perf is a general tool.
+Also, if present, statistics for an intermediate cache are not collected, as perf is a generic tool.
 To have a better picture, relative indicators are needed. As the profile of cache usage we examine the following factors.
 
 - Branch prediction effectiveness. `branch_misses/branches`. These are actually misses so the lower value the better the branch prediction works.
