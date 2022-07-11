@@ -372,7 +372,7 @@ In the first step we use measure marginal approach to verify whether cache usage
 For evmone the total cache effectiveness is between `1e-7` and `3e-7`. 
 Recall that this denotes the miss ratios. 
 With such low values, computations are executed almost entirely within caches and cache usage profiles are very similar for all opcodes.
-For the full picture L1 ratio to LLC is between `0.0008` and `0.0016`. 
+For the full picture L1 to LLC ratio is between `0.0008` and `0.0016`. 
 This means that L1 cache performance has huge impact on measurements.
 For completeness, the branch prediction effectiveness varies between `0.0008` and `0.0012`. 
 And it may be considered almost equal for all opcodes.
