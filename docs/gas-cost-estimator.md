@@ -356,7 +356,7 @@ As the test, the marginal programs are used. We calculate the relative overhead 
 ```
 
 In the case of evmone, the average of the relative overhead in CPU time is `0.00068` and the maximal value excluding outliers is around `0.005`. 
-This is considered as negligible. 
+This is considered negligible. 
 
 In the case of geth, the average of the relative overhead in CPU time is `0.48`. This is much more than for evmone. 
 Further investigation is required to explain such difference.
