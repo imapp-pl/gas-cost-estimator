@@ -1,33 +1,44 @@
 ---
-title: 'R Notebook: exploration of warmup impact on measurements - template; for Gas Cost Estimator'
+title: 'R Notebook: exploration of warmup, benchmark and overhead impact on measurements - template; for Gas Cost Estimator'
 output:
   html_document:
     df_print: paged
 ---
+
+## Introduction
+
+In this script we conduct analysis of three elements:
+
+-   warm-up effect
+-   comparison between `measure_total` and benchmark methods
+-   EVM engine overhead
+
 ```{r, setup, include=FALSE}
-knitr::opts_knit$set(root.dir = '~/sources/imapp/gas-cost-estimator/src')
+knitr::opts_knit$set(root.dir = 'C:/dev/imapp/gas-cost-estimator/src')
 ```
+
 ```{r include=FALSE, fig.width=20}
 library(sqldf)
 library(nlme)
 ```
 
-## Introduction
-
-
-
 ## Data generation
 
+## Warm-up
 
+Program generation
 
-## Analysis
+    python3 program_generator/pg_validation.py generate --count=3 --opsLimit 1500 --randomizeOpsLimit --cleanStack --randomizePush --dominant random --fullCsv > analysis/raw/warmup_programs.csv
+
+Execute
+
+    make measure EVM=geth VOLUME_DIR=/home/user/sources/imapp/local PROGRAMS=warmup_programs
+
+Load data
 
 ```{r}
-measurements_pre = read.csv("../../local/warmup_results_geth_pre.csv")
-measurements_post = read.csv("../../local/warmup_results_geth_post.csv")
-benchmark_results = read.csv("../../local/benchmark_results.csv")
-benchmark_reference_results = read.csv("../../local/benchmark_reference_results.csv")
-overhead_sequence_results = read.csv("../../local/overhead_sequence_results.csv")
+measurements_pre = read.csv("analysis/raw/warmup_results_geth_pre.csv")
+measurements_post = read.csv("analysis/raw/warmup_results_geth_post.csv")
 ```
 
 ```{r fig.width=10}
@@ -40,13 +51,66 @@ legend(x = "topright",
 matplot(do.call(data.frame, split(measurements_post$measure_total_time_ns, measurements_post$program_id)), type="l", xlab="runs", ylab="time[ns]")
 ```
 
-```{r fig.width=10}
+## Benchmark comparison
+
+Program generation
+
+    python3 program_generator/pg_validation.py generate --count=100 --opsLimit 1500 --randomizeOpsLimit --cleanStack --randomizePush --dominant random --fullCsv > analysis/raw/benchmark_programs.csv
+
+Execute
+
+    make measure EVM=geth VOLUME_DIR=/home/user/sources/imapp/local PROGRAMS=benchmark_programs
+
+    make measure EVM=geth METHOD=benchmark VOLUME_DIR=/home/user/sources/imapp/local PROGRAMS=benchmark_programs
+
+Load data
+
+```{r}
+benchmark_results = read.csv("analysis/raw/benchmark_results.csv")
+benchmark_reference_results = read.csv("analysis/raw/benchmark_reference_results.csv")
+```
+
+Use subset for better visualization
+
+```{r}
 benchmark_results_a <- subset(benchmark_results, program_id > 0 & program_id < 50)
-boxplot(total_time_ns~program_id ,data=subset(benchmark_reference_results, program_id > 0 & program_id < 50), outline=FALSE)
-lines(benchmark_results_a$program_id, benchmark_results_a$total_time_ns, col=2, type="p")
 ```
 
 ```{r fig.width=10}
-plot(overhead_sequence_results$sequence_count, overhead_sequence_results$total_time_ns, type="l", ylim=c(0, 4000))
+boxplot(total_time_ns~program_id ,data=subset(benchmark_reference_results, program_id > 0 & program_id < 50), outline=FALSE)
+lines(benchmark_results_a$program_id, benchmark_results_a$total_time_ns, col=2, type="p", pch = 15)
+legend(x = "topleft",
+       legend = c("Measure total method", "Benchmark method"),
+       lty = c(1, 1),
+       col = c(1, 2),
+       lwd = 3) 
+
+```
+
+## EVM engine overhead
+
+Program generation
+
+Hand crafted programs made of sequence: `PUSH` FF, `PUSH` 33, `DIV` and `POP`
+
+Execute
+
+    make measure EVM=geth VOLUME_DIR=/home/user/sources/imapp/local PROGRAMS=overhead_sequence_programs
+
+Load data
+
+```{r}
+overhead_sequence_results = read.csv("analysis/raw/overhead_sequence_results.csv")
+```
+
+```{r fig.width=10}
+plot(overhead_sequence_results$sequence_count, overhead_sequence_results$total_time_ns, type="l", ylim = c(0,7000))
 lines(overhead_sequence_results$sequence_count, overhead_sequence_results$engine_overhead_time_ns, col="2", type="l")
+lines(overhead_sequence_results$sequence_count, overhead_sequence_results$execution_loop_time_ns, col="3", type="l")
+legend(x = "topleft",
+       legend = c("Total execution", "Calculated engine overhead", "Actual bytecode execution loop"),
+       lty = c(1, 1, 1),
+       col = c(1, 2, 3),
+       lwd = 3) 
+
 ```
