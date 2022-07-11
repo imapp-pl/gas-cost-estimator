@@ -44,11 +44,17 @@ measurements_post = read.csv("analysis/raw/warmup_results_geth_post.csv")
 ```{r fig.width=10}
 matplot(do.call(data.frame, split(measurements_pre$measure_total_time_ns, measurements_pre$program_id)), type="l", xlab="runs", ylab="time[ns]")
 legend(x = "topright",
-       legend = c("user_time_perf", "user_time_pure", "sys_time_perf"),
+       legend = c("Program 1", "Program 2", "Program 3"),
        lty = c(1, 2),
        col = c(1, 2, 3),
        lwd = 2) 
 matplot(do.call(data.frame, split(measurements_post$measure_total_time_ns, measurements_post$program_id)), type="l", xlab="runs", ylab="time[ns]")
+legend(x = "topright",
+       legend = c("Program 1", "Program 2", "Program 3"),
+       lty = c(1, 2),
+       col = c(1, 2, 3),
+       lwd = 2) 
+
 ```
 
 ## Benchmark comparison
