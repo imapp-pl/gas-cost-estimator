@@ -339,7 +339,7 @@ Also, if present, statistics for an intermediate cache are not collected, as per
 To have a better picture, relative indicators are needed. As the profile of cache usage we examine the following factors.
 
 - Branch prediction effectiveness. `branch_misses/branches`. These are actually misses so the lower value the better the branch prediction works.
-- L1 icache - instruction cache of the first level - effectiveness. `L1_icache_load_misses/L1_icache_loads`. These are actually misses so the lower value the better cache works. Unfortunately, results for dcache (data cache) are absent.
+- L1 cache - instruction cache of the first level - effectiveness. `L1_icache_load_misses/L1_icache_loads`. These are actual misses so the lower value the better cache works. Unfortunately, results for dcache (data cache) are absent.
 - Last Level Cache effectiveness. `LLC_load_misses/LLC_loads`. These are actually misses so the lower value the better cache works.
 - Total cache effectiveness. `LLC_load_misses/(L1_icache_loads+L1_dcache_loads)`. This ratio tells how often memory requests are handled aby any cache. These are actually misses.
 - L1 to LLC ratio. `LLC_loads/(L1_icache_loads+L1_dcache_loads)`. It compares loads of L1 and LLC. This demonstrates how request were filtered through cache levels. The lower value, the more requests are are handled by L1 and intermediate level caches.
