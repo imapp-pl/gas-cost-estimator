@@ -334,7 +334,7 @@ The available statistics are:
 - `iTLB_loads` - hits to the instruction translation lookaside buffer
 - `iTLB_load_misses` - misses at the instruction translation lookaside buffer
 
-Unfortunately, statistics for the misses at the first level data cache was unavailable.
+Unfortunately, statistics for the misses at the first level data cache were unavailable.
 Also statistics for an intermediate cache is not collected, if present, as perf is a general tool.
 To have a better picture, relative indicators are needed. As the profile of cache usage we examine the following factors.
 
