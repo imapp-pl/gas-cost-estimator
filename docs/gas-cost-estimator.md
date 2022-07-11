@@ -379,7 +379,7 @@ And it may be considered almost equal for all opcodes.
 
 For geth the total cache effectiveness is between `0.00006` and `0.00014`. 
 So in this case also, computations are executed almost entirely within caches and cache usage profiles are very similar for all opcodes.
-For the full picture L1 ratio to LLC is between `0.012` and `0.018`. 
+For the full picture L1 to LLC ratio is between `0.012` and `0.018`. 
 This means again that L1 cache performance has a huge impact on measurements but is slightly lower than for evmone.
 For completeness, the branch prediction effectiveness varies between `0.008` and `0.014`. 
 And it may be considered almost equal for all opcodes. 
