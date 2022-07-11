@@ -308,7 +308,7 @@ In other words: what is the impact of caches on measurements.
 We need to collect statistics of caches, of various levels, and other infrastructure.
 The "perf" tool is utilized for this purpose. It is low level software that listens to Linux kernel events.
 The number of cache levels, size and performance differs for environments/CPU architectures. 
-But our goal is not to determine the impact itself, rather to verify that it does not depend on opcode and context,
+However, our goal is not to determine the impact itself, rather to verify that it does not depend on opcode and context,
 and does not interfere the measurements.
 A regular CPU, Intel Celeron J4005, was used as reference for computations. This unit has modest and not excessive cache solutions.
 
