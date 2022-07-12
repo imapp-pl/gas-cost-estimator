@@ -1,7 +1,5 @@
 # Gas Cost Estimator
 
-**TODO** fill authors
-
 **Abstract**
 
 We summarize the findings of the second stage of the "Gas Cost Estimator" research project. A method of estimating gas costs of EVM OPCODEs by means of estimating their marginal execution cost is proposed. We provide arguments for this method to be a feasible way of assessing the costs of EVM OPCODEs. The procedure to obtain the measurements is also standardized and tooling is provided. We discuss the difference between different EVM implementations and compare the obtained alternative gas cost schedule with the current one.
@@ -22,7 +20,7 @@ The unused remainder of the prepaid gas allowance is returned back to the transa
 
 The challenge with this mechanism is to determine adequate gas costs of bytecode instructions.
 Currently, the gas cost is determined on a per-OPCODE basis, that is, every OPCODE interpreted by the EVM has a predetermined gas cost (sometimes gas cost expressed as a function of instruction's arguments is added).
-This report and the "Gas Cost Estimator" research project aims at devising a method to estimate adequate values for these OPCODE gas costs, by estimating and analyzing the relative computational cost of OPCODEs.
+This report and the "Gas Cost Estimator" research project aim at devising a method to estimate adequate values for these OPCODE gas costs, by estimating and analyzing the relative computational cost of OPCODEs.
 
 In the remainder of this section, we provide our motivation and some background on the literature on the subject.
 In section **Estimation Method** we describe the proposed measurement and estimation method.
@@ -103,17 +101,17 @@ The two EVM implementations used for the estimation are [`geth`](https://github.
 As we will see in the next sections, it is sufficient for the estimation method we are using, at the same time being relatively easy to apply.
 We chose to not pursue the method `measure_all` (aka "Individual instruction measurement") which has been preliminarily chosen during Stage I.
 
-`measure_total` takes the measurement of the interpreter loop in its entirety, starting at just before the first iteration and ending just after the program halts.
+`measure_total` takes the measurement of the interpreter loop in its entirety, starting just before the first iteration and ending just after the program halts.
 The measurement is taken using a nanosecond precision monotonic timer, as available depending on the particular EVM implementation.
 We also capture the timer overhead by taking two readings of the timer without any code in between.
-The timer overhead is negligible in the `measure_total` approach, orders of magnitude smaller than the measurement itself, we capture the readings of it nevertheless, as it provides a first instance of a sanity check on the collected data.
+The timer overhead is negligible in the `measure_total` approach, orders of magnitude smaller than the measurement itself, we capture the readings of it nevertheless, as it provides the first instance of a sanity check on the collected data.
 
 As during the measurements done for Stage I, each measurement is repeated `sampleSize` times during the lifetime of a single OS process doing the measurement, as well as the measuring OS process is started `nSamples` times, producing the total of `nSamples * sampleSize` measurements for a single program.
 
 The benefits of measuring the entire execution of the interpreter loop are the following:
 1. We are not concerned with timer resolution or overhead anymore, and we do not need to correct it as we needed when measuring individual instructions.
 2. We do not introduce factors which might impact the functioning of the EVM, namely the system calls required to capture the timer, in the middle of a running EVM program.
-3. The instrumentation is much simpler and the amounts of data produced smaller.
+3. The instrumentation is much simpler and less data is produced.
 4. The number of changes in the interpreter code is smaller.
 
 The main drawback is that we need to take special measures in order to be able to draw useful conclusions from the measurement obtained.
@@ -159,7 +157,7 @@ At the same time, we have full control over the stack arguments prepared for eac
 This layout is naturally extended to OPCODEs which remove from and push to the stack different numbers of values.
 
 Such programs are later used to estimate the marginal cost of every `OPCODE` we are interested in.
-The estimation is based on a premise, that if we can capture the trend of increasing timer measurements (`measure_total`, see above), in function of growing `op_count`, we can conclude that the slope of this trend is proportional to the computational cost of `OPCODE`.
+The estimation is based on a premise, that if we can capture the trend of increasing timer measurements (`measure_total`, see above), in the function of growing `op_count`, we can conclude that the slope of this trend is proportional to the computational cost of `OPCODE`.
 In other words, we are estimating the marginal increase of computational cost (time spent executing) as a function of the marginal increase of the program (by a single instance of `OPCODE`).
 
 It turns out, that a simple linear regression is capable of capturing such trend very reliably, given some additional data clean-up measures.
@@ -295,17 +293,17 @@ Care must be taken to always use an efficient, low-level, monotonic timer availa
 For the measurements done on Ubuntu OS, we use the `tsc` clocksource.
 For the Go EVM `geth` we use the low-level `runtimeNano()` call.
 For the C EVM `evmone` we use the `std::chrono::steady_clock::now()` call.
-For the .NET Core `Nethermind` we use the `Stopwatch` class, that in turn use the system underlying timing mechanism.
+For the .NET Core `Nethermind` we use the `Stopwatch` class, that in turn uses the system's underlying timing mechanism.
 In this setup, the timer overhead measured is in the order of magnitude of 25ns, many times less than the duration of the execution of the program using `measure_total`.
 
 ### Cache impact
 
 CPUs employ caches and other optimization mechanisms to speed up execution. 
-The questions are: do opcodes have comparable cache profiles and do they retain profiles when executed as parts of real life programs.
+The questions are: do opcodes have comparable cache profiles and do they retain profiles when executed as parts of real-life programs.
 In other words: what is the impact of caches on measurements.
 
 We need to collect statistics on caches, of various levels, and other infrastructure.
-The "perf" tool is utilized for this purpose. It is low level software that listens to Linux kernel events.
+The "perf" tool is utilized for this purpose. It is low-level software that listens to Linux kernel events.
 The number of cache levels, size and performance differs for environments/CPU architectures. 
 However, our goal is not to determine the impact itself, rather to verify that it does not depend on opcode and context,
 and does not interfere with the measurements.
@@ -337,7 +335,7 @@ Unfortunately, statistics for the misses at the first level data cache were unav
 Also, if present, statistics for an intermediate cache are not collected, as perf is a generic tool.
 To have a better picture, relative indicators are needed. As the profile of cache usage we examine the following factors.
 
-- Branch prediction effectiveness. `branch_misses/branches`. These are actually misses so the lower value the better the branch prediction works.
+- Branch prediction effectiveness. `branch_misses/branches`. These are actual misses so the lower value the better the branch prediction works.
 - L1 cache - instruction cache of the first level - effectiveness. `L1_icache_load_misses/L1_icache_loads`. These are actual misses so the lower value the better cache works. Unfortunately, results for dcache (data cache) are absent.
 - Last Level Cache effectiveness. `LLC_load_misses/LLC_loads`. These are actual misses so the lower value the better cache works.
 - Total cache effectiveness. `LLC_load_misses/(L1_icache_loads+L1_dcache_loads)`. This ratio tells how often memory requests are handled by any cache. These are actual misses.
@@ -390,9 +388,9 @@ And it may be considered almost equal for all opcodes.
 Next, we verify how cache usage profiles change when random programs, closer to real-world contracts, are executed.
 
 For evmone the total cache effectiveness is between `3e-7` and `4.5e-6`.
-For geth ththis is between `4e-6` and `1.5e-4`. 
+For geth this is between `4e-6` and `1.5e-4`. 
 But note that high values are attained for 0-length programs. These are not 0 lengths in fact, but very short.
-For other programs the ratios significantly drop. 
+For other programs, the ratios significantly drop. 
 So computations are executed almost entirely in caches, also for these programs, regardless of the fact ratios rised compering to marginal programs. 
 
 <img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_validation_total_effectiveness.png" width="425"/> 
@@ -407,32 +405,27 @@ Warm-up is the effect when immediate subsequent executions of the same bytecode 
 - all necessary memory being allocated, extra memory pre-allocated
 - process priority
 
-Handling the warm-up correctly is the key for the accurate cost estimation. Any Ethereum node is deemed to be fully warmed up as it is constantly processing contract functions. For this reason the cost estimation should remove the warm up effect.
+Handling the warm-up correctly is the key for the accurate cost estimation. Any Ethereum node is deemed to be fully warmed up as it is constantly processing contract functions. For this reason, the cost estimation should remove the warm up effect.
 
 #### Removing warm-up impact
 In the [Results section](#Results) we show that the warm-up has its impact on the first bytecode executions only. Any subsequent iterations tend to be more stable. All our final measurements have been taken as subsequent iterations, thereby discarding any negative impact.
 
 ### Garbage collection impact
+Due to its unpredictable nature, Garbage Collector can significantly skew results for individual opcodes. But overall it has minimal impact. The total cost of garbage collection can be discounted because in real-life it often happens during the period of lower activity on the EVM processing machine. Also, it can be linked to other EVM activities, like block preparation, network communication, PoW processing, etc.
 
-**TODO**
-
-- argument that GC impact is similar between kinds of programs/OPCODEs and doesn't skew the results
-(or:)
-- recommendation for GC handling
-- argument that this GC handling reflects the typical operation of EVM
-
+As the result we have taken the decision to run all the measurements with the Garbage Collector turned off.
 ### Use of benchmarking tools
-The goal of benchmarking mode is to use well known libraries that track performance in reliable and precise manner. They tend to produce reproducible results and help to avoid common pitfalls while measuring execution time. In our approach we use the following tools:
+The goal of benchmarking mode is to use well-known libraries that track performance in a reliable and precise manner. They tend to produce reproducible results and help to avoid common pitfalls while measuring execution time. In our approach we use the following tools:
 - evmone: [hayai](https://github.com/nickbruun/hayai)
 - Go Ethereum: [Go Testing](https://pkg.go.dev/testing#Benchmark) package
 - Nethermind: [DotNetBenchmark](https://benchmarkdotnet.org/articles/overview.html)
 
-These tools were selected as industry standards for respective languages. They all minimize influence and variability of: caching, warmups, memory allocation, garbage collection, process management, external programs impact and clock measurements. If configured properly, these tools help to alleviate the unfavorable impacts of cache, warm-up and garbage collector.
+These tools were selected as industry standards for respective languages. They all minimize the influence and variability of: caching, warmups, memory allocation, garbage collection, process management, external programs impact and clock measurements. If configured properly, these tools help to alleviate the unfavorable impacts of cache, warm-up and garbage collector.
 
-We use benchmarking tools in addition to the main measurements methods. This helps us to confirm that negative impacts have been accurately taken into the account.
+We use benchmarking tools in addition to the main measurement methods. This helps us to confirm that negative impacts have been accurately taken into the account.
 
 ### EVM engine overhead cost
-Not only each instruction bears a cost, but also preparation for bytecode execution has some impact on total time. For simple functions the cost of preparation can exceed the actual cost of execution. Therefore, it is necessary to estimate it correctly.
+Not only each instruction bears a cost, but also preparation for bytecode execution has some impact on total time. For simple functions, the cost of preparation can exceed the actual cost of execution. Therefore, it is necessary to estimate it correctly.
 
 These certain 'preparation' steps are executed before every bytecode. They are performed no matter how long or complicated the bytecode is. This tend to be constant, so the longer program takes, the more negligible it becomes. Ideally the cost of overhead should be estimated and expressed in the same units as opcodes cost. 
 
@@ -442,7 +435,7 @@ In the second run, we measure the same programs, but this time use `STOP` opcode
 Finally, we will also execute random programs with and without `STOP` prefix.
 
 #### Geth code analysis
-The list below shows sequences that _might_ contribute towards additional cost of each bytecode execution:
+The list below shows sequences that _might_ contribute towards the additional cost of each bytecode execution:
 
 Sequence 1 `runtime.Execute()`:  Prepare environment and sender account
 ```go
@@ -510,7 +503,7 @@ Each program comes with all the measures implemented for the special kinds of OP
 
 Each program has a randomly chosen _dominant OPCODE_, which appears in the program more often than others.
 This is done to ensure that the random programs will vary enough in between them in terms of which OPCODEs have been randomly chosen.
-If not for the dominant OPCODE, the programs cost would tend to average out for longer programs.
+If not for the dominant OPCODE, the program costs would tend to average out for longer programs.
 
 We also always prepend at least one `JUMP` instruction at the beginning, since EVM implementations tend to do additional work on the first occurrence.
 It is safe to assume that in any real-world scenario, every EVM bytecode will execute `JUMP` at least once.
@@ -631,7 +624,7 @@ For the results of the notebook containing all plots and models for all OPCODEs 
 
 #### Bi-modality correction for `evmone`
 
-A subset of OPCODEs exhibit a bi-modal distribution of measurements:
+A subset of OPCODEs exhibits a bi-modal distribution of measurements:
 
 **Figure 4: Bimodal trend of `JUMP` `measure_marginal` results for `evmone`, along with the bimodal distribution and the corrected `measure_marginal` trend**
 
@@ -777,11 +770,11 @@ Firstly, we ran three random programs on freshly booted up system. We can observ
 
 When executing the same programs again, immediately after the previous test, the warm-up effect disappears.
 
-**Figure 10: Execution time (`measure_total_time_ns`) of three random programs (`program_id`) for each run (`run_id`) on warmed up system**
+**Figure 10: Execution time (`measure_total_time_ns`) of three random programs (`program_id`) for each run (`run_id`) on warmed-up system**
 
 <img src="./gas_cost_estimator_doc_assets/warmup_geth_results_post.png" width="700"/>
 
-This proves that any warm-up effects are diminished by subsequent runs. All our measurements above were taken on properly warmed up environment.
+This proves that any warm-up effects are diminished by subsequent runs. All our measurements above were taken in a properly warmed-up environment.
 
 For the `.Rmd` scripts to obtain the warm-up analysis see [`warmup-template.Rmd`](./../src/analysis/warmup-template.Rmd).
 
@@ -796,22 +789,22 @@ For this exercise, we ran the same 50 random programs using two different method
 
 <img src="./gas_cost_estimator_doc_assets/benchmark_comparison_results.png" width="700"/>
 
-From the Figure 11, we can deduct that our `measure_total` method is successfully eliminating negative effects of caching, warmups, memory allocation, garbage collection, process management, external programs impact and clock measurements. As the same method constitutes basis for `measure_marginal` and `measure_arguments` we assume the same.
+From the Figure 11, we can deduct that our `measure_total` method is successfully eliminating negative effects of caching, warmups, memory allocation, garbage collection, process management, external programs impact and clock measurements. As the same method constitutes the basis for `measure_marginal` and `measure_arguments`, we also assume that those negative effects are correctly dealt with.
 
 ### EVM Engine Overhead
 
-This exercise estimates _engine overhead_ - the cost of processing contract before even entering the bytecode execution loop. Firstly we prepared a simple sequence made of `PUSHx`, `DIV` and `POP`. Then we replicated the sequence from 1 to 1000 and measured total execution time for each replication. Finally, the same bytecodes were executed, but this time prefixed with `STOP` opcode. This guaranteed the constant execution time (single opcode).
+This exercise estimates _engine overhead_ - the cost of processing the contract before even entering the bytecode execution loop. Firstly we prepared a simple sequence made of `PUSHx`, `DIV` and `POP`. Then we replicated the sequence from 1 to 1000 and measured the total execution time for each replication. Finally, the same bytecodes were executed, but this time prefixed with `STOP` opcode. This guaranteed the constant execution time (single opcode).
 
 **Figure 12: Execution time (`total_time_ns`) of 50 random programs (`program_id`) using two different methods `measure_total` and `benchmark`**
 
 <img src="./gas_cost_estimator_doc_assets/overhead_sequence_results.png" width="700"/>
 
-As we can see, for the simplest case, the execution time is already quite significant comparing to the expected gas cost. The engine overhead estimation method confirms that most of the time is actually taken by the execution preparation, while the execution time is nearing 0.
+As we can see, for the simplest case, the execution time is already quite significant compared to the expected gas cost. The engine overhead estimation method confirms that most of the time is actually taken by the execution preparation, while the execution time is nearing 0.
 The longer the bytecode, the more negligible overhead cost becomes.
 
 Surprisingly, the engine overhead is not constant as initially thought. It increases with the contract length. Some of this can be explained by specific preparation steps (see [Code analysis](#Geth-code-analysis) )
 
-The impact of the engine overhead on the gas cost estimation entails the further discussion.
+The impact of the engine overhead on the gas cost estimation entails further discussion.
 
 ### Validation results
 
@@ -907,7 +900,7 @@ We can summarize the findings about the alternative gas cost schedule:
   - flow control OPCODEs (`JUMP` and `JUMPI`) are currently grossly overpriced
   - cost of the exponent argument in `EXP` is currently grossly overpriced
 
-Note, that the above statements should always be understood relatively to the cost of the pivot OPCODE.
+Note, that the above statements should always be understood relative to the cost of the pivot OPCODE.
 
 The entire alternative gas cost schedule resulting from our estimates is given in [Appendix B: EVM OPCODEs and their Gas cost estimates](#Appendix-B:-EVM-OPCODEs-and-their-Gas-cost-estimates).
 
