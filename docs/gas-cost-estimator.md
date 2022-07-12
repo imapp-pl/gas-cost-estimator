@@ -302,10 +302,102 @@ In this setup, the timer overhead measured is in the order of magnitude of 25ns,
 
 ### Cache impact
 
-**TODO**
+CPUs employ caches and other optimization mechanisms to speed up execution. 
+The questions are: do opcodes have comparable cache profiles and do they retain profiles when executed as parts of real life programs.
+In other words: what is the impact of caches on measurements.
 
-- argument that cache behavior is similar between different kinds of programs (marginal/arguments/validation) used and doesn't skew the results
-- argument that cache impact is "fair" between OPCODEs
+We need to collect statistics on caches, of various levels, and other infrastructure.
+The "perf" tool is utilized for this purpose. It is low level software that listens to Linux kernel events.
+The number of cache levels, size and performance differs for environments/CPU architectures. 
+However, our goal is not to determine the impact itself, rather to verify that it does not depend on opcode and context,
+and does not interfere with the measurements.
+A regular CPU, Intel Celeron J4005, was used as a reference for computations. This unit has modest and not excessive cache solutions.
+
+Perf collects statistics on the whole process. We do not measure just program execution. So dedicated modification of EVMs is needed. 
+In particular, a program is executed in a loop inside an EVM instance and unnecessary instrumentation is removed.
+Refer to this (??) version of evmone and this (??) version of geth.
+
+The available statistics are:
+
+- `task_clock` - CPU time
+- `context_switches`
+- `page_faults` - memory page faults
+- `instructions` - the number of executed instructions
+- `branches` - the number of branches in an executed program
+- `branch_misses` - wrong branches taken by the branch predictor
+- `L1_dcache_loads` - hits to the first level data cache
+- `LLC_loads` - hits to the last level cache
+- `LLC_load_misses` - misses at the last level cache
+- `L1_icache_loads` - hits to the first level instruction cache
+- `L1_icache_load_misses` - misses at the first level instruction cache
+- `dTLB_loads` - hits to the data translation lookaside buffer
+- `dTLB_load_misses` - misses at the data translation lookaside buffer
+- `iTLB_loads` - hits to the instruction translation lookaside buffer
+- `iTLB_load_misses` - misses at the instruction translation lookaside buffer
+
+Unfortunately, statistics for the misses at the first level data cache were unavailable.
+Also, if present, statistics for an intermediate cache are not collected, as perf is a generic tool.
+To have a better picture, relative indicators are needed. As the profile of cache usage we examine the following factors.
+
+- Branch prediction effectiveness. `branch_misses/branches`. These are actually misses so the lower value the better the branch prediction works.
+- L1 cache - instruction cache of the first level - effectiveness. `L1_icache_load_misses/L1_icache_loads`. These are actual misses so the lower value the better cache works. Unfortunately, results for dcache (data cache) are absent.
+- Last Level Cache effectiveness. `LLC_load_misses/LLC_loads`. These are actual misses so the lower value the better cache works.
+- Total cache effectiveness. `LLC_load_misses/(L1_icache_loads+L1_dcache_loads)`. This ratio tells how often memory requests are handled by any cache. These are actual misses.
+- L1 to LLC ratio. `LLC_loads/(L1_icache_loads+L1_dcache_loads)`. It compares loads of L1 and LLC. This demonstrates how requests were filtered through cache levels. The lower value, the more requests are handled by L1 and intermediate level caches.
+- Translation buffers iTLB and dTLB. `iTLB_load_misses/iTLB_loads` and `dTLB_load_misses/dTLB_loads`. These are statistics of less importance.
+
+#### Perf impact
+
+Using an instrumentation has an impact on measurements by itself. 
+We verify this impact by running the same tests with and without perf. Then CPU time is compared.
+As the test, the marginal programs are used. We calculate the relative overhead of perf which is
+
+```
+(with_perf - without_perf) / without_perf
+```
+
+In the case of evmone, the average of the relative overhead in CPU time is `0.00068` and the maximal value excluding outliers is around `0.005`. 
+This is considered negligible. 
+
+In the case of geth, the average of the relative overhead in CPU time is `0.48`. This is much more than for evmone. 
+Further investigation is required to explain such difference.
+Looking at the distributions of relative increases, we can say that they are very similar.
+So even if using perf tool has an impact on measurements, it is proportional and does not modify relative comparison.
+
+<img src="./gas_cost_estimator_doc_assets/evmone_perf_overhead.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_overhead.png" width="425"/> 
+
+#### Measure marginal
+
+In the first step, we use measure marginal approach to verify whether cache usage depends on opcode.
+
+For evmone the total cache effectiveness is between `1e-7` and `3e-7`. 
+Recall that this denotes the miss ratios. 
+With such low values, computations are executed almost entirely within caches and cache usage profiles are very similar for all opcodes.
+For the full picture L1 to LLC ratio is between `0.0008` and `0.0016`. 
+This means that L1 cache performance has huge impact on measurements.
+For completeness, the branch prediction effectiveness varies between `0.0008` and `0.0012`. 
+And it may be considered almost equal for all opcodes.
+
+For geth the total cache effectiveness is between `0.00006` and `0.00014`. 
+So in this case also, computations are executed almost entirely within caches and cache usage profiles are very similar for all opcodes.
+For the full picture L1 to LLC ratio is between `0.012` and `0.018`. 
+This means again that L1 cache performance has a huge impact on measurements but is slightly lower than for evmone.
+For completeness, the branch prediction effectiveness varies between `0.008` and `0.014`. 
+And it may be considered almost equal for all opcodes. 
+
+<img src="./gas_cost_estimator_doc_assets/evmone_perf_marginal_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_marginal_total_effectiveness.png" width="425"/> 
+
+#### Validation
+
+Next, we verify how cache usage profiles change when random programs, closer to real-world contracts, are executed.
+
+For evmone the total cache effectiveness is between `3e-7` and `4.5e-6`.
+For geth ththis is between `4e-6` and `1.5e-4`. 
+But note that high values are attained for 0-length programs. These are not 0 lengths in fact, but very short.
+For other programs the ratios significantly drop. 
+So computations are executed almost entirely in caches, also for these programs, regardless of the fact ratios rised compering to marginal programs. 
+
+<img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_validation_total_effectiveness.png" width="425"/> 
 
 ### Warm-up impact
 **TODO**
