@@ -125,8 +125,6 @@ For the implementation of the instrumentation tools follow the links:
 - [Python script to orchestrate the measurements for a batch of programs](./../src/instrumentation_measurement/measurements.py)
 - [convenience `Makefile`](./../Makefile) allowing to build Docker images and run measurements within them
 
-- if we end up using `bench` - provide rationale and discussion **TODO**
-
 ### `measure_marginal` method
 
 We propose to use the `measure_total` instrumentation to measure programs generated in a particular way, in order to extract the OPCODEs' gas cost estimates from it.
@@ -275,7 +273,7 @@ For the implementation of the `measure_arguments` estimation scripts [see here](
 The instrumentation and measurement were performed for these EVMs:
 1. `geth` - [ethereum/go-ethereum](https://github.com/ethereum/go-ethereum) at [`v1.10.13`](https://github.com/ethereum/go-ethereum/releases/tag/v1.10.13) with [additional changes implementing the instrumentation in the `wallclock-total` branch](https://github.com/imapp-pl/go-ethereum/commit/64aa7ec3).
 2. `evmone` - [ethereum/evmone](https://github.com/ethereum/evmone) at [`b95f90b4`](https://github.com/ethereum/evmone/commit/b95f90b4) with [additional changes implementing the instrumentation in the `wallclock` branch](https://github.com/imapp-pl/evmone/commit/3092f3be).
-3. `nethermind` - TBD
+3. `nethermind` - [NethermindEth/nethermind](https://github.com/NethermindEth/nethermind) at [`v1.13.1`](https://github.com/NethermindEth/nethermind/releases/tag/1.13.1) with [additional changes implementing the instrumentation in the `imapp_benchmark` branch](https://github.com/imapp-pl/nethermind/tree/imapp_benchmark)
 
 running in these machines:
 1. `cloud`: `AWS, Ubuntu 20.04.3, dockerized` - `t2.micro` instance
@@ -400,9 +398,19 @@ So computations are executed almost entirely in caches, also for these programs,
 <img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_validation_total_effectiveness.png" width="425"/> 
 
 ### Warm-up impact
-**TODO**
-- recommendation for warm-up handling
-- argument that this warm-up handling reflects typical operation of EVM
+Warm-up is the effect when immediate subsequent executions of the same bytecode are gradually faster. This is due to:
+- processor cache L1, L2, L3 being pre-loaded with the EVM engine code and data
+- operating system cache
+- disk cache
+- execution framework (Go, .NET) being fully loaded
+- any dependant libraries being fully loaded
+- all necessary memory being allocated, extra memory pre-allocated
+- process priority
+
+Handling the warm-up correctly is the key for the accurate cost estimation. Any Ethereum node is deemed to be fully warmed up as it is constantly processing contract functions. For this reason the cost estimation should remove the warm up effect.
+
+#### Removing warm-up impact
+In the [Results section](#Results) we show that the warm-up has its impact on the first bytecode executions only. Any subsequent iterations tend to be more stable. All our final measurements have been taken as subsequent iterations, thereby discarding any negative impact.
 
 ### Garbage collection impact
 
@@ -412,6 +420,80 @@ So computations are executed almost entirely in caches, also for these programs,
 (or:)
 - recommendation for GC handling
 - argument that this GC handling reflects the typical operation of EVM
+
+### Use of benchmarking tools
+The goal of benchmarking mode is to use well known libraries that track performance in reliable and precise manner. They tend to produce reproducible results and help to avoid common pitfalls while measuring execution time. In our approach we use the following tools:
+- evmone: [hayai](https://github.com/nickbruun/hayai)
+- Go Ethereum: [Go Testing](https://pkg.go.dev/testing#Benchmark) package
+- Nethermind: [DotNetBenchmark](https://benchmarkdotnet.org/articles/overview.html)
+
+These tools were selected as industry standards for respective languages. They all minimize influence and variability of: caching, warmups, memory allocation, garbage collection, process management, external programs impact and clock measurements. If configured properly, these tools help to alleviate the unfavorable impacts of cache, warm-up and garbage collector.
+
+We use benchmarking tools in addition to the main measurements methods. This helps us to confirm that negative impacts have been accurately taken into the account.
+
+### EVM engine overhead cost
+Not only each instruction bears a cost, but also preparation for bytecode execution has some impact on total time. For simple functions the cost of preparation can exceed the actual cost of execution. Therefore, it is necessary to estimate it correctly.
+
+These certain 'preparation' steps are executed before every bytecode. They are performed no matter how long or complicated the bytecode is. This tend to be constant, so the longer program takes, the more negligible it becomes. Ideally the cost of overhead should be estimated and expressed in the same units as opcodes cost. 
+
+#### Overhead cost estimation method
+To estimate the overhead, we propose to calculate overall execution time of programs made of `PUSHx`, `DIV` and `POP` sequences. We gradually increase the number of sequences and measure execution time. Knowing how the program cost increases we can calculate the base (overhead) cost.
+In the second run, we measure the same programs, but this time use `STOP` opcode prefix at the beginning of each bytecode. This will terminate the program on the first instruction, giving us the cost of overhead + single instruction. 
+Finally, we will also execute random programs with and without `STOP` prefix.
+
+#### Geth code analysis
+The list below shows sequences that _might_ contribute towards additional cost of each bytecode execution:
+
+Sequence 1 `runtime.Execute()`:  Prepare environment and sender account
+```go
+var (
+	address = common.BytesToAddress([]byte("contract"))
+	vmenv   = NewEnv(cfg)
+	sender  = vm.AccountRef(cfg.Origin)
+)
+```
+
+Sequence 2 `runtime.Execute()`: Get rule set (London, Berlin) (Note: this seems an obvious candidate for caching. Further analysis has to take place.)
+```go
+rules := cfg.ChainConfig.Rules(vmenv.Context.BlockNumber);
+```
+
+Sequence 3 `runtime.Execute()`: Create a state object. If a state object with the address already exists the balance is carried over to the new account
+```go
+cfg.State.CreateAccount(address)
+```
+
+Sequence 4 `runtime.Execute()`: Set the execution code
+```go
+cfg.State.SetCode(address, code)
+```
+
+Sequence 5 `evm.Call()`: Take snapshot
+```go
+snapshot := evm.StateDB.Snapshot()
+```
+#### Nethermind code analysis
+The list below shows sequences that _might_ contribute towards additional cost of each bytecode execution:
+
+Sequence 1 `Nethermind.Evm.VirtualMachine.Run()`: Get rule set London, Berlin, etc
+```csharp
+_specProvider.GetSpec(state.Env.TxExecutionContext.Header.Number)
+```
+
+Sequence 2 `Nethermind.Evm.VirtualMachine.ExecuteCall()`: Create executing account
+```csharp
+_state.CreateAccount(env.ExecutingAccount, env.TransferValue);
+```
+
+Sequence 3 `Nethermind.Evm.VirtualMachine.ExecuteCall()`: Initiate stack
+```csharp
+vmState.InitStacks();
+```
+
+Sequence 4 (part of state management):  Take snapshot
+```csharp
+_worldState.TakeSnapshot()
+```
 
 ## Validation
 
@@ -686,19 +768,64 @@ For the `.Rmd` scripts to obtain the `measure_arguments` estimates see [`measure
 
 For the results of the notebook containing all plots and models for all OPCODEs [see here](https://gascost.local.imapp.pl/measure_arguments.html).
 
+### Warm-up results
+Firstly, we ran three random programs on freshly booted up system. We can observe that the initial executions of the `Program 1` stand out as significantly slower. The subsequent executions and indeed subsequent programs tend to have more in-line results.
+
+**Figure 9: Execution time (`measure_total_time_ns`) of three random programs (`program_id`) for each run (`run_id`) on fresh system**
+
+<img src="./gas_cost_estimator_doc_assets/warmup_results_geth_pre.png" width="700"/>
+
+When executing the same programs again, immediately after the previous test, the warm-up effect disappears.
+
+**Figure 10: Execution time (`measure_total_time_ns`) of three random programs (`program_id`) for each run (`run_id`) on warmed up system**
+
+<img src="./gas_cost_estimator_doc_assets/warmup_geth_results_post.png" width="700"/>
+
+This proves that any warm-up effects are diminished by subsequent runs. All our measurements above were taken on properly warmed up environment.
+
+For the `.Rmd` scripts to obtain the warm-up analysis see [`warmup-template.Rmd`](./../src/analysis/warmup-template.Rmd).
+
+
+### Benchmark method results
+
+For this exercise, we ran the same 50 random programs using two different methods:
+- `measure_total` described above, sampleSize = 100
+- `benchmark` using the similar structure but all setup, sample_size and measurements are provided by the benchmark framework, hence that gives a single result back
+
+**Figure 11: Execution time (`total_time_ns`) of 50 random programs (`program_id`) using two different methods `measure_total` and `benchmark`**
+
+<img src="./gas_cost_estimator_doc_assets/benchmark_comparison_results.png" width="700"/>
+
+From the Figure 11, we can deduct that our `measure_total` method is successfully eliminating negative effects of caching, warmups, memory allocation, garbage collection, process management, external programs impact and clock measurements. As the same method constitutes basis for `measure_marginal` and `measure_arguments` we assume the same.
+
+### EVM Engine Overhead
+
+This exercise estimates _engine overhead_ - the cost of processing contract before even entering the bytecode execution loop. Firstly we prepared a simple sequence made of `PUSHx`, `DIV` and `POP`. Then we replicated the sequence from 1 to 1000 and measured total execution time for each replication. Finally, the same bytecodes were executed, but this time prefixed with `STOP` opcode. This guaranteed the constant execution time (single opcode).
+
+**Figure 12: Execution time (`total_time_ns`) of 50 random programs (`program_id`) using two different methods `measure_total` and `benchmark`**
+
+<img src="./gas_cost_estimator_doc_assets/overhead_sequence_results.png" width="700"/>
+
+As we can see, for the simplest case, the execution time is already quite significant comparing to the expected gas cost. The engine overhead estimation method confirms that most of the time is actually taken by the execution preparation, while the execution time is nearing 0.
+The longer the bytecode, the more negligible overhead cost becomes.
+
+Surprisingly, the engine overhead is not constant as initially thought. It increases with the contract length. Some of this can be explained by specific preparation steps (see [Code analysis](#Geth-code-analysis) )
+
+The impact of the engine overhead on the gas cost estimation entails the further discussion.
+
 ### Validation results
 
 The estimates obtained by our procedure tend to estimate the computational cost of `measure_validation` programs well and much better than both the trivial model and the current gas cost schedule model.
 
 We can see the data points (each for a given `measure_validation` program) much more tightly packed around the linear regression line.
 
-**Figure 9: Comparison of trivial (`program_length`) estimations the current gas cost schedule (`current_gas_cost`) estimations with our `gas_cost_estimator` estimates (labelled `cost_ns`).** Logarithmic scale on both axes, the curve represents the estimated regression line. The points represent the validation programs and labels are their respective dominant OPCODEs
+**Figure 13: Comparison of trivial (`program_length`) estimations the current gas cost schedule (`current_gas_cost`) estimations with our `gas_cost_estimator` estimates (labelled `cost_ns`).** Logarithmic scale on both axes, the curve represents the estimated regression line. The points represent the validation programs and labels are their respective dominant OPCODEs
 
 <img src="./gas_cost_estimator_doc_assets/validation_compare.png" width="700"/>
 
 The summaries of the linear regression validation models for our estimates are:
 
-**Figure 10: Final `gas_cost_estimator` model summaries**
+**Figure 14: Final `gas_cost_estimator` model summaries**
 
 `geth`:
 ```
@@ -750,11 +877,11 @@ Using the estimates obtained so far, we proceed to choose the pivot OPCODE and c
 `ADDRESS` works best as the pivot OPCODE, providing the most chances for a consistent update to the gas cost schedule.
 Using this pivot, we calculate the alternative gas cost schedule.
 
-**Figure 11a: Comparison of current and alternative gas cost schedules - `cloud`.** Each point represents an OPCODE (or a special cost factor to an OPCODE, like an increase in argument size). The figures are in gas units, relative to the gas cost and estimate of the pivot OPCODE. Results for the `cloud` measurement setup.
+**Figure 15a: Comparison of current and alternative gas cost schedules - `cloud`.** Each point represents an OPCODE (or a special cost factor to an OPCODE, like an increase in argument size). The figures are in gas units, relative to the gas cost and estimate of the pivot OPCODE. Results for the `cloud` measurement setup.
 
 <img src="./gas_cost_estimator_doc_assets/alternative_gas_cost_schedule_cloud.png" width="1000"/>
 
-**Figure 11b: Comparison of current and alternative gas cost schedules - `laptop`**
+**Figure 15b: Comparison of current and alternative gas cost schedules - `laptop`**
 
 <img src="./gas_cost_estimator_doc_assets/alternative_gas_cost_schedule_laptop.png" width="1000"/>
 
