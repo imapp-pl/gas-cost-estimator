@@ -403,7 +403,7 @@ The longer program, the higher ratio. This is still low comparing to other softw
 
 Let us estimate the impact of the branch misprediction on measurements.
 It is hard to determine exactly the misprediction penalty. 
-For the CPU used for the measurements, we assume it is `15` cycles.
+For the CPU used for the measurements, we assume it is `15` cycles, [19].
 And note that CPU is `2.589` GHz.
 To calculate the relative share of misprediction penalty in the total measurement, we use the formula
 `(15*branch_misses)/(task_clock*2589000)`. This yields penalty values between `0` and `0.1` for evmone and between `0.025` and `0.045` for geth.
@@ -1121,3 +1121,4 @@ MULMOD_expensive_cost | 8 | 7,6 | 7,7 | 0,029 | 0,035 |
 
 [18] Bernard L. Peuto and Leonard J. Shustek. 1977. An instruction timing model of CPU performance. SIGARCH Comput. Archit. News 5, 7 (March 1977), 165–178. DOI:https://doi.org/10.1145/633615.810667
 
+[19] Agner Fog. 2022. The microarchitecture of Intel, AMD, and VIA CPUs.
