@@ -395,6 +395,27 @@ So computations are executed almost entirely in caches, also for these programs,
 
 <img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_validation_total_effectiveness.png" width="425"/> 
 
+As it is expected, the branch prediction is less effective comparing to the marginal programs. 
+The effectiveness ratio varies between `0` and `0.035` for evmone and between `0.013` and `0.025` for geth.
+The longer program, the higher ratio. This is still low comparing to other software.
+
+Let us estimate the impact of the branch misprediction on measurements.
+It is hard to determine exactly the misprediction penalty. 
+For the CPU used for the measurements, we assume it is `15` cycles.
+And note that CPU is `2.589` GHz.
+To calculate the relative share of misprediction penalty in the total measurement, we use the formula
+`(15*branch_misses)/(task_clock*2589000)`. This yields penalty values between `0` and `0.1` for evmone and between `0.025` and `0.045` for geth.
+
+#### Measurement with dominant opcode
+
+The maximal `10%` of penalty is that not much. But still we want to know whether opcodes have equal contribution to this penalty.
+For this we use programs where a given opcode dominates.
+
+For evmone, the penalty varies between `0.04` and `0.06`, with the exception to EXP, where the penalty is `0.09`. 
+For geth it is more uniform, the penalty varies around `0.015` and for EXP it is around `0.016`.
+So the only significant outlier is EXP at evmone. But still this is `3-4%` of penalty more than other opcodes at evmone
+which does not have significant impact on measurements.
+
 ### Warm-up impact
 Warm-up is the effect when immediate subsequent executions of the same bytecode are gradually faster. This is due to:
 - processor cache L1, L2, L3 being pre-loaded with the EVM engine code and data
