@@ -399,6 +399,8 @@ As it is expected, the branch prediction is less effective comparing to the marg
 The effectiveness ratio varies between `0` and `0.035` for evmone and between `0.013` and `0.025` for geth.
 The longer program, the higher ratio. This is still low comparing to other software.
 
+<img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_branch_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_validation_branch_effectiveness.png" width="425"/> 
+
 Let us estimate the impact of the branch misprediction on measurements.
 It is hard to determine exactly the misprediction penalty. 
 For the CPU used for the measurements, we assume it is `15` cycles.
