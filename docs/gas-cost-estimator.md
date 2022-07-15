@@ -12,7 +12,7 @@ EVM (Ethereum Virtual Machine) is instrumental to the functioning of the Ethereu
 It is responsible for carrying out the computations associated with transactions on the Ethereum blockchain, namely those related to the functioning of smart contracts.
 Due to Turing's completeness of their instruction sets, and the necessity to guarantee that computations can be securely performed in an open, distributed network, a halting mechanism must be provided.
 
-The halting mechanism is provided thanks to gas, which is an Ethereum specific measure of the computational cost incurred by the executing environment (Ethereum node connected to the network).
+The halting mechanism is provided the means of gas, which is an Ethereum specific measure of the computational cost incurred by the executing environment (Ethereum node connected to the network).
 Gas is priced in Ether (the intrinsic value token of the Ethereum blockchain), and each transaction has an allowance of gas prepaid by the transaction sender.
 Every step of computation (as of writing, this corresponds to every bytecode instruction interpreted by EVM) costs a small amount of gas, and if gas allowance is depleted, the computation is halted and its effects are reverted, except for the consumption of the entire gas allowance.
 The gas consumed by computations performed is paid out as a transaction fee (in Ether) to the miner (validator), including the transaction.
@@ -143,18 +143,18 @@ They do not impact the program execution (`ADDRESS` takes no arguments), but wou
 
 The layout of the `measure_marginal` generated program is an evolution of this thinking.
 
-**`measure_marginal` program**: For every `OPCODE`, which removes one value from and pushes one value to the stack, generate `max_op_count` programs, such that for `0 <= op_count <= max_op_count` we have:
+**`measure_marginal` program**: For each `OPCODE`, we generate a series of programs for `op_count` equal 1 to `max_op_count`. Each program takes the form of:
 
 | | |
 |-|-|
 | `PUSH1` | `max_op_count` times |
-| `{OPCODE POP}` | `op_count` times |
+| `{OPCODE}` | `op_count` times |
 | `POP` | `max_op_count - op_count` times |
 
 An `op_count + 1` program differs from an `op_count` program by only a single instance of the `OPCODE` instruction.
 At the same time, we have full control over the stack arguments prepared for each instance of the `OPCODE` instruction - in the simplest case we provide the same set of arguments for each instance of `OPCODE`.
 
-This layout is naturally extended to OPCODEs which remove from and push to the stack different numbers of values.
+The layout of the program is adapted for OPCODEs which pop or push to the stack a different number of params. In the way that we always guarantee that the stack remains empty at the end of the execution.
 
 Such programs are later used to estimate the marginal cost of every `OPCODE` we are interested in.
 The estimation is based on a premise, that if we can capture the trend of increasing timer measurements (`measure_total`, see above), in the function of growing `op_count`, we can conclude that the slope of this trend is proportional to the computational cost of `OPCODE`.
@@ -311,7 +311,7 @@ A regular CPU, Intel Celeron J4005, was used as a reference for computations. Th
 
 Perf collects statistics on the whole process. We do not measure just program execution. So dedicated modification of EVMs is needed. 
 In particular, a program is executed in a loop inside an EVM instance and unnecessary instrumentation is removed.
-Refer to this (??) version of evmone and this (??) version of geth.
+Refer to [this](https://github.com/imapp-pl/evmone/tree/cache-test) version of evmone and [this](https://github.com/imapp-pl/gas-cost-estimator/blob/cache-report-2/src/instrumentation_measurement/geth/main_minimal.go) execution of geth.
 
 The available statistics are:
 
@@ -362,6 +362,8 @@ So even if using perf tool has an impact on measurements, it is proportional and
 
 <img src="./gas_cost_estimator_doc_assets/evmone_perf_overhead.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_overhead.png" width="425"/> 
 
+For detailed graphs see [here](https://gascost.local.imapp.pl/perf-overhead-evmone.html) and [here](https://gascost.local.imapp.pl/perf-overhead-geth.html).
+
 #### Measure marginal
 
 In the first step, we use measure marginal approach to verify whether cache usage depends on opcode.
@@ -383,6 +385,8 @@ And it may be considered almost equal for all opcodes.
 
 <img src="./gas_cost_estimator_doc_assets/evmone_perf_marginal_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_marginal_total_effectiveness.png" width="425"/> 
 
+For detailed graphs see [here](https://gascost.local.imapp.pl/cache-marginal-evmone.html) and [here](https://gascost.local.imapp.pl/cache-marginal-geth.html).
+
 #### Validation
 
 Next, we verify how cache usage profiles change when random programs, closer to real-world contracts, are executed.
@@ -394,6 +398,33 @@ For other programs, the ratios significantly drop.
 So computations are executed almost entirely in caches, also for these programs, regardless of the fact ratios rised compering to marginal programs. 
 
 <img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_validation_total_effectiveness.png" width="425"/> 
+
+As expected, the branch prediction is less effective compared to the marginal programs. 
+The effective ratio varies between `0` and `0.035` for evmone and between `0.013` and `0.025` for geth.
+The longer program, the higher ratio. This is still low comparing to other software.
+
+<img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_branch_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_validation_branch_effectiveness.png" width="425"/> 
+
+Let us estimate the impact of the branch misprediction on measurements.
+It is hard to determine exactly the misprediction penalty. 
+For the CPU used for the measurements, we assume it is `15` cycles, [19].
+And note that CPU is `2.589` GHz.
+To calculate the relative share of misprediction penalty in the total measurement, we use the formula
+`(15*branch_misses)/(task_clock*2589000)`. This yields penalty values between `0` and `0.1` for evmone and between `0.025` and `0.045` for geth.
+
+For detailed graphs see [here](https://gascost.local.imapp.pl/cache-validation-evmone.html) and [here](https://gascost.local.imapp.pl/cache-validation-geth.html).
+
+#### Measurement with dominant opcode
+
+The maximal `10%` of penalty is not that much. But still, we want to know whether opcodes have an equal contribution to this penalty.
+For this we use programs where a given opcode dominates.
+
+For evmone, the penalty varies between `0.04` and `0.06`, with the exception to EXP, where the penalty is `0.09`. 
+For geth it is more uniform, the penalty varies around `0.015` and for EXP it is around `0.016`.
+So the only significant outlier is EXP at evmone. But still this is `3-4%` of penalty more than other opcodes at evmone
+which does not have significant impact on measurements.
+
+For detailed graphs see [here](https://gascost.local.imapp.pl/cache-dominant-evmone.html) and [here](https://gascost.local.imapp.pl/cache-dominant-geth.html).
 
 ### Warm-up impact
 Warm-up is the effect when immediate subsequent executions of the same bytecode are gradually faster. This is due to:
@@ -1098,3 +1129,4 @@ MULMOD_expensive_cost | 8 | 7,6 | 7,7 | 0,029 | 0,035 |
 
 [18] Bernard L. Peuto and Leonard J. Shustek. 1977. An instruction timing model of CPU performance. SIGARCH Comput. Archit. News 5, 7 (March 1977), 165–178. DOI:https://doi.org/10.1145/633615.810667
 
+[19] Agner Fog. 2022. The microarchitecture of Intel, AMD, and VIA CPUs.
