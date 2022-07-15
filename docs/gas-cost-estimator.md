@@ -12,7 +12,7 @@ EVM (Ethereum Virtual Machine) is instrumental to the functioning of the Ethereu
 It is responsible for carrying out the computations associated with transactions on the Ethereum blockchain, namely those related to the functioning of smart contracts.
 Due to Turing's completeness of their instruction sets, and the necessity to guarantee that computations can be securely performed in an open, distributed network, a halting mechanism must be provided.
 
-The halting mechanism is provided thanks to gas, which is an Ethereum specific measure of the computational cost incurred by the executing environment (Ethereum node connected to the network).
+The halting mechanism is provided the means of gas, which is an Ethereum specific measure of the computational cost incurred by the executing environment (Ethereum node connected to the network).
 Gas is priced in Ether (the intrinsic value token of the Ethereum blockchain), and each transaction has an allowance of gas prepaid by the transaction sender.
 Every step of computation (as of writing, this corresponds to every bytecode instruction interpreted by EVM) costs a small amount of gas, and if gas allowance is depleted, the computation is halted and its effects are reverted, except for the consumption of the entire gas allowance.
 The gas consumed by computations performed is paid out as a transaction fee (in Ether) to the miner (validator), including the transaction.
@@ -143,18 +143,18 @@ They do not impact the program execution (`ADDRESS` takes no arguments), but wou
 
 The layout of the `measure_marginal` generated program is an evolution of this thinking.
 
-**`measure_marginal` program**: For every `OPCODE`, which removes one value from and pushes one value to the stack, generate `max_op_count` programs, such that for `0 <= op_count <= max_op_count` we have:
+**`measure_marginal` program**: For each `OPCODE`, we generate a series of programs for `op_count` equal 1 to `max_op_count`. Each program takes the form of:
 
 | | |
 |-|-|
 | `PUSH1` | `max_op_count` times |
-| `{OPCODE POP}` | `op_count` times |
+| `{OPCODE}` | `op_count` times |
 | `POP` | `max_op_count - op_count` times |
 
 An `op_count + 1` program differs from an `op_count` program by only a single instance of the `OPCODE` instruction.
 At the same time, we have full control over the stack arguments prepared for each instance of the `OPCODE` instruction - in the simplest case we provide the same set of arguments for each instance of `OPCODE`.
 
-This layout is naturally extended to OPCODEs which remove from and push to the stack different numbers of values.
+The layout of the program is adapted for OPCODEs which pop or push to the stack a different number of params. In the way that we always guarantee that the stack remains empty at the end of the execution.
 
 Such programs are later used to estimate the marginal cost of every `OPCODE` we are interested in.
 The estimation is based on a premise, that if we can capture the trend of increasing timer measurements (`measure_total`, see above), in the function of growing `op_count`, we can conclude that the slope of this trend is proportional to the computational cost of `OPCODE`.
