@@ -416,7 +416,7 @@ For detailed graphs see [here](https://gascost.local.imapp.pl/cache-validation-e
 
 #### Measurement with dominant opcode
 
-The maximal `10%` of penalty is that not much. But still we want to know whether opcodes have equal contribution to this penalty.
+The maximal `10%` of penalty is not that much. But still, we want to know whether opcodes have an equal contribution to this penalty.
 For this we use programs where a given opcode dominates.
 
 For evmone, the penalty varies between `0.04` and `0.06`, with the exception to EXP, where the penalty is `0.09`. 
