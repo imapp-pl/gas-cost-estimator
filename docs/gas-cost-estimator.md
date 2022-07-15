@@ -400,7 +400,7 @@ So computations are executed almost entirely in caches, also for these programs,
 <img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_validation_total_effectiveness.png" width="425"/> 
 
 As expected, the branch prediction is less effective compared to the marginal programs. 
-The effectiveness ratio varies between `0` and `0.035` for evmone and between `0.013` and `0.025` for geth.
+The effective ratio varies between `0` and `0.035` for evmone and between `0.013` and `0.025` for geth.
 The longer program, the higher ratio. This is still low comparing to other software.
 
 <img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_branch_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_validation_branch_effectiveness.png" width="425"/> 
