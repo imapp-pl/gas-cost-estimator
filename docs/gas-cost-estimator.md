@@ -12,7 +12,7 @@ EVM (Ethereum Virtual Machine) is instrumental to the functioning of the Ethereu
 It is responsible for carrying out the computations associated with transactions on the Ethereum blockchain, namely those related to the functioning of smart contracts.
 Due to Turing's completeness of their instruction sets, and the necessity to guarantee that computations can be securely performed in an open, distributed network, a halting mechanism must be provided.
 
-The halting mechanism is provided the means of gas, which is an Ethereum specific measure of the computational cost incurred by the executing environment (Ethereum node connected to the network).
+The halting mechanism is provided by the means of gas, which is an Ethereum specific measure of the computational cost incurred by the executing environment (Ethereum node connected to the network).
 Gas is priced in Ether (the intrinsic value token of the Ethereum blockchain), and each transaction has an allowance of gas prepaid by the transaction sender.
 Every step of computation (as of writing, this corresponds to every bytecode instruction interpreted by EVM) costs a small amount of gas, and if gas allowance is depleted, the computation is halted and its effects are reverted, except for the consumption of the entire gas allowance.
 The gas consumed by computations performed is paid out as a transaction fee (in Ether) to the miner (validator), including the transaction.
@@ -143,7 +143,7 @@ They do not impact the program execution (`ADDRESS` takes no arguments), but wou
 
 The layout of the `measure_marginal` generated program is an evolution of this thinking.
 
-**`measure_marginal` program**: For each `OPCODE`, we generate a series of programs for `op_count` equal 1 to `max_op_count`. Each program takes the form of:
+**`measure_marginal` program**: For each `OPCODE`, which removes one value from and pushes one value to the stack, we generate a series of programs for `op_count` equal 1 to `max_op_count`. Each program takes the form of:
 
 | | |
 |-|-|
