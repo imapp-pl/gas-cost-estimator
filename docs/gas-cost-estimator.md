@@ -664,7 +664,7 @@ A subset of OPCODEs exhibits a bi-modal distribution of measurements:
 In the first plot we can still visually pick up the constant trend, irrespective of whether we're looking at the "top-mode" or "bottom-mode" measurements.
 We also see the two strong batches of measurements clustered around their respective modes.
 
-In the second plot we see the results of bringing the "top-mode" observations down to the level of the "bottom-mode" observations.
+In the third plot we see the results of bringing the "top-mode" observations down to the level of the "bottom-mode" observations.
 
 ### `measure_arguments` dynamics and results
 
