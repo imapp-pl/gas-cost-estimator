@@ -311,7 +311,7 @@ A regular CPU, Intel Celeron J4005, was used as a reference for computations. Th
 
 Perf collects statistics on the whole process. We do not measure just program execution. So dedicated modification of EVMs is needed. 
 In particular, a program is executed in a loop inside an EVM instance and unnecessary instrumentation is removed.
-Refer to [this](https://github.com/imapp-pl/evmone/tree/cache-test) version of evmone and [this](https://github.com/imapp-pl/gas-cost-estimator/blob/cache-report-2/src/instrumentation_measurement/geth/main_minimal.go) execution of geth.
+Refer to [this](https://github.com/imapp-pl/gas-cost-estimator/blob/cache-report-2/src/instrumentation_measurement/geth/main_minimal.go) execution of geth and  [this](https://github.com/imapp-pl/evmone/tree/cache-test) version of evmone.
 
 The available statistics are:
 
@@ -360,9 +360,9 @@ Further investigation is required to explain such difference.
 Looking at the distributions of relative increases, we can say that they are very similar.
 So even if using perf tool has an impact on measurements, it is proportional and does not modify relative comparison.
 
-<img src="./gas_cost_estimator_doc_assets/evmone_perf_overhead.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_overhead.png" width="425"/> 
+<img src="./gas_cost_estimator_doc_assets/geth_perf_overhead.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/evmone_perf_overhead.png" width="425"/> 
 
-For detailed graphs see [here](https://gascost.local.imapp.pl/perf-overhead-evmone.html) and [here](https://gascost.local.imapp.pl/perf-overhead-geth.html).
+For detailed graphs see [here](https://gascost.local.imapp.pl/perf-overhead-geth.html) and [here](https://gascost.local.imapp.pl/perf-overhead-evmone.html).
 
 #### Measure marginal
 
@@ -383,9 +383,9 @@ This means again that L1 cache performance has a huge impact on measurements but
 For completeness, the branch prediction effectiveness varies between `0.008` and `0.014`. 
 And it may be considered almost equal for all opcodes. 
 
-<img src="./gas_cost_estimator_doc_assets/evmone_perf_marginal_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_marginal_total_effectiveness.png" width="425"/> 
+<img src="./gas_cost_estimator_doc_assets/geth_perf_marginal_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/evmone_perf_marginal_total_effectiveness.png" width="425"/> 
 
-For detailed graphs see [here](https://gascost.local.imapp.pl/cache-marginal-evmone.html) and [here](https://gascost.local.imapp.pl/cache-marginal-geth.html).
+For detailed graphs see [here](https://gascost.local.imapp.pl/cache-marginal-geth.html) and [here](https://gascost.local.imapp.pl/cache-marginal-evmone.html).
 
 #### Validation
 
@@ -397,13 +397,13 @@ But note that high values are attained for 0-length programs. These are not 0 le
 For other programs, the ratios significantly drop. 
 So computations are executed almost entirely in caches, also for these programs, regardless of the fact ratios rised compering to marginal programs. 
 
-<img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_validation_total_effectiveness.png" width="425"/> 
+<img src="./gas_cost_estimator_doc_assets/geth_perf_validation_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_total_effectiveness.png" width="425"/> 
 
 As expected, the branch prediction is less effective compared to the marginal programs. 
 The effective ratio varies between `0` and `0.035` for evmone and between `0.013` and `0.025` for geth.
 The longer program, the higher ratio. This is still low comparing to other software.
 
-<img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_branch_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_validation_branch_effectiveness.png" width="425"/> 
+<img src="./gas_cost_estimator_doc_assets/geth_perf_validation_branch_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_branch_effectiveness.png" width="425"/> 
 
 Let us estimate the impact of the branch misprediction on measurements.
 It is hard to determine exactly the misprediction penalty. 
@@ -412,7 +412,7 @@ And note that CPU is `2.589` GHz.
 To calculate the relative share of misprediction penalty in the total measurement, we use the formula
 `(15*branch_misses)/(task_clock*2589000)`. This yields penalty values between `0` and `0.1` for evmone and between `0.025` and `0.045` for geth.
 
-For detailed graphs see [here](https://gascost.local.imapp.pl/cache-validation-evmone.html) and [here](https://gascost.local.imapp.pl/cache-validation-geth.html).
+For detailed graphs see [here](https://gascost.local.imapp.pl/cache-validation-geth.html) and [here](https://gascost.local.imapp.pl/cache-validation-evmone.html).
 
 #### Measurement with dominant opcode
 
@@ -424,7 +424,7 @@ For geth it is more uniform, the penalty varies around `0.015` and for EXP it is
 So the only significant outlier is EXP at evmone. But still this is `3-4%` of penalty more than other opcodes at evmone
 which does not have significant impact on measurements.
 
-For detailed graphs see [here](https://gascost.local.imapp.pl/cache-dominant-evmone.html) and [here](https://gascost.local.imapp.pl/cache-dominant-geth.html).
+For detailed graphs see [here](https://gascost.local.imapp.pl/cache-dominant-geth.html) and [here](https://gascost.local.imapp.pl/cache-dominant-evmone.html).
 
 ### Warm-up impact
 Warm-up is the effect when immediate subsequent executions of the same bytecode are gradually faster. This is due to:
