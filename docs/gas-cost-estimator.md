@@ -72,7 +72,7 @@ On the other hand, we might consider extending the method devised here to storag
 One of the factors that contribute to the challenge which gas cost estimation presents is the inherent multitude of environments involved.
 
 By environments in this context we mean:
-- different implementations of the Ethereum node (and EVM/Ewasm in consequence), done in different programming languages and with different mindsets
+- different implementations of the Ethereum node, done in different programming languages and with different mindsets
 - different hardware on which this software is ran; this is exacerbated by the requirement for the software to run reliably on both server-grade hardware and consumer-grade desktops alike
 - different operating systems
 
@@ -162,7 +162,7 @@ In other words, we are estimating the marginal increase of computational cost (t
 
 It turns out, that a simple linear regression is capable of capturing such trend very reliably, given some additional data clean-up measures.
 
-For the implementation of the `measure_marginal` program generator [see here](./../src/program_generator/pg_marginal.py)
+For the implementation of the `measure_marginal` program generator [see here](./../src/program_generator/pg_marginal.py).
 
 #### Additional features of `measure_marginal` programs
 
@@ -212,7 +212,7 @@ The benefits of using `measure_marginal` as the measurement method are the follo
 
 The assessment of the models and discussion about the results is given in the [Results section](#Results).
 
-For the implementation of the `measure_marginal` estimation scripts [see here](./../src/analysis/measure_marginal.Rmd)
+For the implementation of the `measure_marginal` estimation scripts [see here](./../src/analysis/measure_marginal.Rmd).
 
 ### `measure_arguments` method
 
@@ -238,7 +238,7 @@ We chose these functions:
 - `weight(arg) = log(arg)` - for OPCODEs where the cost is proportional to the bytesize of the argument (remainder of OPCODEs)
 - `weight(arg) = numerator_arg > denominator_arg` - gauged towards the division OPCODES. This means that the arguments "cost" more if the OPCODE involves a `numerator / denominator` operation, and the `numerator` part is bigger.
 
-For the implementation of the `measure_arguments` program generator [see here](./../src/program_generator/pg_arguments.py)
+For the implementation of the `measure_arguments` program generator [see here](./../src/program_generator/pg_arguments.py).
 
 #### Estimation procedure for `measure_arguments`
 
@@ -264,7 +264,7 @@ It is worth noting, that we neglect to check the impact of the size of the secon
 It would be quite unfeasible to compose programs which actually execute as expected, fit into the framework of our measurement method and explore the dynamics of this argument.
 At the same time, we find it unlikely for this argument to play a role in the cost of execution of this OPCODE.
 
-For the implementation of the `measure_arguments` estimation scripts [see here](./../src/analysis/measure_arguments.Rmd)
+For the implementation of the `measure_arguments` estimation scripts [see here](./../src/analysis/measure_arguments.Rmd).
 
 ### Measurement setup and environments
 
@@ -285,7 +285,7 @@ We will focus on citing and discussing only the results coming from the `cloud` 
 #### Garbage collection
 
 For the Go EVM `geth` we turn garbage collection off using the `GOGC=off` environment variable but we _don't_ run `runtime.GC()` at all.
-See [section [Garbage collection impact](#Garbage-collection-impact)] for the details.
+See the section [Garbage collection impact](#Garbage-collection-impact) for the details.
 
 #### Timer
 
@@ -368,7 +368,7 @@ For detailed graphs see [here](https://gascost.local.imapp.pl/perf-overhead-evmo
 
 In the first step, we use measure marginal approach to verify whether cache usage depends on opcode.
 
-For evmone the total cache effectiveness is between `1e-7` and `3e-7`. 
+For evmone the total cache effectiveness is between `10^-7` and `3*10^-7`. 
 Recall that this denotes the miss ratios. 
 With such low values, computations are executed almost entirely within caches and cache usage profiles are very similar for all opcodes.
 For the full picture L1 to LLC ratio is between `0.0008` and `0.0016`. 
@@ -391,8 +391,8 @@ For detailed graphs see [here](https://gascost.local.imapp.pl/cache-marginal-evm
 
 Next, we verify how cache usage profiles change when random programs, closer to real-world contracts, are executed.
 
-For evmone the total cache effectiveness is between `3e-7` and `4.5e-6`.
-For geth this is between `4e-6` and `1.5e-4`. 
+For evmone the total cache effectiveness is between `3*10^-7` and `4.5*10^-6`.
+For geth this is between `4*10^-6` and `1.5*10^-4`. 
 But note that high values are attained for 0-length programs. These are not 0 lengths in fact, but very short.
 For other programs, the ratios significantly drop. 
 So computations are executed almost entirely in caches, also for these programs, regardless of the fact ratios rised compering to marginal programs. 
@@ -542,7 +542,7 @@ It is safe to assume that in any real-world scenario, every EVM bytecode will ex
 Lastly, `PUSHx`, `DUPx`, `SWAPx` groups are given the same probability as regular OPCODEs, and when selected, the precise variant is chosen randomly in the next step.
 This is to overcome the high frequency of these `PUSHx`, `DUPx`, `SWAPx` OPCODEs, should they have been treated separately and on par with other OPCODEs.
 
-For the implementation of the `measure_validation` program generator [see here](./../src/program_generator/pg_validation.py)
+For the implementation of the `measure_validation` program generator [see here](./../src/program_generator/pg_validation.py).
 
 #### Validation procedure
 
