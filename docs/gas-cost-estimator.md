@@ -657,7 +657,7 @@ For the results of the notebook containing all plots and models for all OPCODEs 
 
 A subset of OPCODEs exhibits a bi-modal distribution of measurements:
 
-**Figure 4: Bimodal trend of `JUMP` `measure_marginal` results for `evmone`, along with the bimodal distribution and the corrected `measure_marginal` trend**
+**Figure 4: Bimodal trend of `PUSH32` `measure_marginal` results for `evmone`, along with the bimodal distribution and the corrected `measure_marginal` trend**
 
 <img src="./gas_cost_estimator_doc_assets/bimodal_PUSH32_evmone.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/bimodal_PUSH32_evmone_corrected.png" width="425"/> 
 
