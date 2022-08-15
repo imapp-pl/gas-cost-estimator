@@ -462,8 +462,10 @@ Not only each instruction bears a cost, but also preparation for bytecode execut
 These certain 'preparation' steps are executed before every bytecode. They are performed no matter how long or complicated the bytecode is. This tend to be constant, so the longer program takes, the more negligible it becomes. Ideally the cost of overhead should be estimated and expressed in the same units as opcodes cost. 
 
 #### Overhead cost estimation method
-To estimate the overhead, we propose to calculate overall execution time of programs made of `PUSHx`, `DIV` and `POP` sequences. We gradually increase the number of sequences and measure execution time. Knowing how the program cost increases we can calculate the base (overhead) cost.
-In the second run, we measure the same programs, but this time use `STOP` opcode prefix at the beginning of each bytecode. This will terminate the program on the first instruction, giving us the cost of overhead + single instruction. 
+To estimate the overhead, we propose to calculate overall execution time of programs made of `PUSHx`, `DIV` and `POP` sequences. The single sequence is made in such way that id does not leave any leftovers on the stack. The `DIV` opcode was selected for its relatively high complexity, therefore the same effect can be demonstrated with fewer iterations, which also is more real-life scenario. Additionally identical parameters were used for all the sequences, thus eliminating any random variability. 
+
+In the first step, we gradually increase the number of sequences and measure execution times. Knowing how the program cost increases we can calculate the base (overhead) cost.
+In the second step, we measure the same programs, but this time use `STOP` opcode prefix at the beginning of each bytecode. This will terminate the program on the first instruction, giving us the cost of overhead + single instruction. 
 Finally, we will also execute random programs with and without `STOP` prefix.
 
 #### Geth code analysis
