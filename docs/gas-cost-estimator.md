@@ -237,6 +237,7 @@ We chose these functions:
 - `weight(arg) = arg` - for memory OPCODEs: `CALLDATALOAD`, `CALLDATACOPY`, `RETURNDATACOPY`, `MLOAD`, `MSTORE`, `MSTORE8`, `CODECOPY`
 - `weight(arg) = log(arg)` - for OPCODEs where the cost is proportional to the bytesize of the argument (remainder of OPCODEs)
 - `weight(arg) = numerator_arg > denominator_arg` - gauged towards the division OPCODES. This means that the arguments "cost" more if the OPCODE involves a `numerator / denominator` operation, and the `numerator` part is bigger.
+- `weight(arg) = 0` - for other OPCODEs where the cost does not depend on the argument.
 
 For the implementation of the `measure_arguments` program generator [see here](./../src/program_generator/pg_arguments.py).
 
