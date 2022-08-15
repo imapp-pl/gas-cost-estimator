@@ -574,7 +574,7 @@ For the implementation of the validation scripts [see here](./../src/analysis/va
 In order to compute this figure, we combine results from the `measure_marginal` and `measure_arguments` stages in the following fashion:
 
 The constant cost of executing an OPCODE is its respective slope coefficient `a` taken from the `measure_marginal` model.
-The cost related to the size of arguments is taken from the `measure_arguments` model.
+The cost related to the arguments is taken from the `measure_arguments` model.
 
 The reason for this is that `measure_arguments` performs much worse in estimating the marginal _constant_ cost of the OPCODE.
 It includes interaction terms of the form `a * op_count * weight(arg)`, so the `op_count` coefficient `d` (from `d * op_count` term) is the estimation of marginal increase of `measure_total_time` for each unit increase of `op_count`, but _assuming `weight(arg) = 0`_.
