@@ -916,13 +916,13 @@ We observe, that the final result (the alternative gas cost schedule) doesn't di
 
 We can summarize the findings about the alternative gas cost schedule:
 1. The following OPCODEs should have their gas cost left intact:
-  - `CALLDATACOPY`, `CODECOPY` (but not their cost of the arguments)
   - `SDIV`, `MOD`, `SMOD` (assuming their "non-trivial" version, i.e. `x >= y`; `DIV` could be also put here, although it diverges a bit more from the current schedule)
 2. The following OPCODEs can have their gas cost updated rather consistently, respecting all the EVM implementations (relative difference between `geth` and `evmone` is less than 15%):
   - `MUL`: 1.2
   - `SAR`: 1.1
   - `ADDMOD`: 6 (assuming "non-trivial" version)
   - `MULMOD`: 7.5 (assuming "non-trivial" version)
+  - `CALLDATACOPY`, `CODECOPY` (constant cost): 2
 3. The following OPCODEs can have their gas cost discounted whenever the calculation is trivial (`x < y`):
   - `DIV`, `SDIV`, `MOD`, `SMOD`, `ADDMOD`, `MULMOD`
    However, the magnitude of the discount is different across different EVMs.
