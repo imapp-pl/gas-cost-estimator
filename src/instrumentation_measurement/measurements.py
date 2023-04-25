@@ -77,17 +77,17 @@ class Measurements(object):
         reader = csv.DictReader(sys.stdin, delimiter=',', quotechar='"')
         self._programs = [self._program_from_csv_row(row) for row in reader]
 
-    def measure(self, sampleSize=1, mode="all", evm="geth", nSamples=1):
+    def measure(self, sample_size=1, mode="all", evm="geth", n_samples=1):
         """
         Main entrypoint of the CLI tool.
 
         Reads programs' CSV from STDIN. Prints measurement results CSV to STDOUT
 
         Parameters:
-        sampleSize (integer): size of a sample to pass into the EVM measuring executable
+        sample_size (integer): size of a sample to pass into the EVM measuring executable
         mode (string): Measurement mode. Allowed: total, all, trace
         evm (string): which evm use. Default: geth. Allowed: geth, openethereum, evmone
-        nSamples (integer): number of samples (individual starts of the EVM measuring executable) to do
+        n_samples (integer): number of samples (individual starts of the EVM measuring executable) to do
         """
 
         geth = "geth"
@@ -134,24 +134,24 @@ class Measurements(object):
             print(header)
 
         for program in self._programs:
-            for sample_id in range(nSamples):
+            for sample_id in range(n_samples):
                 instrumenter_result = None
                 if evm == geth:
                     if mode == benchmark_mode:
-                        instrumenter_result = self.run_geth_benchmark(program, sampleSize)
+                        instrumenter_result = self.run_geth_benchmark(program, sample_size)
                     else:
-                        instrumenter_result = self.run_geth(mode, program, sampleSize)
+                        instrumenter_result = self.run_geth(mode, program, sample_size)
                 elif evm == openethereum:
-                    instrumenter_result = self.run_openethereum(mode, program, sampleSize)
+                    instrumenter_result = self.run_openethereum(mode, program, sample_size)
                 elif evm == openethereum_ewasm:
-                    instrumenter_result = self.run_openethereum_wasm(program, sampleSize)
+                    instrumenter_result = self.run_openethereum_wasm(program, sample_size)
                 elif evm == evmone:
-                    instrumenter_result = self.run_evmone(mode, program, sampleSize)
+                    instrumenter_result = self.run_evmone(mode, program, sample_size)
                 elif evm == nethermind:
                     if mode == benchmark_mode:
-                        instrumenter_result = self.run_nethermind_benchmark(program, sampleSize)
+                        instrumenter_result = self.run_nethermind_benchmark(program, sample_size)
                     else:
-                        instrumenter_result = self.run_nethermind(program, sampleSize)
+                        instrumenter_result = self.run_nethermind(program, sample_size)
 
                 if mode == trace_opcodes:
                     instrumenter_result = self.sanitize_tracer_result(instrumenter_result)
@@ -161,22 +161,21 @@ class Measurements(object):
                 csv_chunk = '\n'.join(result_row)
                 print(csv_chunk)
 
-    def run_geth(self, mode, program, sampleSize):
+    def run_geth(self, mode, program, sample_size):
         golang_main = ['./instrumentation_measurement/bin/geth_main']
-        args = ['--mode', mode, '--printCSV', '--printEach=false', '--sampleSize={}'.format(sampleSize)]
+        args = ['--mode', mode, '--printCSV', '--printEach=false', '--sampleSize={}'.format(sample_size)]
         bytecode_arg = ['--bytecode', program.bytecode]
         invocation = golang_main + args + bytecode_arg
         result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
         assert result.returncode == 0
         # strip the final newline
         instrumenter_result = result.stdout.split('\n')[:-1]
-
         return instrumenter_result
 
-    def run_geth_benchmark(self, program, sampleSize):
+    def run_geth_benchmark(self, program, sample_size):
         geth_benchmark = ['./instrumentation_measurement/geth_benchmark/tests/imapp_benchmark/imapp_benchmark']
 
-        args = ['--sampleSize', '{}'.format(sampleSize)]
+        args = ['--sampleSize', '{}'.format(sample_size)]
         bytecode_arg = ['--bytecode', program.bytecode]
         invocation = geth_benchmark + args + bytecode_arg
         result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
@@ -185,10 +184,10 @@ class Measurements(object):
         instrumenter_result = result.stdout.split('\n')[:-1]
         return instrumenter_result
 
-    def run_nethermind(self, program, sampleSize):
+    def run_nethermind(self, program, sample_size):
         geth_benchmark = [
             './instrumentation_measurement/nethermind_benchmark/src/Nethermind/Imapp.Measurement.Runner/bin/Release/net6.0/Imapp.Measurement.Runner']
-        args = ['--bytecode', program.bytecode, '--print-csv', '--sample-size={}'.format(sampleSize)]
+        args = ['--bytecode', program.bytecode, '--print-csv', '--sample-size={}'.format(sample_size)]
         invocation = geth_benchmark + args
         result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
         assert result.returncode == 0
@@ -196,10 +195,10 @@ class Measurements(object):
         instrumenter_result = result.stdout.split('\n')[:-1]
         return instrumenter_result
 
-    def run_nethermind_benchmark(self, program, sampleSize):
+    def run_nethermind_benchmark(self, program, sample_size):
         geth_benchmark = [
             './instrumentation_measurement/nethermind_benchmark/src/Nethermind/Imapp.Benchmark.Runner/bin/Release/net6.0/Imapp.Benchmark.Runner']
-        args = ['--bytecode', program.bytecode, '--print-csv', '--sample-size={}'.format(sampleSize)]
+        args = ['--bytecode', program.bytecode, '--print-csv', '--sample-size={}'.format(sample_size)]
         invocation = geth_benchmark + args
         result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
         assert result.returncode == 0
@@ -207,11 +206,11 @@ class Measurements(object):
         instrumenter_result = result.stdout.split('\n')[:-1]
         return instrumenter_result
 
-    def run_openethereum(self, mode, program, sampleSize):
+    def run_openethereum(self, mode, program, sample_size):
         openethereum_build_path = './instrumentation_measurement/openethereum/target/release/'
         openethereum_main = [openethereum_build_path + 'openethereum-evm']
         args = ['--chain', 'Berlin', '--measure-mode', mode, '--code', program.bytecode, "--repeat",
-                "{}".format(sampleSize)]
+                "{}".format(sample_size)]
         invocation = openethereum_main + args
         result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
         assert result.returncode == 0
@@ -219,12 +218,12 @@ class Measurements(object):
         instrumenter_result = result.stdout.split('\n')[:-4]
         return instrumenter_result
 
-    def run_openethereum_wasm(self, program, sampleSize):
+    def run_openethereum_wasm(self, program, sample_size):
         openethereum_path = './instrumentation_measurement/openethereum'
         openethereum_build_path = os.path.join(openethereum_path, 'target/release/')
         openethereum_main = [openethereum_build_path + 'openethereum-evm']
         chain = os.path.join(openethereum_path, 'ethcore/res/instant_seal.json')
-        args = ['--code', program.bytecode, "--repeat", "{}".format(sampleSize), "--chain", chain, "--gas", "5000"]
+        args = ['--code', program.bytecode, "--repeat", "{}".format(sample_size), "--chain", chain, "--gas", "5000"]
         invocation = openethereum_main + args
         result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
         assert result.returncode == 0
@@ -233,19 +232,18 @@ class Measurements(object):
         instrumenter_result = result.stdout.split('\n')[38:-4]
         return instrumenter_result
 
-    def run_evmone(self, mode, program, sampleSize):
+    def run_evmone(self, mode, program, sample_size):
         evmone_build_path = './instrumentation_measurement/evmone/build/'
         evmone_main = [evmone_build_path + 'bin/evmc', 'run']
 
         # only measure-total is currently supported
         assert mode == "total"
-        args = ['--vm', evmone_build_path + '/lib/libevmone.so,O=0', '--sample-size', '{}'.format(sampleSize)]
+        args = ['--vm', evmone_build_path + '/lib/libevmone.so,O=0', '--sample-size', '{}'.format(sample_size)]
         invocation = evmone_main + args + [program.bytecode]
         result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
         assert result.returncode == 0
         # strip additional output information added by evmone
         instrumenter_result = result.stdout.split('\n')[3:-4]
-
         return instrumenter_result
 
     def csv_row_append_info(self, instrumenter_result, program, sample_id):
