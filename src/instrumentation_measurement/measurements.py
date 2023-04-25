@@ -91,6 +91,7 @@ class Measurements(object):
         openethereum_ewasm = "openethereum_ewasm"
         evmone = "evmone"
         nethermind = "nethermind"
+        ethereumjs = 'ethereumjs'
 
         measure_total = "total"
         measure_all = "all"
@@ -101,14 +102,15 @@ class Measurements(object):
             print("clocksource should be tsc, found something different. See docker_timer.md somewhere in the docs")
             return
 
-        if evm not in {geth, openethereum, evmone, openethereum_ewasm, nethermind}:
-            print("Wrong evm parameter. Allowed are: {}, {}, {}, {}".format(geth, openethereum, evmone,
-                                                                            openethereum_ewasm, nethermind))
+        if evm not in {geth, openethereum, evmone, openethereum_ewasm, nethermind, ethereumjs}:
+            print("Wrong evm parameter. Allowed are: {}, {}, {}, {}, {}".format(geth, openethereum, evmone,
+                                                                                openethereum_ewasm, nethermind,
+                                                                                ethereumjs))
             return
 
         if mode not in {measure_total, measure_all, trace_opcodes, benchmark_mode}:
-            print("Invalid measurement mode. Allowed options: {}, {}, {}".format(measure_total, measure_all,
-                                                                                 trace_opcodes, benchmark_mode))
+            print("Invalid measurement mode. Allowed options: {}, {}, {}, {}".format(measure_total, measure_all,
+                                                                                     trace_opcodes, benchmark_mode))
             return
         elif mode == measure_total:
             header = "program_id,sample_id,run_id,measure_total_time_ns,measure_total_timer_time_ns"
@@ -127,6 +129,10 @@ class Measurements(object):
                 header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,mem_allocs_count,mem_allocs_bytes"
             elif evm == nethermind:
                 header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,std_dev_time_ns,mem_allocs_count,mem_allocs_bytes"
+            elif evm == ethereumjs:
+                header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,std_dev_time_ns"
+            else:
+                header = ''
             print(header)
 
         for program in self._programs:
@@ -148,6 +154,8 @@ class Measurements(object):
                         instrumenter_result = self.run_nethermind_benchmark(program, sample_size)
                     else:
                         instrumenter_result = self.run_nethermind(program, sample_size)
+                elif evm == ethereumjs and mode == benchmark_mode:
+                    instrumenter_result = self.run_ethereumjs_benchmark(program, sample_size)
 
                 if mode == trace_opcodes:
                     instrumenter_result = self.sanitize_tracer_result(instrumenter_result)
@@ -244,6 +252,19 @@ class Measurements(object):
         assert result.returncode == 0
         # strip additional output information added by evmone
         instrumenter_result = result.stdout.split('\n')[3:-4]
+        return instrumenter_result
+
+    def run_ethereumjs_benchmark(self, program, sample_size):
+        ethereumjs_benchmark = [
+            'node',
+            '-max-old-space-size=4000'  # So that garbage collector won't be executed until program eats 4GB of RAM
+            './instrumentation_measurement/ethereumjs-monorepo/packages/evm/benchmarks/benchmarkOpcodes.js']
+        args = [f'--sampleSize={sample_size}', program.bytecode]
+        invocation = ethereumjs_benchmark + args
+        result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
+        assert result.returncode == 0
+        # strip the final newline
+        instrumenter_result = result.stdout.split('\n')[:-1]
         return instrumenter_result
 
     def csv_row_append_info(self, instrumenter_result, program, sample_id):
