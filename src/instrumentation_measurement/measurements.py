@@ -50,6 +50,18 @@ class Measurements(object):
     ```
     """
 
+    def __init__(self):
+        reader = csv.DictReader(sys.stdin, delimiter=',', quotechar='"')
+        self._programs = [self._program_from_csv_row(row) for row in reader]
+
+    def _program_from_csv_row(self, row):
+        program_id = row['program_id']
+        bytecode = self._expand_unreachable_code(row['bytecode'])
+
+        # might be missing
+        measured_op_position = row.get('measured_op_position')
+        return Program(program_id, bytecode, measured_op_position)
+
     def _expand_unreachable_code(self, bytecode):
         if bytecode[-11:] == 'unreachable':
             bytecode = bytecode[:-11]
@@ -60,22 +72,6 @@ class Measurements(object):
             return bytecode
         else:
             return bytecode
-
-    def _program_from_csv_row(self, row):
-        program_id = row['program_id']
-        bytecode = self._expand_unreachable_code(row['bytecode'])
-
-        # might be missing
-        measured_op_position = row.get('measured_op_position')
-        return Program(program_id, bytecode, measured_op_position)
-
-    def _check_clocksource(self):
-        with open(CLOCKSOURCE_PATH) as clocksource:
-            return clocksource.readlines() == ['tsc\n']
-
-    def __init__(self):
-        reader = csv.DictReader(sys.stdin, delimiter=',', quotechar='"')
-        self._programs = [self._program_from_csv_row(row) for row in reader]
 
     def measure(self, sample_size=1, mode="all", evm="geth", n_samples=1):
         """
@@ -160,6 +156,10 @@ class Measurements(object):
 
                 csv_chunk = '\n'.join(result_row)
                 print(csv_chunk)
+
+    def _check_clocksource(self):
+        with open(CLOCKSOURCE_PATH) as clocksource:
+            return clocksource.readlines() == ['tsc\n']
 
     def run_geth(self, mode, program, sample_size):
         golang_main = ['./instrumentation_measurement/bin/geth_main']
@@ -264,7 +264,7 @@ class Measurements(object):
 
             args = None
             match_result = re.search(r'^(DUP|PUSH|SWAP)([1-9][0-9]?)$', opcode)
-            if match_result == None:
+            if match_result is None:
                 # stack top is stack[stack_depth - 1] and stack bottom is stack[0],
                 # so to take some deeper arguments we have to do some mysterious maths
                 arity = specs[opcode]
