@@ -6,6 +6,8 @@
 
     ```curl https://sh.rustup.rs -sSf | sh```
    
+   Restart shell or logout and login so that PATH is updated.
+
 2. Cloning repo
     ```
     cd src/instrumentation_measurement

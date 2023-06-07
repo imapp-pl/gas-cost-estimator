@@ -1,9 +1,11 @@
 import csv
 import fire
+import json
+import os.path
+import re
 import sys
 import subprocess
-import re
-import os.path
+
 
 MAX_OPCODE_ARGS = 7
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -91,6 +93,7 @@ class Measurements(object):
         openethereum_ewasm = "openethereum_ewasm"
         evmone = "evmone"
         nethermind = "nethermind"
+        revm = "revm"
 
         measure_total = "total"
         measure_all = "all"
@@ -101,14 +104,14 @@ class Measurements(object):
             print("clocksource should be tsc, found something different. See docker_timer.md somewhere in the docs")
             return
 
-        if evm not in {geth, openethereum, evmone, openethereum_ewasm, nethermind}:
-            print("Wrong evm parameter. Allowed are: {}, {}, {}, {}".format(geth, openethereum, evmone,
-                                                                            openethereum_ewasm, nethermind))
+        allowed_evms = {geth, openethereum, evmone, openethereum_ewasm, nethermind, revm}
+        if evm not in allowed_evms:
+            print("Wrong evm parameter. Allowed are: {}".format(','.join(allowed_evms)))
             return
 
         if mode not in {measure_total, measure_all, trace_opcodes, benchmark_mode}:
-            print("Invalid measurement mode. Allowed options: {}, {}, {}".format(measure_total, measure_all,
-                                                                                 trace_opcodes, benchmark_mode))
+            print("Invalid measurement mode. Allowed options: {}, {}, {}, {}".format(measure_total, measure_all,
+                                                                                     trace_opcodes, benchmark_mode))
             return
         elif mode == measure_total:
             header = "program_id,sample_id,run_id,measure_total_time_ns,measure_total_timer_time_ns"
@@ -127,6 +130,8 @@ class Measurements(object):
                 header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,mem_allocs_count,mem_allocs_bytes"
             elif evm == nethermind:
                 header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,std_dev_time_ns,mem_allocs_count,mem_allocs_bytes"
+            elif evm == 'revm':
+                header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,std_dev_time_ns"
             print(header)
 
         for program in self._programs:
@@ -148,6 +153,8 @@ class Measurements(object):
                         instrumenter_result = self.run_nethermind_benchmark(program, sample_size)
                     else:
                         instrumenter_result = self.run_nethermind(program, sample_size)
+                elif evm == revm and mode == benchmark_mode:
+                    instrumenter_result = self.run_revm_benchmark(program, sample_size)
 
                 if mode == trace_opcodes:
                     instrumenter_result = self.sanitize_tracer_result(instrumenter_result)
@@ -245,6 +252,44 @@ class Measurements(object):
         # strip additional output information added by evmone
         instrumenter_result = result.stdout.split('\n')[3:-4]
         return instrumenter_result
+
+    def run_revm_benchmark(self, program, sample_size):
+        revm_benchmark = [
+            'cargo',
+            'bench',
+            '--bench=criterion_bytecode',
+        ]
+        args = ['--manifest-path=./instrumentation_measurement/revm/bins/revm-test/Cargo.toml']
+        invocation = revm_benchmark + args
+        results = []
+        for run_id in range(1, sample_size + 1):
+            result = subprocess.run(invocation,
+                                    input=program.bytecode.encode('utf-8'),
+                                    shell=True,
+                                    stdout=subprocess.PIPE)
+            assert result.returncode == 0
+            result_line = self._create_revm_result(run_id)
+            results.append(result_line)
+        result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
+        assert result.returncode == 0
+        return results
+
+    def _create_revm_result(self, run_id: int):
+        base_benchmark_data = json.load(
+            open('./instrumentation_measurement/revm/target/criterion/bytecode-benchmark/new/estimates.json'))
+        stop_benchmark_data = json.load(
+            open('./instrumentation_measurement/revm/target/criterion/bytecode-benchmark-stop/new/estimates.json'))
+
+        columns = [
+            str(run_id),  # run_id
+            '0',  # iterations_count
+            str(int(stop_benchmark_data['slope']['point_estimate'])),  # engine_overhead_time_ns
+            # execution_loop_time_ns
+            str(int(base_benchmark_data['slope']['point_estimate'] - stop_benchmark_data['slope']['point_estimate'])),
+            str(int(base_benchmark_data['slope']['point_estimate'])),  # total_time_ns
+            str(round(base_benchmark_data['std_dev']['point_estimate'], 2)),  # std_dev_time_ns
+        ]
+        return ','.join(columns)
 
     def csv_row_append_info(self, instrumenter_result, program, sample_id):
         # append program_id and sample_id which are not known to the instrumenter tool
