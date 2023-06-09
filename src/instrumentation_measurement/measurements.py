@@ -268,28 +268,30 @@ class Measurements(object):
                                     shell=True,
                                     stdout=subprocess.PIPE)
             assert result.returncode == 0
-            result_line = self._create_revm_result(run_id)
+            result_line = self._create_revm_result_line(run_id)
             results.append(result_line)
-        result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
-        assert result.returncode == 0
+
         return results
 
-    def _create_revm_result(self, run_id: int):
+    def _create_revm_result_line(self, run_id: int):
         base_benchmark_data = json.load(
             open('./instrumentation_measurement/revm/target/criterion/bytecode-benchmark/new/estimates.json'))
+        base_benchmark_samples_data = json.load(
+            open('./instrumentation_measurement/revm/target/criterion/bytecode-benchmark/new/sample.json'))
         stop_benchmark_data = json.load(
             open('./instrumentation_measurement/revm/target/criterion/bytecode-benchmark-stop/new/estimates.json'))
 
+        iterations = int(sum(base_benchmark_samples_data['iters']))
         columns = [
-            str(run_id),  # run_id
-            '0',  # iterations_count
-            str(int(stop_benchmark_data['slope']['point_estimate'])),  # engine_overhead_time_ns
+            run_id,  # run_id
+            iterations,  # iterations_count
+            int(stop_benchmark_data['slope']['point_estimate']),  # engine_overhead_time_ns
             # execution_loop_time_ns
-            str(int(base_benchmark_data['slope']['point_estimate'] - stop_benchmark_data['slope']['point_estimate'])),
-            str(int(base_benchmark_data['slope']['point_estimate'])),  # total_time_ns
-            str(round(base_benchmark_data['std_dev']['point_estimate'], 2)),  # std_dev_time_ns
+            int(base_benchmark_data['slope']['point_estimate'] - stop_benchmark_data['slope']['point_estimate']),
+            int(base_benchmark_data['slope']['point_estimate']),  # total_time_ns
+            round(base_benchmark_data['std_dev']['point_estimate'], 2),  # std_dev_time_ns
         ]
-        return ','.join(columns)
+        return ','.join(str(col) for col in columns)
 
     def csv_row_append_info(self, instrumenter_result, program, sample_id):
         # append program_id and sample_id which are not known to the instrumenter tool
