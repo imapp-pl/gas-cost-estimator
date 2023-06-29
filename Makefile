@@ -1,37 +1,27 @@
-MEASUREMENT_MODE ?= all
+MEASUREMENT_MODE ?= total
 IMAGE_VERSION ?= latest
-# see Dockerfile.geth
-GETH_VERSION_SHA ?= unspecified
+EVM ?= geth
 
-build: build-geth build-evmone build-openethereum
+# measurement params
+VOLUME_DIR ?= /home/ubuntu/pdobacz/local
+PROGRAMS ?=
+SAMPLESIZE ?= 1
+NSAMPLES ?= 1
+MEASUREMENT_SUFFIX ?=
 
-build-geth:
-	docker build -f Dockerfile.geth \
-		--tag  "gas-cost-estimator/geth_${MEASUREMENT_MODE}:${IMAGE_VERSION}" \
+build:
+	docker build -f Dockerfile.${EVM} \
+		--tag  "gas-cost-estimator/${EVM}_${MEASUREMENT_MODE}:${IMAGE_VERSION}" \
 		--build-arg  MEASUREMENT_MODE=${MEASUREMENT_MODE} \
-		--build-arg  GETH_VERSION_SHA=${GETH_VERSION_SHA} \
 		.
 
-build-evmone:
-	docker build -f Dockerfile.evmone \
-	  --tag  "gas-cost-estimator/evmone_${MEASUREMENT_MODE}:${IMAGE_VERSION}" \
-		.
-
-build-openethereum:
-	docker build -f Dockerfile.openethereum \
-		--tag  "gas-cost-estimator/openethereum_${MEASUREMENT_MODE}:${IMAGE_VERSION}" \
-		.
-
-measure-openethereum:
+measure:
 	docker run --rm \
-		--privileged \
+	  --privileged \
 		--security-opt seccomp:unconfined \
-		-it gas-cost-estimator/openethereum_${MEASUREMENT_MODE}:${IMAGE_VERSION} \
-		sh -c "cd src && python3 program_generator/program_generator.py generate --fullCsv | python3 instrumentation_measurement/measurements.py measure --evm openethereum --mode ${MEASUREMENT_MODE} --sampleSize=5 --nSamples=1"
+		-v ${VOLUME_DIR}:/srv/local \
+		-it gas-cost-estimator/${EVM}_${MEASUREMENT_MODE}:${IMAGE_VERSION} \
+		sh -c "cd src && cat /srv/local/${PROGRAMS}.csv | python3 instrumentation_measurement/measurements.py measure --evm ${EVM} --mode ${MEASUREMENT_MODE} --sampleSize=${SAMPLESIZE} --nSamples=${NSAMPLES} > /srv/local/${EVM}_${PROGRAMS}_${SAMPLESIZE}_${NSAMPLES}${MEASUREMENT_SUFFIX}.csv"
 
-measure-geth:
-	docker run --rm \
-		--privileged \
-		--security-opt seccomp:unconfined \
-		-it gas-cost-estimator/geth_${MEASUREMENT_MODE}:${IMAGE_VERSION} \
-		sh -c "cd src && python3 program_generator/program_generator.py generate --fullCsv | python3 instrumentation_measurement/measurements.py measure --mode ${MEASUREMENT_MODE} --sampleSize=5 --nSamples=1"
+trace:
+	cd src; cat ${VOLUME_DIR}/${PROGRAMS}.csv | python3 instrumentation_measurement/measurements.py measure --evm geth --mode trace --sampleSize 1 > ${VOLUME_DIR}/trace_${PROGRAMS}.csv; cd ..
