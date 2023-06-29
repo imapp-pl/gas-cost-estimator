@@ -33,4 +33,4 @@ require (
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 )
 
-replace github.com/ethereum/go-ethereum v1.10.17 => github.com/imapp-pl/go-ethereum v1.9.26-0.20211217103820-7a3604da9f25
+replace github.com/ethereum/go-ethereum v1.10.17 => ./src/instrumentation_measurement/go-ethereum

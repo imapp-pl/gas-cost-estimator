@@ -1,16 +1,13 @@
-[submodule "src/instrumentation_measurement/openethereum"]
-	path = src/instrumentation_measurement/openethereum
-	url = ../openethereum.git
 [submodule "src/instrumentation_measurement/evmone"]
 	path = src/instrumentation_measurement/evmone
-	url = ../evmone.git
+	url = https://github.com/imapp-pl/evmone
 [submodule "src/instrumentation_measurement/geth_benchmark"]
 	path = src/instrumentation_measurement/geth_benchmark
 	url = https://github.com/imapp-pl/go-ethereum
 	branch = imapp_benchmark
 [submodule "src/instrumentation_measurement/nethermind_benchmark"]
 	path = src/instrumentation_measurement/nethermind_benchmark
-	url = https://github.com/imapp-pl/nethermind.git
+	url = https://github.com/imapp-pl/nethermind
 	branch = imapp_benchmark
 [submodule "src/instrumentation_measurement/erigon_benchmark"]
 	path = src/instrumentation_measurement/erigon_benchmark
