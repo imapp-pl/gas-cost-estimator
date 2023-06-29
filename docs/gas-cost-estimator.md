@@ -12,7 +12,7 @@ EVM (Ethereum Virtual Machine) is instrumental to the functioning of the Ethereu
 It is responsible for carrying out the computations associated with transactions on the Ethereum blockchain, namely those related to the functioning of smart contracts.
 Due to Turing's completeness of their instruction sets, and the necessity to guarantee that computations can be securely performed in an open, distributed network, a halting mechanism must be provided.
 
-The halting mechanism is provided the means of gas, which is an Ethereum specific measure of the computational cost incurred by the executing environment (Ethereum node connected to the network).
+The halting mechanism is provided by the means of gas, which is an Ethereum specific measure of the computational cost incurred by the executing environment (Ethereum node connected to the network).
 Gas is priced in Ether (the intrinsic value token of the Ethereum blockchain), and each transaction has an allowance of gas prepaid by the transaction sender.
 Every step of computation (as of writing, this corresponds to every bytecode instruction interpreted by EVM) costs a small amount of gas, and if gas allowance is depleted, the computation is halted and its effects are reverted, except for the consumption of the entire gas allowance.
 The gas consumed by computations performed is paid out as a transaction fee (in Ether) to the miner (validator), including the transaction.
@@ -72,7 +72,7 @@ On the other hand, we might consider extending the method devised here to storag
 One of the factors that contribute to the challenge which gas cost estimation presents is the inherent multitude of environments involved.
 
 By environments in this context we mean:
-- different implementations of the Ethereum node (and EVM/Ewasm in consequence), done in different programming languages and with different mindsets
+- different implementations of the Ethereum node, done in different programming languages and with different mindsets
 - different hardware on which this software is ran; this is exacerbated by the requirement for the software to run reliably on both server-grade hardware and consumer-grade desktops alike
 - different operating systems
 
@@ -143,7 +143,7 @@ They do not impact the program execution (`ADDRESS` takes no arguments), but wou
 
 The layout of the `measure_marginal` generated program is an evolution of this thinking.
 
-**`measure_marginal` program**: For each `OPCODE`, we generate a series of programs for `op_count` equal 1 to `max_op_count`. Each program takes the form of:
+**`measure_marginal` program**: For each `OPCODE`, which removes one value from and pushes one value to the stack, we generate a series of programs for `op_count` equal 1 to `max_op_count`. Each program takes the form of:
 
 | | |
 |-|-|
@@ -162,7 +162,7 @@ In other words, we are estimating the marginal increase of computational cost (t
 
 It turns out, that a simple linear regression is capable of capturing such trend very reliably, given some additional data clean-up measures.
 
-For the implementation of the `measure_marginal` program generator [see here](./../src/program_generator/pg_marginal.py)
+For the implementation of the `measure_marginal` program generator [see here](./../src/program_generator/pg_marginal.py).
 
 #### Additional features of `measure_marginal` programs
 
@@ -212,7 +212,7 @@ The benefits of using `measure_marginal` as the measurement method are the follo
 
 The assessment of the models and discussion about the results is given in the [Results section](#Results).
 
-For the implementation of the `measure_marginal` estimation scripts [see here](./../src/analysis/measure_marginal.Rmd)
+For the implementation of the `measure_marginal` estimation scripts [see here](./../src/analysis/measure_marginal.Rmd).
 
 ### `measure_arguments` method
 
@@ -237,8 +237,9 @@ We chose these functions:
 - `weight(arg) = arg` - for memory OPCODEs: `CALLDATALOAD`, `CALLDATACOPY`, `RETURNDATACOPY`, `MLOAD`, `MSTORE`, `MSTORE8`, `CODECOPY`
 - `weight(arg) = log(arg)` - for OPCODEs where the cost is proportional to the bytesize of the argument (remainder of OPCODEs)
 - `weight(arg) = numerator_arg > denominator_arg` - gauged towards the division OPCODES. This means that the arguments "cost" more if the OPCODE involves a `numerator / denominator` operation, and the `numerator` part is bigger.
+- `weight(arg) = 0` - for other OPCODEs where the cost does not depend on the argument.
 
-For the implementation of the `measure_arguments` program generator [see here](./../src/program_generator/pg_arguments.py)
+For the implementation of the `measure_arguments` program generator [see here](./../src/program_generator/pg_arguments.py).
 
 #### Estimation procedure for `measure_arguments`
 
@@ -264,7 +265,7 @@ It is worth noting, that we neglect to check the impact of the size of the secon
 It would be quite unfeasible to compose programs which actually execute as expected, fit into the framework of our measurement method and explore the dynamics of this argument.
 At the same time, we find it unlikely for this argument to play a role in the cost of execution of this OPCODE.
 
-For the implementation of the `measure_arguments` estimation scripts [see here](./../src/analysis/measure_arguments.Rmd)
+For the implementation of the `measure_arguments` estimation scripts [see here](./../src/analysis/measure_arguments.Rmd).
 
 ### Measurement setup and environments
 
@@ -285,7 +286,7 @@ We will focus on citing and discussing only the results coming from the `cloud` 
 #### Garbage collection
 
 For the Go EVM `geth` we turn garbage collection off using the `GOGC=off` environment variable but we _don't_ run `runtime.GC()` at all.
-See [section [Garbage collection impact](#Garbage-collection-impact)] for the details.
+See the section [Garbage collection impact](#Garbage-collection-impact) for the details.
 
 #### Timer
 
@@ -311,7 +312,7 @@ A regular CPU, Intel Celeron J4005, was used as a reference for computations. Th
 
 Perf collects statistics on the whole process. We do not measure just program execution. So dedicated modification of EVMs is needed. 
 In particular, a program is executed in a loop inside an EVM instance and unnecessary instrumentation is removed.
-Refer to [this](https://github.com/imapp-pl/evmone/tree/cache-test) version of evmone and [this](https://github.com/imapp-pl/gas-cost-estimator/blob/cache-report-2/src/instrumentation_measurement/geth/main_minimal.go) execution of geth.
+Refer to [this](https://github.com/imapp-pl/gas-cost-estimator/blob/cache-report-2/src/instrumentation_measurement/geth/main_minimal.go) execution of geth and  [this](https://github.com/imapp-pl/evmone/tree/cache-test) version of evmone.
 
 The available statistics are:
 
@@ -360,7 +361,9 @@ Further investigation is required to explain such difference.
 Looking at the distributions of relative increases, we can say that they are very similar.
 So even if using perf tool has an impact on measurements, it is proportional and does not modify relative comparison.
 
-<img src="./gas_cost_estimator_doc_assets/evmone_perf_overhead.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_overhead.png" width="425"/> 
+<img src="./gas_cost_estimator_doc_assets/geth_perf_overhead.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/evmone_perf_overhead.png" width="425"/> 
+
+For detailed graphs see [here](https://gascost.local.imapp.pl/perf-overhead-geth.html) and [here](https://gascost.local.imapp.pl/perf-overhead-evmone.html).
 
 For detailed graphs see [here](https://gascost.local.imapp.pl/perf-overhead-evmone.html) and [here](https://gascost.local.imapp.pl/perf-overhead-geth.html).
 
@@ -368,7 +371,7 @@ For detailed graphs see [here](https://gascost.local.imapp.pl/perf-overhead-evmo
 
 In the first step, we use measure marginal approach to verify whether cache usage depends on opcode.
 
-For evmone the total cache effectiveness is between `1e-7` and `3e-7`. 
+For evmone the total cache effectiveness is between `10^-7` and `3*10^-7`. 
 Recall that this denotes the miss ratios. 
 With such low values, computations are executed almost entirely within caches and cache usage profiles are very similar for all opcodes.
 For the full picture L1 to LLC ratio is between `0.0008` and `0.0016`. 
@@ -383,7 +386,9 @@ This means again that L1 cache performance has a huge impact on measurements but
 For completeness, the branch prediction effectiveness varies between `0.008` and `0.014`. 
 And it may be considered almost equal for all opcodes. 
 
-<img src="./gas_cost_estimator_doc_assets/evmone_perf_marginal_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_marginal_total_effectiveness.png" width="425"/> 
+<img src="./gas_cost_estimator_doc_assets/geth_perf_marginal_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/evmone_perf_marginal_total_effectiveness.png" width="425"/> 
+
+For detailed graphs see [here](https://gascost.local.imapp.pl/cache-marginal-geth.html) and [here](https://gascost.local.imapp.pl/cache-marginal-evmone.html).
 
 For detailed graphs see [here](https://gascost.local.imapp.pl/cache-marginal-evmone.html) and [here](https://gascost.local.imapp.pl/cache-marginal-geth.html).
 
@@ -391,13 +396,40 @@ For detailed graphs see [here](https://gascost.local.imapp.pl/cache-marginal-evm
 
 Next, we verify how cache usage profiles change when random programs, closer to real-world contracts, are executed.
 
-For evmone the total cache effectiveness is between `3e-7` and `4.5e-6`.
-For geth this is between `4e-6` and `1.5e-4`. 
+For evmone the total cache effectiveness is between `3*10^-7` and `4.5*10^-6`.
+For geth this is between `4*10^-6` and `1.5*10^-4`. 
 But note that high values are attained for 0-length programs. These are not 0 lengths in fact, but very short.
 For other programs, the ratios significantly drop. 
 So computations are executed almost entirely in caches, also for these programs, regardless of the fact ratios rised compering to marginal programs. 
 
-<img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_validation_total_effectiveness.png" width="425"/> 
+<img src="./gas_cost_estimator_doc_assets/geth_perf_validation_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_total_effectiveness.png" width="425"/> 
+
+As expected, the branch prediction is less effective compared to the marginal programs. 
+The effective ratio varies between `0` and `0.035` for evmone and between `0.013` and `0.025` for geth.
+The longer program, the higher ratio. This is still low comparing to other software.
+
+<img src="./gas_cost_estimator_doc_assets/geth_perf_validation_branch_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_branch_effectiveness.png" width="425"/> 
+
+Let us estimate the impact of the branch misprediction on measurements.
+It is hard to determine exactly the misprediction penalty. 
+For the CPU used for the measurements, we assume it is `15` cycles, [19].
+And note that CPU is `2.589` GHz.
+To calculate the relative share of misprediction penalty in the total measurement, we use the formula
+`(15*branch_misses)/(task_clock*2589000)`. This yields penalty values between `0` and `0.1` for evmone and between `0.025` and `0.045` for geth.
+
+For detailed graphs see [here](https://gascost.local.imapp.pl/cache-validation-geth.html) and [here](https://gascost.local.imapp.pl/cache-validation-evmone.html).
+
+#### Measurement with dominant opcode
+
+The maximal `10%` of penalty is not that much. But still, we want to know whether opcodes have an equal contribution to this penalty.
+For this we use programs where a given opcode dominates.
+
+For evmone, the penalty varies between `0.04` and `0.06`, with the exception to EXP, where the penalty is `0.09`. 
+For geth it is more uniform, the penalty varies around `0.015` and for EXP it is around `0.016`.
+So the only significant outlier is EXP at evmone. But still this is `3-4%` of penalty more than other opcodes at evmone
+which does not have significant impact on measurements.
+
+For detailed graphs see [here](https://gascost.local.imapp.pl/cache-dominant-geth.html) and [here](https://gascost.local.imapp.pl/cache-dominant-evmone.html).
 
 As expected, the branch prediction is less effective compared to the marginal programs. 
 The effective ratio varies between `0` and `0.035` for evmone and between `0.013` and `0.025` for geth.
@@ -461,8 +493,10 @@ Not only each instruction bears a cost, but also preparation for bytecode execut
 These certain 'preparation' steps are executed before every bytecode. They are performed no matter how long or complicated the bytecode is. This tend to be constant, so the longer program takes, the more negligible it becomes. Ideally the cost of overhead should be estimated and expressed in the same units as opcodes cost. 
 
 #### Overhead cost estimation method
-To estimate the overhead, we propose to calculate overall execution time of programs made of `PUSHx`, `DIV` and `POP` sequences. We gradually increase the number of sequences and measure execution time. Knowing how the program cost increases we can calculate the base (overhead) cost.
-In the second run, we measure the same programs, but this time use `STOP` opcode prefix at the beginning of each bytecode. This will terminate the program on the first instruction, giving us the cost of overhead + single instruction. 
+To estimate the overhead, we propose to calculate overall execution time of programs made of `PUSHx`, `DIV` and `POP` sequences. The single sequence is made in such way that id does not leave any leftovers on the stack. The `DIV` opcode was selected for its relatively high complexity, therefore the same effect can be demonstrated with fewer iterations, which also is more real-life scenario. Additionally identical parameters were used for all the sequences, thus eliminating any random variability. 
+
+In the first step, we gradually increase the number of sequences and measure execution times. Knowing how the program cost increases we can calculate the base (overhead) cost.
+In the second step, we measure the same programs, but this time use `STOP` opcode prefix at the beginning of each bytecode. This will terminate the program on the first instruction, giving us the cost of overhead + single instruction. 
 Finally, we will also execute random programs with and without `STOP` prefix.
 
 #### Geth code analysis
@@ -542,7 +576,7 @@ It is safe to assume that in any real-world scenario, every EVM bytecode will ex
 Lastly, `PUSHx`, `DUPx`, `SWAPx` groups are given the same probability as regular OPCODEs, and when selected, the precise variant is chosen randomly in the next step.
 This is to overcome the high frequency of these `PUSHx`, `DUPx`, `SWAPx` OPCODEs, should they have been treated separately and on par with other OPCODEs.
 
-For the implementation of the `measure_validation` program generator [see here](./../src/program_generator/pg_validation.py)
+For the implementation of the `measure_validation` program generator [see here](./../src/program_generator/pg_validation.py).
 
 #### Validation procedure
 
@@ -574,7 +608,7 @@ For the implementation of the validation scripts [see here](./../src/analysis/va
 In order to compute this figure, we combine results from the `measure_marginal` and `measure_arguments` stages in the following fashion:
 
 The constant cost of executing an OPCODE is its respective slope coefficient `a` taken from the `measure_marginal` model.
-The cost related to the size of arguments is taken from the `measure_arguments` model.
+The cost related to the arguments is taken from the `measure_arguments` model.
 
 The reason for this is that `measure_arguments` performs much worse in estimating the marginal _constant_ cost of the OPCODE.
 It includes interaction terms of the form `a * op_count * weight(arg)`, so the `op_count` coefficient `d` (from `d * op_count` term) is the estimation of marginal increase of `measure_total_time` for each unit increase of `op_count`, but _assuming `weight(arg) = 0`_.
@@ -657,14 +691,14 @@ For the results of the notebook containing all plots and models for all OPCODEs 
 
 A subset of OPCODEs exhibits a bi-modal distribution of measurements:
 
-**Figure 4: Bimodal trend of `JUMP` `measure_marginal` results for `evmone`, along with the bimodal distribution and the corrected `measure_marginal` trend**
+**Figure 4: Bimodal trend of `PUSH32` `measure_marginal` results for `evmone`, along with the bimodal distribution and the corrected `measure_marginal` trend**
 
 <img src="./gas_cost_estimator_doc_assets/bimodal_PUSH32_evmone.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/bimodal_PUSH32_evmone_corrected.png" width="425"/> 
 
 In the first plot we can still visually pick up the constant trend, irrespective of whether we're looking at the "top-mode" or "bottom-mode" measurements.
 We also see the two strong batches of measurements clustered around their respective modes.
 
-In the second plot we see the results of bringing the "top-mode" observations down to the level of the "bottom-mode" observations.
+In the third plot we see the results of bringing the "top-mode" observations down to the level of the "bottom-mode" observations.
 
 ### `measure_arguments` dynamics and results
 
@@ -913,13 +947,13 @@ We observe, that the final result (the alternative gas cost schedule) doesn't di
 
 We can summarize the findings about the alternative gas cost schedule:
 1. The following OPCODEs should have their gas cost left intact:
-  - `CALLDATACOPY`, `CODECOPY` (but not their cost of the arguments)
   - `SDIV`, `MOD`, `SMOD` (assuming their "non-trivial" version, i.e. `x >= y`; `DIV` could be also put here, although it diverges a bit more from the current schedule)
 2. The following OPCODEs can have their gas cost updated rather consistently, respecting all the EVM implementations (relative difference between `geth` and `evmone` is less than 15%):
   - `MUL`: 1.2
   - `SAR`: 1.1
   - `ADDMOD`: 6 (assuming "non-trivial" version)
   - `MULMOD`: 7.5 (assuming "non-trivial" version)
+  - `CALLDATACOPY`, `CODECOPY` (constant cost): 2
 3. The following OPCODEs can have their gas cost discounted whenever the calculation is trivial (`x < y`):
   - `DIV`, `SDIV`, `MOD`, `SMOD`, `ADDMOD`, `MULMOD`
    However, the magnitude of the discount is different across different EVMs.
@@ -986,9 +1020,9 @@ CALLER | 2 | 1,2 | 2,0 | 0,014 | 0,022 |
 CALLVALUE | 2 | 0,8 | 1,2 | 0,010 | 0,020 | 
 CALLDATALOAD | 3 | 0,7 | 1,5 | 0,360 | 0,069 | 
 CALLDATASIZE | 2 | 0,6 | 0,4 | 0,010 | 0,023 | 
-CALLDATACOPY | 2 | 2,2 | 2,2 | 0,330 | 0,084 | 
+CALLDATACOPY | 3 | 2,2 | 2,2 | 0,330 | 0,084 | 
 CODESIZE | 2 | 0,6 | 0,4 | 0,007 | 0,023 | 
-CODECOPY | 2 | 2,1 | 2,2 | 0,237 | 0,238 | 
+CODECOPY | 3 | 2,1 | 2,2 | 0,237 | 0,238 | 
 GASPRICE | 2 | 0,8 | 2,0 | 0,007 | 0,023 | 
 RETURNDATASIZE | 2 | 0,6 | 0,4 | 0,011 | 0,022 | 
 RETURNDATACOPY | 3 | 2,7 | 2,0 | 0,481 | 0,169 | 
