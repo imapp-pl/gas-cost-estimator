@@ -2,197 +2,237 @@
 title: "R Notebook: exploration of validation of measurements - with varying arguments; for Gas Cost Estimator"
 output: html_document
 ---
+In this script we conduct the validation procedure of the obtained estimates.
 
-```{r include=FALSE, fig.width=20}
-library(sqldf)
-library(nlme)
-
-# prevent scientific notation
-options(scipen = 100)
+```{r, setup, include=FALSE}
+# NOTE: change this to your respective path
+knitr::opts_knit$set(root.dir = '~/sources/imapp/gas-cost-estimator/src')
+source('common.R')
 ```
 
-### Data preparations
+### Functions
 
 ```{r}
-explained_variable = 'avg_measure_total_time_ns'
-all_envs = c('geth', 'evmone', 'openethereum')
-```
+# Produces some initial overview plots of all the programs costs
+overview_plots <- function(df, selection_col, selection_val) {
+  subset = df[which(df[, selection_col] == selection_val), ]
+  boxplot(measure_total_time_ns ~ program_id, data=subset, main=selection_val)
+  boxplot(measure_total_time_ns ~ run_id, data=subset, las=2, main=selection_val)
+}
 
-```{r}
-plot_validation <- function(df, yvar, xvar, label_n_zero_args, set_asp) {
-  if (missing(label_n_zero_args)) {
-    label_n_zero_args = FALSE
+# Selects a subset of data and plots the validation model results.
+# `set_asp=TRUE` will fix the aspect of the plot to 1:1, but it didn't prove useful
+compare_plots <- function(df, selection_col, selection_val, estimate_var, labels, colors, set_asp, log) {
+  if (missing(labels)) {
+    labels = 'program_id'
+  }
+  if (missing(colors)) {
+    colors = 'has_exp'
   }
   if (missing(set_asp) || set_asp == FALSE) {
     asp=NULL
   } else {
     asp = 1
   }
-  scatter.smooth(df[,xvar], df[,yvar], col=df$has_exp, asp=asp)
-  text(df[,yvar] ~ df[,xvar], data=df, labels=program_id, cex=0.6, pos=4, font=2)
-  if (label_n_zero_args) {
-    text(df[,yvar] ~ df[,xvar], data=df, labels=n_zero_args, cex=0.6, pos=1, font=2)
+  if (missing(log)) {
+    log = ''
   }
+  subset = df[which(df[, selection_col] == selection_val), ]
+  formula = as.formula(paste0(explained_variable, " ~ ", estimate_var))
+  plot(formula, data=df, col=df[, colors], asp=asp, log=log)
+  abline(lm(formula, data=df), asp=asp, untf=TRUE)
+  text(formula, data=df, labels=df[, labels], cex=0.6, pos=4, font=2)
+  title(main=paste(selection_val, 'estimate by', estimate_var))
 }
-```
 
-```{r}
+# Fits the validation model
 lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
   if (! missing(selection_col) & ! missing(selection_val)) {
     subset = df[which(df[, selection_col] == selection_val), ]
   } else {
     subset = df
   }
-  lm(subset[, yvar] ~ subset[,xvar], data=subset)
+  formula = as.formula(paste0(yvar, ' ~ ', xvar))
+  model = lm(formula, data=subset)
+  print(summary(model))
+  return(model)
 }
 ```
 
+### Data preparations
+
 ```{r}
-setwd("~/sources/imapp/gas-cost-estimator/src")
-
-estimated_cost = read.csv("../../local/argument_estimated_cost.csv")
-# from measure_marginal.Rmd, not currently used except experimentation with mixing (see below)
-marginal = read.csv("../../local/marginal_estimated_cost.csv")
-
-# TODO: PUSHes aren't estimated and are prevalent in the validation programs. Rectify this.
+explained_variable = 'avg_measure_total_time_ns'
+suffix = ""
+# suffix = "_lenovo"
+all_envs = c('geth', 'evmone')
+div_opcodes = c('DIV', 'MOD', 'SDIV', 'SMOD')
 ```
 
-#### Mix marginal and argument measurements?
+```{r}
+estimated_cost = read.csv(paste0("../../local/argument_estimated_cost", suffix, ".csv"))
+# those are only the constant gas costs, we'll calculate arg portion of the cost later
+current_gas_cost = read.csv("program_generator/data/current_gas_cost.csv")
+marginal = read.csv(paste0("../../local/marginal_estimated_cost", suffix, ".csv"))
+```
+
+#### Mix marginal and argument measurements
 
 We originally used only the results coming from the "arguments" measurements. This means that the programs used featured running the OPCODEs with varying arguments (spanning the entire space of uint256).
-For the constant cost of an OPCODE, we'd take the `op_count` variable estimation.
-This turned out to give very coarse estimate of the constant cost (clustered estimations for evmone, grossly overestimated constant cost of MOD and friends).
+For the constant cost of an OPCODE, we'd take the `op_count` variable coefficient.
+This turned out to give very coarse estimate of the constant cost (clustered estimations for `evmone`, grossly overestimated constant cost of MOD and friends).
 
-We next tried to "mix" the two results. Take the constant cost estimated via "measure marginal" (simple, constant arguments, varying length of a series of OPCODEs) and take the estimation of the argument impact from the "measure argument" approach.
+Since the `op_count` variable coefficient from a `measure_arguments` model is an estimate of the marginal cost of OPCODE assuming the arguments being zero, we conclude that `measure_arguments` performs poorly in estimating the constant cost.
 
-The drawbacks of the mixed approach are:
-  - might be OPCODE-unfair
-  - give slightly less healthy results (with the only-"arguments", the slope coefficients are closer to 1)
-  - is more complicated
-  - after the fixes to the "arguments" measurement routine, as well as switching to the `c100_ops300_clean` validation set (which doesn't limit args to `PUSH1`-size), the only-"arguments" method doesn't give bad results anymore
-  
-Therefore, in the end, we stick with only-"arguments" measurements, and leave "marginal" measurements for cross validation only.
+Because of this, we take the constant cost of the OPCODE from `measure_marginal`.
 
 ```{r}
 order1 = order(estimated_cost$opcode, estimated_cost$env)
 order2 = order(marginal$op, marginal$env)
 
-# commented out - we **don't** mix
-# estimated_cost[order1, 'estimate_marginal_ns'] = marginal[order2, 'estimate_marginal_ns']
+estimated_cost[order1, 'estimate_marginal_ns'] = marginal[order2, 'estimate_marginal_ns']
+estimated_cost[order1, 'estimate_marginal_ns_stderr'] = marginal[order2, 'estimate_marginal_ns_stderr']
 
 head(estimated_cost)
 head(marginal)
 ```
-
-See `individual_vs_total_validation.Rmd` for invocations to generate/trace/measure programs.
-
-We've extended the program length to 30 OPCODEs to accommodate more `PUSH`es and `POP`s.
-
 ```{r fig.width=20}
-setwd("~/sources/imapp/gas-cost-estimator/src")
+program_set_codename = "pg_validation_full5_c500_randOps1500"
+measurement_codename = paste0("200_8", suffix)
 
-# we have tried `c900_ops300_clean` too, but it is a bit overkill. No surprises there.
-# program_set_codename = "arythmetic_c100_ops300_clean"
-# measurement_codename = "200_8"
+programs = read.csv(paste("../../local/", program_set_codename, ".csv", sep=""))
 
-# we randomize the number of instructions in the random programs to capture program length impact on OPCODE performance
-# program_set_codename = "arythmetic_c100_randOps500_clean"
-# measurement_codename = "200_8"
-
-# this dataset (tiny programs) has a radically highler slope coefficient and lower Intercept
-# this prompt us to vary the opsLimit for the validation program generation
-# program_set_codename = "arythmetic_c100_ops10_clean"
-# measurement_codename = "200_8"
-
-# this is the data set without varying argument size. 
-# program_set_codename = "arythmetic_c100_ops30_clean_smallpush"
-# measurement_codename = "50_1"
-
-program_set_codename = "full1_c400_randOps1000_clean"
-measurement_codename = "200_8"
-
-traces = read.csv(paste("../../local/trace_pg_validation_", program_set_codename, ".csv", sep=""))
+traces = read.csv(paste("../../local/trace_", program_set_codename, ".csv", sep=""))
 head(traces)
-total_measurements_geth = read.csv(paste("../../local/geth_pg_validation_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
+total_measurements_geth = read.csv(paste("../../local/geth_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
 head(total_measurements_geth)
-total_measurements_evmone = read.csv(paste("../../local/evmone_pg_validation_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
+total_measurements_evmone = read.csv(paste("../../local/evmone_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
 head(total_measurements_evmone)
-# TODO: at this point, for openethereum we are getting much better (acceptable) results for the sample size 16, nsamples 400, see Discussion section below
-total_measurements_openethereum = read.csv(paste("../../local/openethereum_pg_validation_", program_set_codename, "_", "16_400", ".csv", sep=""))
-head(total_measurements_openethereum)
 
 total_measurements_geth$env = 'geth'
 total_measurements_evmone$env = 'evmone'
-total_measurements_openethereum$env = 'openethereum'
-measurements = rbind(total_measurements_geth, total_measurements_evmone, total_measurements_openethereum)
+measurements = rbind(total_measurements_geth, total_measurements_evmone)
 head(measurements)
 ```
 
 ### Remove outliers
 
-```{r}
-remove_outliers <- function(df, col) {
-  boxplot_result = boxplot(df[, col] ~ df[, 'program_id'] + df[, 'env'], plot=FALSE)
-  outliers = boxplot_result$out
-  names = boxplot_result$names[boxplot_result$group]
-  all_row_identifiers = paste(df[, col], df[, 'program_id'], df[, 'env'], sep='.')
-  outlier_row_identifiers = paste(outliers, names, sep='.')
-  no_outliers = df[-which(all_row_identifiers %in% outlier_row_identifiers), ]
-  return(no_outliers)
-}
-
+```{r fig.width=15}
 removed_outliers = TRUE
 
 if (removed_outliers) {
-  # before
-  par(mfrow=c(1,3))
-  boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'geth'), ], las=2, outline=TRUE, log='y')
-  boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'evmone'), ], las=2, outline=TRUE, log='y')
-  boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'openethereum'), ], las=2, outline=TRUE, log='y')
-
-  measurements = remove_outliers(measurements, 'measure_total_time_ns')
-  
-  # after
-  par(mfrow=c(1,3))
-  boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'geth'), ], las=2, outline=TRUE, log='y')
-  boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'evmone'), ], las=2, outline=TRUE, log='y')
-  boxplot(measure_total_time_ns ~ program_id, data=measurements[which(measurements$env == 'openethereum'), ], las=2, outline=TRUE, log='y')
+  measurements = remove_compare_outliers(measurements, 'measure_total_time_ns', all_envs, for_validation=TRUE)
 }
 ```
+
+```{r fig.width=15}
+par(mfrow=c(2,2))
+overview_plots(measurements, 'env', 'geth')
+overview_plots(measurements, 'env', 'evmone')
+```
+
+### Estimate the program cost
+
+Here we use the traced arguments to calculate the cost of each program, as estimated by our model.
 
 ```{r}
 estimated_cost$arg0_ns[which(is.na(estimated_cost$arg0_ns))] = 0
 estimated_cost$arg1_ns[which(is.na(estimated_cost$arg1_ns))] = 0
 estimated_cost$arg2_ns[which(is.na(estimated_cost$arg2_ns))] = 0
+estimated_cost$expensive_ns[which(is.na(estimated_cost$expensive_ns))] = 0
+
+arg0_linear_opcodes = c('CALLDATALOAD', 'CALLDATACOPY', 'RETURNDATACOPY', 'MLOAD', 'MSTORE', 'MSTORE8', 'CODECOPY')
+arg1_linear_opcodes = c('CALLDATACOPY', 'RETURNDATACOPY', 'CODECOPY')
+arg2_linear_opcodes = c('CALLDATACOPY', 'RETURNDATACOPY', 'CODECOPY')
+
+# linear (memory) args are originally captured and estimated in bytes, convert to 32-byte words for 
+# compatibility with the current gas cost schedule
+adjust_to_words <- function(df_traces, df_cost, column, column_cost, opcodes) {
+  # first the value of the argument in traces
+  df_traces[which(df_traces$op %in% opcodes), column] = df_traces[which(df_traces$op %in% opcodes), column] / 32
+  # second the estimate in cost data frame
+  df_cost[which(df_cost$opcode %in% opcodes), column_cost] = df_cost[which(df_cost$opcode %in% opcodes), column_cost] * 32
+  return(list(df_traces, df_cost))
+}
+
+c(traces, estimated_cost) %<-% adjust_to_words(traces, estimated_cost, 'arg_0', 'arg0_ns', arg0_linear_opcodes)
+c(traces, estimated_cost) %<-% adjust_to_words(traces, estimated_cost, 'arg_1', 'arg1_ns', arg1_linear_opcodes)
+c(traces, estimated_cost) %<-% adjust_to_words(traces, estimated_cost, 'arg_2', 'arg2_ns', arg2_linear_opcodes)
 
 estimated_traces = sqldf("SELECT
                             program_id, sample_id, instruction_id, op,
                             arg_0 as arg0, arg_1 as arg1, arg_2 as arg2,
                             env,
-                            arg0_ns, arg1_ns, arg2_ns, estimate_marginal_ns
+                            arg0_ns, arg1_ns, arg2_ns, estimate_marginal_ns,
+                            expensive_ns,
+                            constant_current_gas
                           FROM traces
                           INNER JOIN estimated_cost ON
-                            traces.op == estimated_cost.opcode")
+                            traces.op == estimated_cost.opcode
+                          INNER JOIN current_gas_cost ON
+                            traces.op == current_gas_cost.opcode")
 
-# TODO: very crude, how can this be made more robust?
-
+# wherever the argument did not apply we ended up with NA, we need 0 to calculate
+# overall cost of the program
 estimated_traces$arg0[which(is.na(estimated_traces$arg0))] = 0
 estimated_traces$arg1[which(is.na(estimated_traces$arg1))] = 0
 estimated_traces$arg2[which(is.na(estimated_traces$arg2))] = 0
 
+estimated_traces$expensive = NA
+estimated_traces[which(estimated_traces$op %in% div_opcodes), ]$expensive =
+  estimated_traces[which(estimated_traces$op %in% div_opcodes), ]$arg0 >
+  estimated_traces[which(estimated_traces$op %in% div_opcodes), ]$arg1
+# remember that argX is the byte-size of the argument in these estimated_traces
+estimated_traces[which(estimated_traces$op == 'ADDMOD'), ]$expensive =
+  8**estimated_traces[which(estimated_traces$op == 'ADDMOD'), ]$arg0 +
+  8**estimated_traces[which(estimated_traces$op == 'ADDMOD'), ]$arg1 > 
+  8**estimated_traces[which(estimated_traces$op == 'ADDMOD'), ]$arg2
+estimated_traces[which(estimated_traces$op == 'MULMOD'), ]$expensive =
+  estimated_traces[which(estimated_traces$op == 'MULMOD'), ]$arg0 +
+  estimated_traces[which(estimated_traces$op == 'MULMOD'), ]$arg1 >
+  estimated_traces[which(estimated_traces$op == 'MULMOD'), ]$arg2
+estimated_traces$expensive[which(is.na(estimated_traces$expensive))] = 0
+
+arg0_estimated_cost_log = estimated_traces$arg0_ns * log(estimated_traces$arg0 + 1, 256) * !(estimated_traces$op %in% arg0_linear_opcodes)
+arg1_estimated_cost_log = estimated_traces$arg1_ns * log(estimated_traces$arg1 + 1, 256) * !(estimated_traces$op %in% arg1_linear_opcodes)
+arg2_estimated_cost_log = estimated_traces$arg2_ns * log(estimated_traces$arg2 + 1, 256) * !(estimated_traces$op %in% arg2_linear_opcodes)
+arg0_estimated_cost_lin = estimated_traces$arg0_ns * estimated_traces$arg0 * (estimated_traces$op %in% arg0_linear_opcodes)
+arg1_estimated_cost_lin = estimated_traces$arg1_ns * estimated_traces$arg1 * (estimated_traces$op %in% arg1_linear_opcodes)
+arg2_estimated_cost_lin = estimated_traces$arg2_ns * estimated_traces$arg2 * (estimated_traces$op %in% arg2_linear_opcodes)
+arg0_estimated_cost = arg0_estimated_cost_log + arg0_estimated_cost_lin
+arg1_estimated_cost = arg1_estimated_cost_log + arg1_estimated_cost_lin
+arg2_estimated_cost = arg2_estimated_cost_log + arg2_estimated_cost_lin
+
+expensive_estimated_cost = estimated_traces$expensive_ns * estimated_traces$expensive
+
 estimated_traces$cost_ns = estimated_traces$estimate_marginal_ns + 
-                           estimated_traces$arg0_ns * log(estimated_traces$arg0 + 1, 256) +
-                           estimated_traces$arg1_ns * log(estimated_traces$arg1 + 1, 256) +
-                           estimated_traces$arg2_ns * log(estimated_traces$arg2 + 1, 256)
+                           arg0_estimated_cost +
+                           arg1_estimated_cost +
+                           arg2_estimated_cost +
+                           expensive_estimated_cost
+```
+
+Here we do the same, only using the current gas cost schedule.
+
+```{r}
+arg1_current_gas = (estimated_traces$arg1 != 0) * 50 * (log(estimated_traces$arg1, 256) + 1) * (estimated_traces$op == 'EXP')
+arg2_current_gas = 3 * ceiling(estimated_traces$arg2 / 32) * (estimated_traces$op %in% arg2_linear_opcodes)
+estimated_traces$current_gas = estimated_traces$constant_current_gas +
+                               arg1_current_gas +
+                               arg2_current_gas
 ```
 
 ```{r}
 estimated_programs = sqldf("SELECT
-                              program_id,
+                              estimated_traces.program_id,
                               sum(cost_ns) as cost_ns,
-                              env
+                              sum(current_gas) as current_gas,
+                              env,
+                              dominant
                            FROM estimated_traces
-                           GROUP BY program_id, env")
+                           INNER JOIN programs ON
+                                 programs.program_id == estimated_traces.program_id
+                           GROUP BY estimated_traces.program_id, env, dominant")
 
 aggregate_measurements = sqldf("SELECT
                                   program_id,
@@ -204,13 +244,14 @@ aggregate_measurements = sqldf("SELECT
 
 # ORDER BY is needed here, so that the programs are ordered by program_id numerically
 # this is a hacky way of ensuring we can merge it with other program data like fingerprints
-# TODO: make this more robust
 validation = sqldf("SELECT
                       estimated_programs.program_id,
                       avg_measure_total_time_ns,
                       min_measure_total_time_ns,
                       cost_ns,
-                      estimated_programs.env
+                      current_gas,
+                      estimated_programs.env,
+                      dominant
                     FROM estimated_programs
                     INNER JOIN aggregate_measurements ON 
                           aggregate_measurements.program_id == estimated_programs.program_id
@@ -224,153 +265,137 @@ We need an additional simple (plottable) "fingerprint" of the OPCODEs included i
 
 ```{r}
 fingerprint <- function(x) {
-  paste(x[which(!(x$op %in% c('PUSH1', 'PUSH2', 'PUSH3', 'PUSH4', 'PUSH5', 'PUSH6', 'PUSH7', 'PUSH8', 'PUSH9', 'PUSH10', 'PUSH11', 'PUSH12', 'PUSH13', 'PUSH14', 'PUSH15', 'PUSH16', 'PUSH17', 'PUSH18', 'PUSH19', 'PUSH20', 'PUSH21', 'PUSH22', 'PUSH23', 'PUSH24', 'PUSH25', 'PUSH26', 'PUSH27', 'PUSH28', 'PUSH29', 'PUSH30', 'PUSH31', 'PUSH32', 'STOP', 'POP'))),'op'], collapse=' ')
+  excluded = x$op %in% c('PUSH4', 'PUSH1', 'MSTORE8', 'STOP', 'POP', 'JUMP', 'JUMPDEST')
+  opcodes = unique(x[which(!excluded),'op'])
+  paste(opcodes, collapse=' ')
+}
+fingerprint_no_push <- function(x) {
+  excluded = x$op %in% c('PUSH1', 'PUSH2', 'PUSH3', 'PUSH4', 'PUSH5', 'PUSH6', 'PUSH7', 'PUSH8', 'PUSH9', 'PUSH10', 'PUSH11', 'PUSH12', 'PUSH13', 'PUSH14', 'PUSH15', 'PUSH16', 'PUSH17', 'PUSH18', 'PUSH19', 'PUSH20', 'PUSH21', 'PUSH22', 'PUSH23', 'PUSH24', 'PUSH25', 'PUSH26', 'PUSH27', 'PUSH28', 'PUSH29', 'PUSH30', 'PUSH31', 'PUSH32', 'MSTORE8', 'STOP', 'POP', 'JUMP', 'JUMPDEST')
+  opcodes = unique(x[which(!excluded),'op'])
+  paste(opcodes, collapse=' ')
 }
 has_exp <- function(x) {
   if ('EXP' %in% x$op) 'red' else 'blue'
 }
+has_jump <- function(x) {
+  if ('JUMP' %in% x$op | 'JUMPI' %in% x$op) 'red' else 'blue'
+}
 count_zero_args <- function(x) {
   sum(!is.na(x$arg_0) & x$arg_0 == 0 | !is.na(x$arg_1) & x$arg_1 == 0 | !is.na(x$arg_2) & x$arg_2 == 0)
 }
+program_length <- function(x) {
+  max(x$instruction_id)
+}
 validation$fingerprint = gapply(traces, c('op', 'program_id'), FUN=function(x) fingerprint(x), groups=traces$program_id)
+validation$fingerprint_no_push = gapply(traces, c('op', 'program_id'), FUN=function(x) fingerprint_no_push(x), groups=traces$program_id)
 validation$has_exp = gapply(traces, c('op'), FUN=function(x) has_exp(x), groups=traces$program_id)
+validation$has_jump = gapply(traces, c('op'), FUN=function(x) has_jump(x), groups=traces$program_id)
 validation$n_zero_args = gapply(traces, c('op', 'program_id', 'arg_0', 'arg_1', 'arg_2'), FUN=function(x) count_zero_args(x), groups=traces$program_id)
+validation$program_length = gapply(traces, c('program_id', 'instruction_id'), FUN=function(x) program_length(x), groups=traces$program_id)
 ```
 
-```{r fig.width=15}
-# we've removed outliers so picking the right ylim / OUTLINE no longer required
-par(mfrow=c(3,2))
-overview_plots <- function(df, selection_col, selection_val) {
-  subset = df[which(df[, selection_col] == selection_val), ]
-  boxplot(measure_total_time_ns ~ program_id, data=subset, main=selection_val)
-  boxplot(measure_total_time_ns ~ run_id, data=subset, las=2, main=selection_val)
-}
-overview_plots(measurements, 'env', 'geth')
-overview_plots(measurements, 'env', 'evmone')
-overview_plots(measurements, 'env', 'openethereum')
+We divide the validation data into classes with respect to whether we are dealing with an `EXP`-dominated program:
+
+```{r}
+validation_no_exp = validation[which(validation$dominant != 'EXP'), ]
 ```
 
 ### Check estimation using trivial variables
 
 Based on the plots alone, it does not appear like our estimation only relies on trivial variables.
 
-```{r}
-program_length <- function(x) {
-  max(x$instruction_id)
-}
-# the "trivial" variables to check if we are not doing trivial estimation
-validation$program_length = gapply(traces, c('program_id', 'instruction_id'), FUN=function(x) program_length(x), groups=traces$program_id)
-```
-
-We divide the validation data into classes with respect to the length of the program:
-
-```{r}
-validation_long = validation[which(validation$program_length > 400), ]
-validation_short = validation[which(validation$program_length <= 100), ]
-```
-
-```{r fig.width=15}
-par(mfrow=c(1,3))
-trivial_variable_plots <- function(df, selection_col, selection_val) {
-  subset = df[which(df[, selection_col] == selection_val), ]
-  plot_validation(subset, explained_variable, 'program_length')
-  title(main=paste(selection_val, 'program_length'))
-}
-trivial_variable_plots(validation, 'env', 'geth')
-trivial_variable_plots(validation, 'env', 'evmone')
-trivial_variable_plots(validation, 'env', 'openethereum')
-```
 Trivial variable plots are interesting, after we have introduced varying program length. `openethereum` in particular has a good correlation there, which is caused by the large, constant cost of running an instruction (~250ns, regardless of OPCODE).
 
+We add the 'no EXP' version to make sure that the improvement of the estimated gas model over program length model isn't only because of the extreme EXP case.
+
 ```{r}
-program_length_model_geth = lm_validation(validation, explained_variable, 'program_length', selection_col='env', selection_val='geth')
-program_length_model_evmone = lm_validation(validation, explained_variable, 'program_length', selection_col='env', selection_val='evmone')
-program_length_model_openethereum = lm_validation(validation, explained_variable, 'program_length', selection_col='env', selection_val='openethereum')
-print('geth all - only progam length')
-summary(program_length_model_geth)
-print('evmone all - only progam length')
-summary(program_length_model_evmone)
-print('openethereum all - only progam length')
-summary(program_length_model_openethereum)
+print('geth all - only program length')
+lm_validation(validation, explained_variable, 'program_length', selection_col='env', selection_val='geth')
+print('evmone all - only program length')
+lm_validation(validation, explained_variable, 'program_length', selection_col='env', selection_val='evmone')
+print('geth all - only program length - no EXP')
+lm_validation(validation_no_exp, explained_variable, 'program_length', selection_col='env', selection_val='geth')
+print('evmone all - only program length  - no EXP')
+lm_validation(validation_no_exp, explained_variable, 'program_length', selection_col='env', selection_val='evmone')
 ```
 
 Nevertheless, neither of the "trivial" models is comparable with the final validation model including the estimated `cost_ns`. see below.
 
-### Final validation model
-
-We explore the models in two classes of program lengths. We keep the model for the long programs.
+### Current gas cost models
 
 ```{r}
-compare_plots <- function(df, selection_col, selection_val, estimate_var) {
-  subset = df[which(df[, selection_col] == selection_val), ]
-  plot_validation(subset, explained_variable, estimate_var, set_asp=TRUE)
-  title(main=paste(selection_val, ' estimate'))
-}
-
-model_geth = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
-model_evmone = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
-model_openethereum = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='openethereum')
-print('geth all')
-summary(model_geth)
-print('evmone all')
-summary(model_evmone)
-print('openethereum all')
-summary(model_openethereum)
-model_geth = lm_validation(validation_short, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
-model_evmone = lm_validation(validation_short, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
-model_openethereum = lm_validation(validation_short, explained_variable, 'cost_ns', selection_col='env', selection_val='openethereum')
-print('geth short')
-summary(model_geth)
-print('evmone short')
-summary(model_evmone)
-print('openethereum short')
-summary(model_openethereum)
-model_geth = lm_validation(validation_long, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
-model_evmone = lm_validation(validation_long, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
-model_openethereum = lm_validation(validation_long, explained_variable, 'cost_ns', selection_col='env', selection_val='openethereum')
-print('geth long')
-summary(model_geth)
-print('evmone long')
-summary(model_evmone)
-print('openethereum long')
-summary(model_openethereum)
+print('geth all - current gas')
+lm_validation(validation, explained_variable, 'current_gas', selection_col='env', selection_val='geth')
+print('evmone all - current gas')
+lm_validation(validation, explained_variable, 'current_gas', selection_col='env', selection_val='evmone')
 ```
 
-```{r fig.width=15}
-par(mfrow=c(3,3))
-compare_plots(validation, 'env', 'geth', 'cost_ns')
-compare_plots(validation, 'env', 'evmone', 'cost_ns')
-compare_plots(validation, 'env', 'openethereum', 'cost_ns')
-compare_plots(validation_short, 'env', 'geth', 'cost_ns')
-compare_plots(validation_short, 'env', 'evmone', 'cost_ns')
-compare_plots(validation_short, 'env', 'openethereum', 'cost_ns')
-compare_plots(validation_long, 'env', 'geth', 'cost_ns')
-compare_plots(validation_long, 'env', 'evmone', 'cost_ns')
-compare_plots(validation_long, 'env', 'openethereum', 'cost_ns')
+### Final validation model
+
+```{r}
+print('geth all - no EXP')
+lm_validation(validation_no_exp, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
+print('evmone all - no EXP')
+lm_validation(validation_no_exp, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
+
+print('geth all')
+model_geth = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
+print('evmone all')
+model_evmone = lm_validation(validation, explained_variable, 'cost_ns', selection_col='env', selection_val='evmone')
+```
+
+A side-by-side comparison of the gas cost model with the `program_length` model and with the `current_gas` model.
+
+```{r fig.width=25, fig.height=25}
+par(mfrow=c(3,2))
+compare_plots(validation_no_exp, 'env', 'geth', 'program_length', labels='dominant')
+compare_plots(validation_no_exp, 'env', 'evmone', 'program_length', labels='dominant')
+compare_plots(validation_no_exp, 'env', 'geth', 'current_gas', labels='dominant')
+compare_plots(validation_no_exp, 'env', 'evmone', 'current_gas', labels='dominant')
+compare_plots(validation_no_exp, 'env', 'geth', 'cost_ns', labels='dominant')
+compare_plots(validation_no_exp, 'env', 'evmone', 'cost_ns', labels='dominant')
+par(mfrow=c(3,2))
+compare_plots(validation, 'env', 'geth', 'program_length', labels='dominant', log='xy')
+compare_plots(validation, 'env', 'evmone', 'program_length', labels='dominant', log='xy')
+compare_plots(validation, 'env', 'geth', 'current_gas', labels='dominant', log='xy')
+compare_plots(validation, 'env', 'evmone', 'current_gas', labels='dominant', log='xy')
+compare_plots(validation, 'env', 'geth', 'cost_ns', labels='dominant', log='xy')
+compare_plots(validation, 'env', 'evmone', 'cost_ns', labels='dominant', log='xy')
+par(mfrow=c(3,2))
+compare_plots(validation, 'env', 'geth', 'program_length', labels='dominant')
+compare_plots(validation, 'env', 'evmone', 'program_length', labels='dominant')
+compare_plots(validation, 'env', 'geth', 'current_gas', labels='dominant')
+compare_plots(validation, 'env', 'evmone', 'current_gas', labels='dominant')
+compare_plots(validation, 'env', 'geth', 'cost_ns', labels='dominant')
+compare_plots(validation, 'env', 'evmone', 'cost_ns', labels='dominant')
 ```
 
 ## Model diagnostics
 
 ```{r fig.width=15}
-par(mfrow=c(3,4))
+par(mfrow=c(2,4))
 plot(model_geth)
 plot(model_evmone)
-plot(model_openethereum)
 ```
 
 ### Discussion of results so far
 
 Results for `geth` and `evmone` look promising, the correlation is clearly there, the slope coefficient is close to 1 (so there's a good correspondence between a nanosecond of measurement and the nanosecond of validation).
 
+The model diagnosticts aren't ideal, especially for `geth`, where some non-linearity is present..
+
+The best trait of the model is that it offers a massive improvement over the trivial model and a substantial improvement over the current gas cost model.
+
 #### Intercept problem
 
-**NOTE** this has been solved, see last paragrapsh
+**NOTE** this has been solved, see last paragraph.
 
 The worrying part is the intercept coefficient which is far away from zero (should be the cost of an empty EVM program). If we use a validation set with only small arguments (`smallpush`), then the intercept problem goes away, so it seems that it might be coming from the estimates of the arguments impact.
 
 The intercept problem has been explained by randomizing the length of the random program. We can see on the plots of the entire program set, that the relation between estimated cost and actual program execution time is non-linear (the longer the program, the more efficient the execution and the slope coefficient approaches 1.0). At the same time, the shorter the program, the smaller the intercept.
 
-**TODO** increase the upper bound for the program length even further, to cover the area where the slope is steadily 1.0. Also increase the total count of program samples to have a good representation in all lengths.
+**NOTE** After including memory OPCODEs the intercept is back, because we're allocating a considerable chunk of memory at start of every program.
+This isn't an issue.
 
 #### `openethereum` problem
 
@@ -384,3 +409,125 @@ There's an interesting phenomenon on the `openethereum` validation, if you use `
 Another note is that increasing sample size and/or number of samples for the validation set, improves the validation model. It might be that we're brute-forcing over the problem of the unstability of `openethereum`'s performance (see above).
 
 Lastly, increasing the sample size on the estimation set (`marginal/arguments`), improves the validation model further, and also makes the estimates much more reasonable.
+
+### Final results
+
+```{r}
+all_envs = c("geth", "evmone")
+extract_opcodes <- function() {
+  unique(estimated_cost$opcode)
+}
+all_opcodes = extract_opcodes()
+
+get_gas_schedule_comparison <- function(pivot_opcode, df) {
+  pivot_statistics = sqldf(paste0("SELECT estimate_marginal_ns, env FROM df WHERE opcode='", pivot_opcode, "'"))
+  pivot_gas_cost = current_gas_cost$constant_current_gas[which(current_gas_cost$opcode==pivot_opcode)]
+    
+  row.names(pivot_statistics) = pivot_statistics$env
+  # 
+  for (env in all_envs) {
+    multiplier = pivot_gas_cost / pivot_statistics[env, 'estimate_marginal_ns']
+    df$estimate_marginal_gas[which(df$env==env)] = df$estimate_marginal_ns[which(df$env == env)] * multiplier
+    df$arg0_gas[which(df$env==env)] = df$arg0_ns[which(df$env == env)] * multiplier
+    df$arg1_gas[which(df$env==env)] = df$arg1_ns[which(df$env == env)] * multiplier
+    df$arg2_gas[which(df$env==env)] = df$arg2_ns[which(df$env == env)] * multiplier
+    df$expensive_gas[which(df$env==env)] = df$expensive_ns[which(df$env == env)] * multiplier
+    # stderrs
+    df$estimate_marginal_gas_stderr[which(df$env==env)] = df$estimate_marginal_ns_stderr[which(df$env == env)] * multiplier
+    df$arg0_gas_stderr[which(df$env==env)] = df$arg0_ns_stderr[which(df$env == env)] * multiplier
+    df$arg1_gas_stderr[which(df$env==env)] = df$arg1_ns_stderr[which(df$env == env)] * multiplier
+    df$arg2_gas_stderr[which(df$env==env)] = df$arg2_ns_stderr[which(df$env == env)] * multiplier
+    df$expensive_gas_stderr[which(df$env==env)] = df$expensive_ns_stderr[which(df$env == env)] * multiplier
+  }
+  
+  gas_schedule_comparison = sqldf("SELECT current_gas_cost.opcode, constant_current_gas,
+                                          geth.estimate_marginal_gas as geth_gas,
+                                          evmone.estimate_marginal_gas as evmone_gas,
+                                          geth.estimate_marginal_gas_stderr as geth_gas_stderr,
+                                          evmone.estimate_marginal_gas_stderr as evmone_gas_stderr
+                                   FROM current_gas_cost 
+                                   INNER JOIN df as geth
+                                     ON geth.opcode = current_gas_cost.opcode AND geth.env = 'geth'
+                                   INNER JOIN df as evmone
+                                     ON evmone.opcode = current_gas_cost.opcode AND evmone.env = 'evmone'")
+  
+  return(list(gas_schedule_comparison, df))
+}
+```
+
+Here we choose the pivot which allows us to have an alternative gas cost schedule with the least divergence between EVMs.
+
+```{r}
+pivot_results = data.frame(matrix(ncol=3, nrow=0))
+colnames(pivot_results) = c('pivot_opcode', 'distance', 'distance2')
+for (pivot_opcode in all_opcodes) {
+  c(gas_schedule_comparison, ...) %<-% get_gas_schedule_comparison(pivot_opcode, estimated_cost)
+  distance = sum(abs(gas_schedule_comparison$geth_gas - gas_schedule_comparison$evmone_gas))
+  distance2 = sqrt(sum((gas_schedule_comparison$geth_gas - gas_schedule_comparison$evmone_gas)^2))
+  pivot_results[nrow(pivot_results) + 1, ] = data.frame(pivot_opcode, distance, distance2)
+}
+```
+
+We select the pivot by inspection of the `pivot_results` and later continue to fill in the additional special entries of our gas cost schedule, being the costs of the arguments.
+
+```{r}
+pivot_opcode = "ADDRESS"
+c(gas_schedule_comparison, estimated_cost) %<-% get_gas_schedule_comparison(pivot_opcode, estimated_cost)
+
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
+  data.frame("EXP_arg1_cost", 50, estimated_cost$arg1_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='EXP')],  estimated_cost$arg1_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='EXP')], estimated_cost$arg1_gas_stderr[which(estimated_cost$env=='geth' & estimated_cost$opcode=='EXP')],  estimated_cost$arg1_gas_stderr[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='EXP')])
+
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
+  data.frame("CALLDATACOPY_arg2_cost", 3, estimated_cost$arg2_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='CALLDATACOPY')],  estimated_cost$arg2_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='CALLDATACOPY')],  estimated_cost$arg2_gas_stderr[which(estimated_cost$env=='geth' & estimated_cost$opcode=='CALLDATACOPY')],  estimated_cost$arg2_gas_stderr[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='CALLDATACOPY')])
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
+  data.frame("RETURNDATACOPY_arg2_cost", 3, estimated_cost$arg2_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='RETURNDATACOPY')],  estimated_cost$arg2_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='RETURNDATACOPY')], estimated_cost$arg2_gas_stderr[which(estimated_cost$env=='geth' & estimated_cost$opcode=='RETURNDATACOPY')],  estimated_cost$arg2_gas_stderr[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='RETURNDATACOPY')])
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
+  data.frame("CODECOPY_arg2_cost", 3, estimated_cost$arg2_gas[which(estimated_cost$env=='geth' & estimated_cost$opcode=='CODECOPY')],  estimated_cost$arg2_gas[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='CODECOPY')], estimated_cost$arg2_gas_stderr[which(estimated_cost$env=='geth' & estimated_cost$opcode=='CODECOPY')],  estimated_cost$arg2_gas_stderr[which(estimated_cost$env=='evmone' & estimated_cost$opcode=='CODECOPY')])
+
+expensive_division_cost <- function(df, env, opcode) {
+  df$expensive_gas[which(df$env==env & df$opcode==opcode)] + df$estimate_marginal_gas[which(df$env==env & df$opcode==opcode)]
+}
+expensive_division_cost_stderr <- function(df, env, opcode) {
+  sqrt(df$expensive_gas_stderr[which(df$env==env & df$opcode==opcode)]^2 + df$estimate_marginal_gas_stderr[which(df$env==env & df$opcode==opcode)]^2)
+}
+
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
+  data.frame("DIV_expensive_cost", 5, expensive_division_cost(estimated_cost, 'geth', 'DIV'),  expensive_division_cost(estimated_cost, 'evmone', 'DIV'), expensive_division_cost_stderr(estimated_cost, 'geth', 'DIV'),  expensive_division_cost_stderr(estimated_cost, 'evmone', 'DIV'))
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
+  data.frame("SDIV_expensive_cost", 5, expensive_division_cost(estimated_cost, 'geth', 'SDIV'),  expensive_division_cost(estimated_cost, 'evmone', 'SDIV'), expensive_division_cost_stderr(estimated_cost, 'geth', 'SDIV'),  expensive_division_cost_stderr(estimated_cost, 'evmone', 'SDIV'))
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
+  data.frame("MOD_expensive_cost", 5, expensive_division_cost(estimated_cost, 'geth', 'MOD'),  expensive_division_cost(estimated_cost, 'evmone', 'MOD'), expensive_division_cost_stderr(estimated_cost, 'geth', 'MOD'),  expensive_division_cost_stderr(estimated_cost, 'evmone', 'MOD'))
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
+  data.frame("SMOD_expensive_cost", 5, expensive_division_cost(estimated_cost, 'geth', 'SMOD'),  expensive_division_cost(estimated_cost, 'evmone', 'SMOD'), expensive_division_cost_stderr(estimated_cost, 'geth', 'SMOD'),  expensive_division_cost_stderr(estimated_cost, 'evmone', 'SMOD'))
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
+  data.frame("ADDMOD_expensive_cost", 8, expensive_division_cost(estimated_cost, 'geth', 'ADDMOD'),  expensive_division_cost(estimated_cost, 'evmone', 'ADDMOD'), expensive_division_cost_stderr(estimated_cost, 'geth', 'ADDMOD'),  expensive_division_cost_stderr(estimated_cost, 'evmone', 'ADDMOD'))
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] =
+  data.frame("MULMOD_expensive_cost", 8, expensive_division_cost(estimated_cost, 'geth', 'MULMOD'),  expensive_division_cost(estimated_cost, 'evmone', 'MULMOD'), expensive_division_cost_stderr(estimated_cost, 'geth', 'MULMOD'),  expensive_division_cost_stderr(estimated_cost, 'evmone', 'MULMOD'))
+```
+
+Plot the alternative gas cost schedule.
+
+```{r fig.width=30, fig.height=10}
+maximum_gas_cost = max(gas_schedule_comparison[,!names(gas_schedule_comparison) %in% c('opcode')])
+
+par(mar=c(15,4,4,2))
+plot(gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(0,maximum_gas_cost * 1.1), xlab="", ylab="")
+axis(1, at=1:nrow(gas_schedule_comparison), labels=gas_schedule_comparison$opcode, las=2)
+points(gas_schedule_comparison$geth_gas, col=geth_color, bg=geth_color, xaxt='n', pch=21)
+points(gas_schedule_comparison$evmone_gas, col=evmone_color, bg=evmone_color, xaxt='n', pch=21)
+legend(0, maximum_gas_cost, c("Geth estimate", "Evmone estimate", "Current gas cost schedule"), fill=c(env_colors, 'gray'), cex=2)
+```
+
+In order to be able to tell which OPCODEs diverge by the least, we do:
+
+```{r}
+gas_schedule_comparison$relative_diff = abs(gas_schedule_comparison$geth_gas - gas_schedule_comparison$evmone_gas) / gas_schedule_comparison$evmone_gas
+
+gas_schedule_comparison$close = gas_schedule_comparison$relative_diff < 0.15
+```
+
+```{r}
+# just export the final compiled estimations to a file
+write.csv(estimated_cost, paste0("../../local/final_estimated_cost", suffix, ".csv"), quote=FALSE, row.names=FALSE)
+write.csv(gas_schedule_comparison, paste0("../../local/gas_schedule_comparison", suffix, ".csv"), quote=FALSE, row.names=FALSE)
+```

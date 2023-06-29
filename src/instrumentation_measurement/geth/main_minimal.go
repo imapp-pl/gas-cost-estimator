@@ -46,7 +46,7 @@ func main() {
 	// End warm-up
 
 	for i := 0; i < sampleSize; i++ {
-	    MeasureTotal(cfg, bytecode, printEach, printCSV, i)
+		MeasureTotal(cfg, bytecode, printEach, printCSV, i)
 	}
 
 	if errWarmUp != nil {
@@ -129,5 +129,6 @@ func setDefaultTracerConfig(cfg *vm.LogConfig) {
 }
 
 // runtimeNano returns the current value of the runtime clock in nanoseconds.
+//
 //go:linkname runtimeNano runtime.nanotime
 func runtimeNano() int64

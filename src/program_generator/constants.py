@@ -89,3 +89,8 @@ EWASM_SOMETHING = """
     drop
 """
 EWASM_SOMETHING_LENGTH = 2
+
+MEMORY_OPCODES = ['CALLDATALOAD', 'CALLDATACOPY', 'RETURNDATACOPY', 'MLOAD', 'MSTORE', 'MSTORE8', 'CODECOPY']
+
+# RETURNDATASIZE doesn't require us to preallocate or precall, we can treat it as an ordinary OPCODE
+RETURNDATA_OPCODES = ['RETURNDATACOPY']

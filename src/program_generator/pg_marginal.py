@@ -4,7 +4,7 @@ import fire
 import random
 import sys
 
-from common import generate_single_marginal, prepare_opcodes, get_selection
+from common import generate_single_marginal, prepare_opcodes, get_selection, arity
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -48,8 +48,8 @@ class ProgramGenerator(object):
     fullCsv (boolean): if set, will generate programs with accompanying data in CSV format
     opcode (string): if set, will only generate programs for opcode
     maxOpCount (integer): maximum number of measured opcodes, defaults to 50
-    stepOpCount (integer): by how much the number of measured opcodes should increase, defaults to 5
     shuffleCounts (boolean): if set, will shuffle the op counts used to generate programs for each OPCODE
+    stepOpCount (integer): by how much the number of measured opcodes should increase, defaults to 5
 
     selectionFile (string): file name of the OPCODE selection file under `data`, defaults to `selection.csv`
     seed: a seed for random number generator, defaults to 0
@@ -60,7 +60,6 @@ class ProgramGenerator(object):
     if fullCsv:
       writer = csv.writer(sys.stdout, delimiter=',', quotechar='"')
 
-      # TODO: for now we only have a single program per opcode, hence the program_id is:
       opcodes = [program.opcode for program in programs]
       op_counts = [program.op_count for program in programs]
       program_ids = [program.opcode + '_' + str(program.op_count) for program in programs]
@@ -95,9 +94,8 @@ class ProgramGenerator(object):
     return programs
 
   def _generate_single_program(self, operation, op_count):
-    arity = int(operation['Removed from stack'])
     # for compatibility with the generate_single_marginal function
-    single_op_pushes = ["60a1"] * arity
+    single_op_pushes = ["6003"] * arity(operation)
 
     return Program(generate_single_marginal(single_op_pushes, operation, op_count), operation['Mnemonic'], op_count)
         

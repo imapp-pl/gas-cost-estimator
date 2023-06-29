@@ -6,7 +6,7 @@ import (
 	"math"
 	"math/big"
 	"os"
-	go_runtime "runtime"
+	"strings"
 	"time"
 
 	_ "unsafe"
@@ -19,6 +19,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 )
+
+var calldata []byte
 
 func main() {
 
@@ -46,13 +48,18 @@ func main() {
 	// from `github.com/ethereum/go-ethereum/core/vm/runtime/runtime.go:109`
 	cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
 
+	// Initialize some constant calldata of 32KB, 2^15 bytes.
+	// This means, if we offset between 0th and 2^14th byte, we can fetch between 0 and 2^14 bytes (16KB)
+	// In consequence, we need args to memory-copying OPCODEs to be between 0 and 2^14, 2^14 fits in a PUSH2,
+	// which we'll be using to generate arguments for those OPCODEs.
+	calldata = []byte(strings.Repeat("{", 1<<15))
+
 	// Warm-up. **NOTE** we're keeping tracing on during warm-up, otherwise measurements are off
 	cfg.EVMConfig.Debug = false
 	cfg.EVMConfig.Instrumenter = vm.NewInstrumenterLogger()
-	retWarmUp, _, errWarmUp := runtime.Execute(bytecode, nil, cfg)
+	_, _, errWarmUp := runtime.Execute(bytecode, calldata, cfg)
 	// End warm-up
 
-	sampleStart := time.Now()
 	for i := 0; i < sampleSize; i++ {
 		if mode == "all" {
 			MeasureAll(cfg, bytecode, printEach, printCSV, i)
@@ -62,16 +69,9 @@ func main() {
 			TraceBytecode(cfg, bytecode, printCSV, i)
 		}
 	}
-
-	sampleDuration := time.Since(sampleStart)
-
 	if errWarmUp != nil {
 		fmt.Fprintln(os.Stderr, errWarmUp)
 	}
-	fmt.Fprintln(os.Stderr, "Program: ", *bytecodePtr)
-	fmt.Fprintln(os.Stderr, "Return:", retWarmUp)
-	fmt.Fprintln(os.Stderr, "Sample duration:", sampleDuration)
-
 }
 
 func TraceBytecode(cfg *runtime.Config, bytecode []byte, printCSV bool, sampleId int) {
@@ -82,7 +82,7 @@ func TraceBytecode(cfg *runtime.Config, bytecode []byte, printCSV bool, sampleId
 	cfg.EVMConfig.Tracer = tracer
 	cfg.EVMConfig.Debug = true
 
-	_, _, err := runtime.Execute(bytecode, nil, cfg)
+	_, _, err := runtime.Execute(bytecode, calldata, cfg)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 	}
@@ -109,9 +109,12 @@ func TraceBytecode(cfg *runtime.Config, bytecode []byte, printCSV bool, sampleId
 
 func MeasureTotal(cfg *runtime.Config, bytecode []byte, printEach bool, printCSV bool, sampleId int) {
 	cfg.EVMConfig.Instrumenter = vm.NewInstrumenterLogger()
-	go_runtime.GC()
 
-	_, _, err := runtime.Execute(bytecode, nil, cfg)
+	// We're not collecting in between runs anymore. If the pressure on memory is OK, this has been chosen as the best approach.
+	// (Assuming GOGC=off, which is well enough aligned with default go GC behavior).
+	// go_runtime.GC()
+
+	_, _, err := runtime.Execute(bytecode, calldata, cfg)
 
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -124,9 +127,12 @@ func MeasureTotal(cfg *runtime.Config, bytecode []byte, printEach bool, printCSV
 
 func MeasureAll(cfg *runtime.Config, bytecode []byte, printEach bool, printCSV bool, sampleId int) {
 	cfg.EVMConfig.Instrumenter = vm.NewInstrumenterLogger()
-	go_runtime.GC()
+
+	// see above
+	// go_runtime.GC()
+
 	start := time.Now()
-	_, _, err := runtime.Execute(bytecode, nil, cfg)
+	_, _, err := runtime.Execute(bytecode, calldata, cfg)
 	duration := time.Since(start)
 
 	if err != nil {
@@ -195,7 +201,9 @@ func setDefaults(cfg *runtime.Config) {
 
 // for full options see github.com/ethereum/go-ethereum/core/vm/logger.go:50
 func setDefaultTracerConfig(cfg *vm.LogConfig) {
-	cfg.EnableMemory = true
+	// Necessary, otherwise the initial memory allocation causes that memory to get copied over each instruction.
+	// If we need this to be enabled in the future, we need to rethink the initial MSTORE8
+	cfg.EnableMemory = false
 	cfg.DisableStack = false
 	cfg.DisableStorage = true
 	cfg.EnableReturnData = true

@@ -15,7 +15,6 @@ RUN rm go1.17.1.linux-amd64.tar.gz
 
 ENV PATH=$PATH:/usr/local/go/bin
 ENV GOPATH=/srv/app/.go
-ENV GO111MODULE=off
 ENV GOBIN=/srv/app/.go/bin
 ENV GOGC=off
 
@@ -23,31 +22,10 @@ ENV GOGC=off
 RUN go get github.com/ethereum/go-ethereum
 
 # get our version of geth
-
-# change this argument to cause docker to re-fetch our branch
-# NOTE: the sha itself is _ignored_
-ARG GETH_VERSION_SHA=unspecified
-# manipulate this argument to choose between measurements: all, total
-ARG MEASUREMENT_MODE=all
-
-WORKDIR /srv/app/.go/src/github.com/ethereum/go-ethereum
-RUN git remote add imapp-pl https://github.com/imapp-pl/go-ethereum.git
-RUN git fetch imapp-pl wallclock-${MEASUREMENT_MODE} 
-RUN git checkout wallclock-${MEASUREMENT_MODE}
-# show us what we're checking out!
-RUN git show --no-patch
-
-# get the remainder of measurement code
-COPY ./src/instrumentation_measurement /srv/app/src/instrumentation_measurement
-
-WORKDIR /srv/app/src/instrumentation_measurement
-RUN go get ./geth/...
-
-# get the rest (program generation etc.) 
-COPY ./src/ /srv/app/src/
-RUN go build -o bin/geth_main geth/main.go
-
+COPY ./go.mod /srv/app/
+COPY ./go.sum /srv/app/
 WORKDIR /srv/app/
 
-# our runtime config
-ENV GOGC=off
+# get the remainder of measurement code, incl. forked `geth`
+COPY ./src/instrumentation_measurement /srv/app/src/instrumentation_measurement
+RUN go build -o src/instrumentation_measurement/bin/geth_main github.com/imapp-pl/gas-cost-estimator/src/instrumentation_measurement/geth
