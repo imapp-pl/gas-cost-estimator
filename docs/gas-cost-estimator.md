@@ -365,6 +365,8 @@ So even if using perf tool has an impact on measurements, it is proportional and
 
 For detailed graphs see [here](https://gascost.local.imapp.pl/perf-overhead-geth.html) and [here](https://gascost.local.imapp.pl/perf-overhead-evmone.html).
 
+For detailed graphs see [here](https://gascost.local.imapp.pl/perf-overhead-evmone.html) and [here](https://gascost.local.imapp.pl/perf-overhead-geth.html).
+
 #### Measure marginal
 
 In the first step, we use measure marginal approach to verify whether cache usage depends on opcode.
@@ -387,6 +389,8 @@ And it may be considered almost equal for all opcodes.
 <img src="./gas_cost_estimator_doc_assets/geth_perf_marginal_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/evmone_perf_marginal_total_effectiveness.png" width="425"/> 
 
 For detailed graphs see [here](https://gascost.local.imapp.pl/cache-marginal-geth.html) and [here](https://gascost.local.imapp.pl/cache-marginal-evmone.html).
+
+For detailed graphs see [here](https://gascost.local.imapp.pl/cache-marginal-evmone.html) and [here](https://gascost.local.imapp.pl/cache-marginal-geth.html).
 
 #### Validation
 
@@ -426,6 +430,33 @@ So the only significant outlier is EXP at evmone. But still this is `3-4%` of pe
 which does not have significant impact on measurements.
 
 For detailed graphs see [here](https://gascost.local.imapp.pl/cache-dominant-geth.html) and [here](https://gascost.local.imapp.pl/cache-dominant-evmone.html).
+
+As expected, the branch prediction is less effective compared to the marginal programs. 
+The effective ratio varies between `0` and `0.035` for evmone and between `0.013` and `0.025` for geth.
+The longer program, the higher ratio. This is still low comparing to other software.
+
+<img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_branch_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_validation_branch_effectiveness.png" width="425"/> 
+
+Let us estimate the impact of the branch misprediction on measurements.
+It is hard to determine exactly the misprediction penalty. 
+For the CPU used for the measurements, we assume it is `15` cycles, [19].
+And note that CPU is `2.589` GHz.
+To calculate the relative share of misprediction penalty in the total measurement, we use the formula
+`(15*branch_misses)/(task_clock*2589000)`. This yields penalty values between `0` and `0.1` for evmone and between `0.025` and `0.045` for geth.
+
+For detailed graphs see [here](https://gascost.local.imapp.pl/cache-validation-evmone.html) and [here](https://gascost.local.imapp.pl/cache-validation-geth.html).
+
+#### Measurement with dominant opcode
+
+The maximal `10%` of penalty is not that much. But still, we want to know whether opcodes have an equal contribution to this penalty.
+For this we use programs where a given opcode dominates.
+
+For evmone, the penalty varies between `0.04` and `0.06`, with the exception to EXP, where the penalty is `0.09`. 
+For geth it is more uniform, the penalty varies around `0.015` and for EXP it is around `0.016`.
+So the only significant outlier is EXP at evmone. But still this is `3-4%` of penalty more than other opcodes at evmone
+which does not have significant impact on measurements.
+
+For detailed graphs see [here](https://gascost.local.imapp.pl/cache-dominant-evmone.html) and [here](https://gascost.local.imapp.pl/cache-dominant-geth.html).
 
 ### Warm-up impact
 Warm-up is the effect when immediate subsequent executions of the same bytecode are gradually faster. This is due to:
@@ -916,13 +947,13 @@ We observe, that the final result (the alternative gas cost schedule) doesn't di
 
 We can summarize the findings about the alternative gas cost schedule:
 1. The following OPCODEs should have their gas cost left intact:
-  - `CALLDATACOPY`, `CODECOPY` (but not their cost of the arguments)
   - `SDIV`, `MOD`, `SMOD` (assuming their "non-trivial" version, i.e. `x >= y`; `DIV` could be also put here, although it diverges a bit more from the current schedule)
 2. The following OPCODEs can have their gas cost updated rather consistently, respecting all the EVM implementations (relative difference between `geth` and `evmone` is less than 15%):
   - `MUL`: 1.2
   - `SAR`: 1.1
   - `ADDMOD`: 6 (assuming "non-trivial" version)
   - `MULMOD`: 7.5 (assuming "non-trivial" version)
+  - `CALLDATACOPY`, `CODECOPY` (constant cost): 2
 3. The following OPCODEs can have their gas cost discounted whenever the calculation is trivial (`x < y`):
   - `DIV`, `SDIV`, `MOD`, `SMOD`, `ADDMOD`, `MULMOD`
    However, the magnitude of the discount is different across different EVMs.
@@ -989,9 +1020,9 @@ CALLER | 2 | 1,2 | 2,0 | 0,014 | 0,022 |
 CALLVALUE | 2 | 0,8 | 1,2 | 0,010 | 0,020 | 
 CALLDATALOAD | 3 | 0,7 | 1,5 | 0,360 | 0,069 | 
 CALLDATASIZE | 2 | 0,6 | 0,4 | 0,010 | 0,023 | 
-CALLDATACOPY | 2 | 2,2 | 2,2 | 0,330 | 0,084 | 
+CALLDATACOPY | 3 | 2,2 | 2,2 | 0,330 | 0,084 | 
 CODESIZE | 2 | 0,6 | 0,4 | 0,007 | 0,023 | 
-CODECOPY | 2 | 2,1 | 2,2 | 0,237 | 0,238 | 
+CODECOPY | 3 | 2,1 | 2,2 | 0,237 | 0,238 | 
 GASPRICE | 2 | 0,8 | 2,0 | 0,007 | 0,023 | 
 RETURNDATASIZE | 2 | 0,6 | 0,4 | 0,011 | 0,022 | 
 RETURNDATACOPY | 3 | 2,7 | 2,0 | 0,481 | 0,169 | 
