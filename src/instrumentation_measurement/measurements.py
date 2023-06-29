@@ -213,6 +213,9 @@ class Measurements(object):
   def run_geth_benchmark(self, program, sampleSize):
     geth_benchmark = ['./instrumentation_measurement/geth_benchmark/tests/imapp_benchmark/imapp_benchmark']
 
+    # alternative just-in-time compilation (could run 50% slower)
+    # geth_benchmark = ['go', 'run', './instrumentation_measurement/geth_benchmark/tests/imapp_benchmark/imapp_bench.go']
+
     args = ['--sampleSize', '{}'.format(sampleSize)]
     bytecode_arg = ['--bytecode', program.bytecode]
     invocation = geth_benchmark + args + bytecode_arg
