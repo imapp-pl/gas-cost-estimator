@@ -148,16 +148,34 @@ extract_opcodes <- function() {
 # 3. for `openethereum` we should be using use programs with 0-200 increasing `op_count`, otherwise the model doesn't capture the trend. Possibly, this will be resolved by dropping `openethereum`
 all_opcodes = extract_opcodes()
 
+`_comb_` stands for "combined". The `EXP` measurement has been redone for the input `0xa1` instead of `0x20`, which caused the estimation to be underpriced (as seen in the `validation` notebook).
+This in turn skewed the result enough for `geth` to get a significant, negative intercept.
+After adjusting the input higher, the intercept is "less" significant, but still present.
+`EXP` looks still somewhat underpriced - we need to parametrize its arguments properly.
+
+```{r}
+evmone_bimodals = all_opcodes[which(grepl("PUSH", all_opcodes) & all_opcodes != "PUSH1" | all_opcodes == "JUMP")]
+estimates = estimates[which(estimates$env != 'evmone'), ]
+results = load_data_set("evmone", "50_4")
+for (opcode in all_opcodes) {
+  estimate = compute_all(results, opcode, "evmone", TRUE, bimodal_opcodes=evmone_bimodals, plots='all')
+  estimates[nrow(estimates) + 1, ] = c(opcode, estimate, 'evmone')
+}
 # initialize the data frame to hold the results
-estimates = data.frame(matrix(ncol = 4, nrow = 0))
-colnames(estimates) <- c('op', 'estimate_marginal_ns', 'estimate_marginal_ns_stderr', 'env')
+# estimates = data.frame(matrix(ncol = 4, nrow = 0))
+# colnames(estimates) <- c('op', 'estimate_marginal_ns', 'estimate_marginal_ns_stderr', 'env')
 ```
 
 ```{r}
 estimates = estimates[which(estimates$env != 'geth'), ]
 for (opcode in all_opcodes) {
-  estimate = compute_all(opcode, "geth", use_median=TRUE, plots='all')
-  estimates[nrow(estimates) + 1, ] = c(opcode, estimate$slope, estimate$stderr, 'geth')
+
+  estimate = compute_all(results, opcode, "geth", TRUE, plots='all')
+  estimates[nrow(estimates) + 1, ] = c(opcode, estimate, 'geth')
+
+#  estimate = compute_all(opcode, "geth", use_median=TRUE, plots='all')
+#  estimates[nrow(estimates) + 1, ] = c(opcode, estimate$slope, estimate$stderr, 'geth')
+
 }
 ```
 Use the above plots (if needed, refer also to the printed summaries of the `lm` results), to validate that the `p-values` are zero everywhere, and that the observation boxplots are arranged to follow the plotted trend line.
