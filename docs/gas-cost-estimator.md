@@ -365,6 +365,8 @@ So even if using perf tool has an impact on measurements, it is proportional and
 
 For detailed graphs see [here](https://gascost.local.imapp.pl/perf-overhead-geth.html) and [here](https://gascost.local.imapp.pl/perf-overhead-evmone.html).
 
+For detailed graphs see [here](https://gascost.local.imapp.pl/perf-overhead-evmone.html) and [here](https://gascost.local.imapp.pl/perf-overhead-geth.html).
+
 #### Measure marginal
 
 In the first step, we use measure marginal approach to verify whether cache usage depends on opcode.
@@ -387,6 +389,8 @@ And it may be considered almost equal for all opcodes.
 <img src="./gas_cost_estimator_doc_assets/geth_perf_marginal_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/evmone_perf_marginal_total_effectiveness.png" width="425"/> 
 
 For detailed graphs see [here](https://gascost.local.imapp.pl/cache-marginal-geth.html) and [here](https://gascost.local.imapp.pl/cache-marginal-evmone.html).
+
+For detailed graphs see [here](https://gascost.local.imapp.pl/cache-marginal-evmone.html) and [here](https://gascost.local.imapp.pl/cache-marginal-geth.html).
 
 #### Validation
 
@@ -426,6 +430,33 @@ So the only significant outlier is EXP at evmone. But still this is `3-4%` of pe
 which does not have significant impact on measurements.
 
 For detailed graphs see [here](https://gascost.local.imapp.pl/cache-dominant-geth.html) and [here](https://gascost.local.imapp.pl/cache-dominant-evmone.html).
+
+As expected, the branch prediction is less effective compared to the marginal programs. 
+The effective ratio varies between `0` and `0.035` for evmone and between `0.013` and `0.025` for geth.
+The longer program, the higher ratio. This is still low comparing to other software.
+
+<img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_branch_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_validation_branch_effectiveness.png" width="425"/> 
+
+Let us estimate the impact of the branch misprediction on measurements.
+It is hard to determine exactly the misprediction penalty. 
+For the CPU used for the measurements, we assume it is `15` cycles, [19].
+And note that CPU is `2.589` GHz.
+To calculate the relative share of misprediction penalty in the total measurement, we use the formula
+`(15*branch_misses)/(task_clock*2589000)`. This yields penalty values between `0` and `0.1` for evmone and between `0.025` and `0.045` for geth.
+
+For detailed graphs see [here](https://gascost.local.imapp.pl/cache-validation-evmone.html) and [here](https://gascost.local.imapp.pl/cache-validation-geth.html).
+
+#### Measurement with dominant opcode
+
+The maximal `10%` of penalty is not that much. But still, we want to know whether opcodes have an equal contribution to this penalty.
+For this we use programs where a given opcode dominates.
+
+For evmone, the penalty varies between `0.04` and `0.06`, with the exception to EXP, where the penalty is `0.09`. 
+For geth it is more uniform, the penalty varies around `0.015` and for EXP it is around `0.016`.
+So the only significant outlier is EXP at evmone. But still this is `3-4%` of penalty more than other opcodes at evmone
+which does not have significant impact on measurements.
+
+For detailed graphs see [here](https://gascost.local.imapp.pl/cache-dominant-evmone.html) and [here](https://gascost.local.imapp.pl/cache-dominant-geth.html).
 
 ### Warm-up impact
 Warm-up is the effect when immediate subsequent executions of the same bytecode are gradually faster. This is due to:
