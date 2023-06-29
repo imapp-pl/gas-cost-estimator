@@ -26,6 +26,6 @@ COPY ./go.mod /srv/app/
 COPY ./go.sum /srv/app/
 WORKDIR /srv/app/
 
-# get the remainder of measurement code
+# get the remainder of measurement code, incl. forked `geth`
 COPY ./src/instrumentation_measurement /srv/app/src/instrumentation_measurement
 RUN go build -o src/instrumentation_measurement/bin/geth_main github.com/imapp-pl/gas-cost-estimator/src/instrumentation_measurement/geth

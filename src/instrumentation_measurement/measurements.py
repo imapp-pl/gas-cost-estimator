@@ -25,16 +25,28 @@ class Measurements(object):
   """
   Script to conveniently run instrumentation samples.
 
-  To use together with outputs rom the `program_generator.py`, see docs therein.
+  To use together with outputs from the `program_generator/pg_xxx.py` scripts, see docs therein.
 
   Prints measurement CSV in the following format:
   ```
-  | program_id | sample_id | run_id | instruction_id | measure_all_time_ns | measure_one_time_ns |
+  | program_id | sample_id | run_id | instruction_id | measure_all_time_ns | measure_all_timer_time_ns |
   ```
+  or
+  ```
+  | program_id | sample_id | run_id | measure_total_time_ns | measure_total_timer_time_ns |
+  ```
+  Depending on the `mode` parameter.
 
   Expects the EVM measuring executable (e.g. our `src/instrumentation_measurement/geth/main.go`) to provide
   a chunk of this CSV of the format (without header!):
-  | run_id | instruction_id | measure_all_time_ns | measure_one_time_ns |
+  | run_id | instruction_id | measure_all_time_ns | measure_all_timer_time_ns |
+  or
+  | run_id | measure_total_time_ns | measure_total_timer_time_ns |
+
+  There is also a special `mode` parameter value: `trace`, which produces a CSV in the following format:
+  ```
+  | program_id | sample_id | instruction_id | pc | op | stack_depth | arg_0 | arg_... |
+  ```
   """
 
   def _expand_unreachable_code(self, bytecode):
@@ -64,7 +76,7 @@ class Measurements(object):
     reader = csv.DictReader(sys.stdin, delimiter=',', quotechar='"')
     self._programs = [self._program_from_csv_row(row) for row in reader]
 
-  def measure(self, sampleSize, mode="all", evm="geth", nSamples=1):
+  def measure(self, sampleSize=1, mode="all", evm="geth", nSamples=1):
     """
     Main entrypoint of the CLI tool.
 
@@ -72,30 +84,32 @@ class Measurements(object):
 
     Parameters:
     sampleSize (integer): size of a sample to pass into the EVM measuring executable
+    mode (string): Measurement mode. Allowed: total, all, trace
     evm (string): which evm use. Default: geth. Allowed: geth, openethereum, evmone
     nSamples (integer): number of samples (individual starts of the EVM measuring executable) to do
-    mode (string): Measurement mode. Allowed: total, all, trace
     """
 
     geth = "geth"
     openethereum = "openethereum"
     openethereum_ewasm = "openethereum_ewasm"
     evmone = "evmone"
+    nethermind = "nethermind"
 
     measure_total = "total"
     measure_all = "all"
     trace_opcodes = "trace"
+    benchmark_mode = "benchmark"
 
     if not self._check_clocksource():
       print("clocksource should be tsc, found something different. See docker_timer.md somewhere in the docs")
       return
 
-    if evm not in {geth, openethereum, evmone, openethereum_ewasm}:
-      print("Wrong evm parameter. Allowed are: {}, {}, {}, {}".format(geth, openethereum, evmone, openethereum_ewasm))
+    if evm not in {geth, openethereum, evmone, openethereum_ewasm, nethermind}:
+      print("Wrong evm parameter. Allowed are: {}, {}, {}, {}".format(geth, openethereum, evmone, openethereum_ewasm, nethermind))
       return
 
-    if mode not in {measure_total, measure_all, trace_opcodes}:
-        print("Invalid measurement mode. Allowed options: {}, {}, {}".format(measure_total, measure_all, trace_opcodes))
+    if mode not in {measure_total, measure_all, trace_opcodes, benchmark_mode}:
+        print("Invalid measurement mode. Allowed options: {}, {}, {}".format(measure_total, measure_all, trace_opcodes, benchmark_mode))
         return
     elif mode == measure_total:
         header = "program_id,sample_id,run_id,measure_total_time_ns,measure_total_timer_time_ns"
@@ -108,7 +122,12 @@ class Measurements(object):
         for i in range(MAX_OPCODE_ARGS):
             elem = ",arg_{}".format(i)
             header += elem
-
+        print(header)
+    elif mode == benchmark_mode:
+        if evm == geth:
+            header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,mem_allocs_count,mem_allocs_bytes"
+        elif evm == nethermind:
+            header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,std_dev_time_ns,mem_allocs_count,mem_allocs_bytes"
         print(header)
 
 
@@ -116,13 +135,21 @@ class Measurements(object):
       for sample_id in range(nSamples):
         instrumenter_result = None
         if evm == geth:
-          instrumenter_result = self.run_geth(mode, program, sampleSize)
+          if mode == benchmark_mode:
+            instrumenter_result = self.run_geth_benchmark(program, sampleSize)
+          else:
+            instrumenter_result = self.run_geth(mode, program, sampleSize)
         elif evm == openethereum:
           instrumenter_result = self.run_openethereum(mode, program, sampleSize)
         elif evm == openethereum_ewasm:
           instrumenter_result = self.run_openethereum_wasm(program, sampleSize)
         elif evm == evmone:
           instrumenter_result = self.run_evmone(mode, program, sampleSize)
+        elif evm == nethermind:
+          if mode == benchmark_mode:
+            instrumenter_result = self.run_nethermind_benchmark(program, sampleSize)
+          else:
+            instrumenter_result = self.run_nethermind(program, sampleSize)
 
         if mode == trace_opcodes:
             instrumenter_result = self.sanitize_tracer_result(instrumenter_result)
@@ -143,6 +170,38 @@ class Measurements(object):
     # strip the final newline
     instrumenter_result = result.stdout.split('\n')[:-1]
 
+    return instrumenter_result
+
+  def run_geth_benchmark(self, program, sampleSize):
+    geth_benchmark = ['./instrumentation_measurement/geth_benchmark/tests/imapp_benchmark/imapp_benchmark']
+
+    args = ['--sampleSize', '{}'.format(sampleSize)]
+    bytecode_arg = ['--bytecode', program.bytecode]
+    invocation = geth_benchmark + args + bytecode_arg
+    result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
+    assert result.returncode == 0
+    # strip the final newline
+    instrumenter_result = result.stdout.split('\n')[:-1]
+    return instrumenter_result
+
+  def run_nethermind(self, program, sampleSize):
+    geth_benchmark = ['./instrumentation_measurement/nethermind_benchmark/src/Nethermind/Imapp.Measurement.Runner/bin/Release/net6.0/Imapp.Measurement.Runner']
+    args = ['--bytecode', program.bytecode, '--print-csv', '--sample-size={}'.format(sampleSize)]
+    invocation = geth_benchmark + args
+    result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
+    assert result.returncode == 0
+    # strip the final newline
+    instrumenter_result = result.stdout.split('\n')[:-1]
+    return instrumenter_result
+
+  def run_nethermind_benchmark(self, program, sampleSize):
+    geth_benchmark = ['./instrumentation_measurement/nethermind_benchmark/src/Nethermind/Imapp.Benchmark.Runner/bin/Release/net6.0/Imapp.Benchmark.Runner']
+    args = ['--bytecode', program.bytecode, '--print-csv', '--sample-size={}'.format(sampleSize)]
+    invocation = geth_benchmark + args
+    result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
+    assert result.returncode == 0
+    # strip the final newline
+    instrumenter_result = result.stdout.split('\n')[:-1]
     return instrumenter_result
 
   def run_openethereum(self, mode, program, sampleSize):
