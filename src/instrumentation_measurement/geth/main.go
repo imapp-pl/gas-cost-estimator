@@ -38,7 +38,17 @@ func main() {
 	printCSV := *printCSVPtr
 	mode := *modePtr
 
-	if mode != "all" && mode != "total" && mode != "trace" {
+	var measureFn func(*runtime.Config, []byte, bool, bool, int)
+	switch mode {
+	case "all":
+		measureFn = MeasureAll
+	case "total":
+		measureFn = MeasureTotal
+	case "trace":
+		measureFn = func(cfg *runtime.Config, bytecode []byte, printEach bool, printCSV bool, i int) {
+			TraceBytecode(cfg, bytecode, printCSV, i)
+		}
+	default:
 		fmt.Fprintln(os.Stderr, "Invalid measurement mode: ", mode)
 		os.Exit(1)
 	}
@@ -60,18 +70,19 @@ func main() {
 	_, _, errWarmUp := runtime.Execute(bytecode, calldata, cfg)
 	// End warm-up
 
+	sampleStart := runtimeNano()
 	for i := 0; i < sampleSize; i++ {
-		if mode == "all" {
-			MeasureAll(cfg, bytecode, printEach, printCSV, i)
-		} else if mode == "total" {
-			MeasureTotal(cfg, bytecode, printEach, printCSV, i)
-		} else if mode == "trace" {
-			TraceBytecode(cfg, bytecode, printCSV, i)
-		}
+		measureFn(cfg, bytecode, printEach, printCSV, i)
 	}
+
+  sampleDuration := runtimeNano() - sampleStart
+
 	if errWarmUp != nil {
 		fmt.Fprintln(os.Stderr, errWarmUp)
 	}
+	fmt.Fprintln(os.Stderr, "Program: ", *bytecodePtr)
+	fmt.Fprintln(os.Stderr, "Return:", retWarmUp)
+	fmt.Fprintln(os.Stderr, "Sample duration:", time.Duration(sampleDuration))
 }
 
 func TraceBytecode(cfg *runtime.Config, bytecode []byte, printCSV bool, sampleId int) {

@@ -1,0 +1,18 @@
+--- temp/evmone2/lib/evmone/execution.cpp	2022-03-28 14:59:23.985945207 +0200
++++ temp/evmone/lib/evmone/execution.cpp	2022-03-28 15:13:07.369861219 +0200
+@@ -26,8 +26,12 @@
+ evmc_result execute(evmc_vm* /*unused*/, const evmc_host_interface* host, evmc_host_context* ctx,
+     evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
+ {
+-    const auto analysis = analyze(rev, code, code_size);
+-    auto state = std::make_unique<AdvancedExecutionState>(*msg, rev, *host, ctx, code, code_size);
+-    return execute(*state, analysis);
++    evmc_result result = evmc::make_result(EVMC_REJECTED, 0, nullptr, 0);
++    for (unsigned int run_id = 0; run_id < 1000000; ++run_id) {
++        const auto analysis = analyze(rev, code, code_size);
++        auto state = std::make_unique<AdvancedExecutionState>(*msg, rev, *host, ctx, code, code_size);
++        result = execute(*state, analysis);
++    }
++    return result;
+ }
+ }  // namespace evmone

@@ -4,6 +4,7 @@ import sys
 import subprocess
 import re
 import os.path
+from io import StringIO
 
 MAX_OPCODE_ARGS = 7
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -87,53 +88,54 @@ class Measurements(object):
         """
 
         geth = "geth"
-        openethereum = "openethereum"
-        openethereum_ewasm = "openethereum_ewasm"
         evmone = "evmone"
         nethermind = "nethermind"
         ethereumjs = 'ethereumjs'
+        erigon = "erigon"
 
         measure_total = "total"
         measure_all = "all"
         trace_opcodes = "trace"
+        measure_perf = "perf"
+        measure_time = "time"
         benchmark_mode = "benchmark"
 
         if not self._check_clocksource():
             print("clocksource should be tsc, found something different. See docker_timer.md somewhere in the docs")
             return
 
-        if evm not in {geth, openethereum, evmone, openethereum_ewasm, nethermind, ethereumjs}:
-            print("Wrong evm parameter. Allowed are: {}, {}, {}, {}, {}".format(geth, openethereum, evmone,
-                                                                                openethereum_ewasm, nethermind,
-                                                                                ethereumjs))
+        if evm not in {geth, evmone, nethermind, ethereumjs, erigon}:
+            print("Wrong evm parameter. Allowed are: {}, {}, {}, {}, {}".format(geth, evmone, nethermind, ethereumjs, erigon))
             return
 
-        if mode not in {measure_total, measure_all, trace_opcodes, benchmark_mode}:
-            print("Invalid measurement mode. Allowed options: {}, {}, {}, {}".format(measure_total, measure_all,
-                                                                                     trace_opcodes, benchmark_mode))
+        if mode not in {measure_total, measure_all, trace_opcodes, measure_perf, measure_time, benchmark_mode}:
+            print("Invalid measurement mode. Allowed options: {}, {}, {}, {}, {}, {}".format(measure_total, measure_all, trace_opcodes, measure_perf, measure_time, benchmark_mode))
             return
-        elif mode == measure_total:
+        
+        if mode == measure_total:
             header = "program_id,sample_id,run_id,measure_total_time_ns,measure_total_timer_time_ns"
-            print(header)
         elif mode == measure_all:
             header = "program_id,sample_id,run_id,instruction_id,measure_all_time_ns,measure_all_timer_time_ns"
-            print(header)
         elif mode == trace_opcodes:
             header = "program_id,sample_id,instruction_id,pc,op,stack_depth"
             for i in range(MAX_OPCODE_ARGS):
                 elem = ",arg_{}".format(i)
                 header += elem
-            print(header)
         elif mode == benchmark_mode:
             if evm == geth:
+                header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,mem_allocs_count,mem_allocs_bytes"
+            elif evm == erigon:
                 header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,mem_allocs_count,mem_allocs_bytes"
             elif evm == nethermind:
                 header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,std_dev_time_ns,mem_allocs_count,mem_allocs_bytes"
             elif evm == ethereumjs:
                 header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,std_dev_time_ns"
-            else:
-                header = ''
-            print(header)
+        elif mode == measure_perf:
+            header = "program_id,sample_id,task_clock,context_switches,page_faults,instructions,branches,branch_misses,L1_dcache_loads,LLC_loads,LLC_load_misses,L1_icache_loads,L1_icache_load_misses,dTLB_loads,dTLB_load_misses,iTLB_loads,iTLB_load_misses"
+        elif mode == measure_time:
+            header = "program_id,sample_id,real_time_perf,user_time_perf,sys_time_perf,real_time_pure,user_time_pure,sys_time_pure"
+
+        print(header)
 
         for program in self._programs:
             for sample_id in range(n_samples):
@@ -143,10 +145,6 @@ class Measurements(object):
                         instrumenter_result = self.run_geth_benchmark(program, sample_size)
                     else:
                         instrumenter_result = self.run_geth(mode, program, sample_size)
-                elif evm == openethereum:
-                    instrumenter_result = self.run_openethereum(mode, program, sample_size)
-                elif evm == openethereum_ewasm:
-                    instrumenter_result = self.run_openethereum_wasm(program, sample_size)
                 elif evm == evmone:
                     instrumenter_result = self.run_evmone(mode, program, sample_size)
                 elif evm == nethermind:
