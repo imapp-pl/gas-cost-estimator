@@ -83,16 +83,15 @@ class Measurements(object):
         Parameters:
         sample_size (integer): size of a sample to pass into the EVM measuring executable
         mode (string): Measurement mode. Allowed: total, all, trace
-        evm (string): which evm use. Default: geth. Allowed: geth, openethereum, evmone
+        evm (string): which evm use. Default: geth. Allowed: geth, evmone
         n_samples (integer): number of samples (individual starts of the EVM measuring executable) to do
         mode (string): Measurement mode. Allowed: total, all, trace, perf, time
         """
 
         geth = "geth"
-        openethereum = "openethereum"
-        openethereum_ewasm = "openethereum_ewasm"
         evmone = "evmone"
         nethermind = "nethermind"
+        ethereumjs = 'ethereumjs'
         erigon = "erigon"
         revm = "revm"
 
@@ -107,13 +106,13 @@ class Measurements(object):
             print("clocksource should be tsc, found something different. See docker_timer.md somewhere in the docs")
             return
 
-        allowed_evms = {geth, openethereum, evmone, openethereum_ewasm, nethermind, erigon, revm}
+        allowed_evms = {geth, evmone, nethermind, ethereumjs, erigon, revm}
         if evm not in allowed_evms:
             print("Wrong evm parameter. Allowed are: {}".format(','.join(allowed_evms)))
             return
 
         if mode not in {measure_total, measure_all, trace_opcodes, measure_perf, measure_time, benchmark_mode}:
-            print("Invalid measurement mode. Allowed options: {}, {}, {}, {}"
+            print("Invalid measurement mode. Allowed options: {}, {}, {}, {}, {}, {}"
                   .format(measure_total, measure_all, trace_opcodes, measure_perf, measure_time, benchmark_mode))
             return
         elif mode == measure_total:
@@ -133,9 +132,11 @@ class Measurements(object):
                 header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,mem_allocs_count,mem_allocs_bytes"
             elif evm == nethermind:
                 header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,std_dev_time_ns,mem_allocs_count,mem_allocs_bytes"
+            elif evm == ethereumjs:
+                header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,std_dev_time_ns"
             elif evm == erigon:
                 header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,mem_allocs_count,mem_allocs_bytes"
-            elif evm == 'revm':
+            elif evm == revm:
                 header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,std_dev_time_ns"
             print(header)
         elif mode == measure_perf:
@@ -153,10 +154,6 @@ class Measurements(object):
                         instrumenter_result = self.run_geth_benchmark(program, sample_size)
                     else:
                         instrumenter_result = self.run_geth(mode, program, sample_size)
-                elif evm == openethereum:
-                    instrumenter_result = self.run_openethereum(mode, program, sample_size)
-                elif evm == openethereum_ewasm:
-                    instrumenter_result = self.run_openethereum_wasm(program, sample_size)
                 elif evm == evmone:
                     instrumenter_result = self.run_evmone(mode, program, sample_size)
                 elif evm == nethermind:
@@ -164,6 +161,8 @@ class Measurements(object):
                         instrumenter_result = self.run_nethermind_benchmark(program, sample_size)
                     else:
                         instrumenter_result = self.run_nethermind(program, sample_size)
+                elif evm == ethereumjs and mode == benchmark_mode:
+                    instrumenter_result = self.run_ethereumjs_benchmark(program, sample_size)               
                 elif evm == erigon:
                     if mode == benchmark_mode:
                         instrumenter_result = self.run_geth_benchmark(program, sample_size)
@@ -261,31 +260,6 @@ class Measurements(object):
         instrumenter_result = result.stdout.split('\n')[:-1]
         return instrumenter_result
 
-    def run_openethereum(self, mode, program, sample_size):
-        openethereum_build_path = './instrumentation_measurement/openethereum/target/release/'
-        openethereum_main = [openethereum_build_path + 'openethereum-evm']
-        args = ['--chain', 'Berlin', '--measure-mode', mode, '--code', program.bytecode, "--repeat",
-                "{}".format(sample_size)]
-        invocation = openethereum_main + args
-        result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
-        assert result.returncode == 0
-        # strip the output normally printed by openethereum ("output", gas used, time info)
-        instrumenter_result = result.stdout.split('\n')[:-4]
-        return instrumenter_result
-
-    def run_openethereum_wasm(self, program, sample_size):
-        openethereum_path = './instrumentation_measurement/openethereum'
-        openethereum_build_path = os.path.join(openethereum_path, 'target/release/')
-        openethereum_main = [openethereum_build_path + 'openethereum-evm']
-        chain = os.path.join(openethereum_path, 'ethcore/res/instant_seal.json')
-        args = ['--code', program.bytecode, "--repeat", "{}".format(sample_size), "--chain", chain, "--gas", "5000"]
-        invocation = openethereum_main + args
-        result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
-        assert result.returncode == 0
-        # strip the output normally printed by openethereum ("output", gas used, time info)
-        # also, when executing ewasm bytecode, OpenEthereum first runs some EVM code (38 instructions)
-        instrumenter_result = result.stdout.split('\n')[38:-4]
-        return instrumenter_result
 
     def run_evmone(self, mode, program, sampleSize):
         if mode == 'perf':
