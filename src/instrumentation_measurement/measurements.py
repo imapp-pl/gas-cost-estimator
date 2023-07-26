@@ -83,7 +83,7 @@ class Measurements(object):
         Parameters:
         sample_size (integer): size of a sample to pass into the EVM measuring executable
         mode (string): Measurement mode. Allowed: total, all, trace
-        evm (string): which evm use. Default: geth. Allowed: geth, openethereum, evmone
+        evm (string): which evm use. Default: geth. Allowed: geth, evmone
         n_samples (integer): number of samples (individual starts of the EVM measuring executable) to do
         """
 
@@ -210,32 +210,6 @@ class Measurements(object):
         assert result.returncode == 0
         # strip the final newline
         instrumenter_result = result.stdout.split('\n')[:-1]
-        return instrumenter_result
-
-    def run_openethereum(self, mode, program, sample_size):
-        openethereum_build_path = './instrumentation_measurement/openethereum/target/release/'
-        openethereum_main = [openethereum_build_path + 'openethereum-evm']
-        args = ['--chain', 'Berlin', '--measure-mode', mode, '--code', program.bytecode, "--repeat",
-                "{}".format(sample_size)]
-        invocation = openethereum_main + args
-        result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
-        assert result.returncode == 0
-        # strip the output normally printed by openethereum ("output", gas used, time info)
-        instrumenter_result = result.stdout.split('\n')[:-4]
-        return instrumenter_result
-
-    def run_openethereum_wasm(self, program, sample_size):
-        openethereum_path = './instrumentation_measurement/openethereum'
-        openethereum_build_path = os.path.join(openethereum_path, 'target/release/')
-        openethereum_main = [openethereum_build_path + 'openethereum-evm']
-        chain = os.path.join(openethereum_path, 'ethcore/res/instant_seal.json')
-        args = ['--code', program.bytecode, "--repeat", "{}".format(sample_size), "--chain", chain, "--gas", "5000"]
-        invocation = openethereum_main + args
-        result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
-        assert result.returncode == 0
-        # strip the output normally printed by openethereum ("output", gas used, time info)
-        # also, when executing ewasm bytecode, OpenEthereum first runs some EVM code (38 instructions)
-        instrumenter_result = result.stdout.split('\n')[38:-4]
         return instrumenter_result
 
     def run_evmone(self, mode, program, sample_size):
