@@ -184,8 +184,6 @@ class Measurements(object):
         with open(CLOCKSOURCE_PATH) as clocksource:
             return clocksource.readlines() == ['tsc\n']
 
-        Reads programs' CSV from STDIN. Prints measurement results CSV to STDOUT
-
     def run_geth(self, mode, program, sampleSize):
         if mode == 'perf':
             return self.run_perf_geth(program)
