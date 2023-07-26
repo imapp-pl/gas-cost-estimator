@@ -143,7 +143,7 @@ no comments here, I can't imagine sizing could depend on anything.
 
 ## `0x37,CALLDATACOPY`
 
-`0x37,CALLDATACOPY,"2 + 3 * (number of words copied, rounded up)",,3,0,Copy input data in current environment to memory.,2 is paid for the operation plus 3 for each word copied (rounded up).`
+`0x37,CALLDATACOPY,"3 + 3 * (number of words copied, rounded up)",,3,0,Copy input data in current environment to memory.,2 is paid for the operation plus 3 for each word copied (rounded up).`
 
 - **geth**: Data is in `callContext.contract.Input`. It is copied to a memory spot depending on the offset `callContext.memory.Set(memOffset64...`, so `memory` is also an input
 - **evmone**: Data is in `state.msg.input_data` / `state.msg.input_size`. Memory in `state.memory`
@@ -167,7 +167,7 @@ no comments here, I can't imagine sizing could depend on anything.
 
 ## `0x39,CODECOPY`
 
-`0x39,CODECOPY,"2 + 3 * (number of words copied, rounded up)",,3,0,Copy code running in current environment to memory.,2 is paid for the operation plus 3 for each word copied (rounded up).`
+`0x39,CODECOPY,"3 + 3 * (number of words copied, rounded up)",,3,0,Copy code running in current environment to memory.,2 is paid for the operation plus 3 for each word copied (rounded up).`
 
 - **geth**: Data is in `callContext.contract.Code`
 - **evmone**: Data is in `state.code`

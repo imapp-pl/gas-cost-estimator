@@ -62,6 +62,15 @@ lm_validation <- function(df, yvar, xvar, selection_col, selection_val) {
 ### Data preparations
 
 ```{r}
+setwd("~/sources/imapp/gas-cost-estimator/src")
+
+estimated_cost = read.csv("../../local/argument_estimated_cost.csv")
+# those are only the constant gas costs, we'll calculate arg portion of the cost later
+current_gas_cost = read.csv("program_generator/data/current_gas_cost.csv")
+# from measure_marginal.Rmd, not currently used except experimentation with mixing (see below)
+marginal = read.csv("../../local/marginal_estimated_cost.csv")
+
+# TODO: PUSHes aren't estimated and are prevalent in the validation programs. Rectify this.
 explained_variable = 'avg_measure_total_time_ns'
 suffix = ""
 # suffix = "_lenovo"
@@ -102,7 +111,25 @@ measurement_codename = paste0("200_8", suffix)
 
 programs = read.csv(paste("../../local/", program_set_codename, ".csv", sep=""))
 
-traces = read.csv(paste("../../local/trace_", program_set_codename, ".csv", sep=""))
+# we randomize the number of instructions in the random programs to capture program length impact on OPCODE performance
+# program_set_codename = "arythmetic_c100_randOps500_clean"
+# measurement_codename = "200_8"
+
+# this dataset (tiny programs) has a radically highler slope coefficient and lower Intercept
+# this prompt us to vary the opsLimit for the validation program generation
+# program_set_codename = "arythmetic_c100_ops10_clean"
+# measurement_codename = "200_8"
+
+# this is the data set without varying argument size. 
+# program_set_codename = "arythmetic_c100_ops30_clean_smallpush"
+# measurement_codename = "50_1"
+
+program_set_codename = "full5_c100_randOps1500_clean_prejump_randominant"
+measurement_codename = "200_8"
+
+programs = read.csv(paste("../../local/pg_validation_", program_set_codename, ".csv", sep=""))
+
+traces = read.csv(paste("../../local/trace_pg_validation_", program_set_codename, ".csv", sep=""))
 head(traces)
 total_measurements_geth = read.csv(paste("../../local/geth_", program_set_codename, "_", measurement_codename, ".csv", sep=""))
 head(total_measurements_geth)
@@ -172,6 +199,8 @@ estimated_traces = sqldf("SELECT
                           INNER JOIN current_gas_cost ON
                             traces.op == current_gas_cost.opcode")
 
+# TODO: very crude, how can this be made more robust?
+
 # wherever the argument did not apply we ended up with NA, we need 0 to calculate
 # overall cost of the program
 estimated_traces$arg0[which(is.na(estimated_traces$arg0))] = 0
@@ -213,6 +242,14 @@ estimated_traces$cost_ns = estimated_traces$estimate_marginal_ns +
 ```
 
 Here we do the same, only using the current gas cost schedule.
+
+```{r}
+arg1_current_gas = (estimated_traces$arg1 != 0) * 50 * (log(estimated_traces$arg1, 256) + 1) * (estimated_traces$op == 'EXP')
+arg2_current_gas = 3 * ceiling(estimated_traces$arg2 / 32) * (estimated_traces$op %in% arg2_linear_opcodes)
+estimated_traces$current_gas = estimated_traces$constant_current_gas +
+                               arg1_current_gas +
+                               arg2_current_gas
+```
 
 ```{r}
 arg1_current_gas = (estimated_traces$arg1 != 0) * 50 * (log(estimated_traces$arg1, 256) + 1) * (estimated_traces$op == 'EXP')
@@ -332,6 +369,17 @@ lm_validation(validation, explained_variable, 'current_gas', selection_col='env'
 
 ### Final validation model
 
+We explore the models in two classes of program lengths. We keep the model for the long programs.
+
+```{r}
+print('geth all - current gas')
+lm_validation(validation, explained_variable, 'current_gas', selection_col='env', selection_val='geth')
+print('evmone all - current gas')
+lm_validation(validation, explained_variable, 'current_gas', selection_col='env', selection_val='evmone')
+```
+
+### Final validation model
+
 ```{r}
 print('geth all - no EXP')
 lm_validation(validation_no_exp, explained_variable, 'cost_ns', selection_col='env', selection_val='geth')
@@ -370,6 +418,26 @@ compare_plots(validation, 'env', 'geth', 'cost_ns', labels='dominant')
 compare_plots(validation, 'env', 'evmone', 'cost_ns', labels='dominant')
 ```
 
+A side-by-side comparison of the gas cost model with the `current_gas` model.
+
+```{r fig.width=25}
+par(mfrow=c(2,2))
+compare_plots(validation_no_exp, 'env', 'geth', 'current_gas', labels='dominant')
+compare_plots(validation_no_exp, 'env', 'evmone', 'current_gas', labels='dominant')
+compare_plots(validation_no_exp, 'env', 'geth', 'cost_ns', labels='dominant')
+compare_plots(validation_no_exp, 'env', 'evmone', 'cost_ns', labels='dominant')
+par(mfrow=c(2,2))
+compare_plots(validation, 'env', 'geth', 'current_gas', labels='dominant', log='xy')
+compare_plots(validation, 'env', 'evmone', 'current_gas', labels='dominant', log='xy')
+compare_plots(validation, 'env', 'geth', 'cost_ns', labels='dominant', log='xy')
+compare_plots(validation, 'env', 'evmone', 'cost_ns', labels='dominant', log='xy')
+par(mfrow=c(2,2))
+compare_plots(validation, 'env', 'geth', 'current_gas', labels='dominant')
+compare_plots(validation, 'env', 'evmone', 'current_gas', labels='dominant')
+compare_plots(validation, 'env', 'geth', 'cost_ns', labels='dominant')
+compare_plots(validation, 'env', 'evmone', 'cost_ns', labels='dominant')
+```
+
 ## Model diagnostics
 
 ```{r fig.width=15}
@@ -382,7 +450,7 @@ plot(model_evmone)
 
 Results for `geth` and `evmone` look promising, the correlation is clearly there, the slope coefficient is close to 1 (so there's a good correspondence between a nanosecond of measurement and the nanosecond of validation).
 
-The model diagnosticts aren't ideal, especially for `geth`, where some non-linearity is present..
+The model diagnosticts aren't ideal, especially for `geth`, where strong non-linearity is present because of the overestimated EXP programs.
 
 The best trait of the model is that it offers a massive improvement over the trivial model and a substantial improvement over the current gas cost model.
 
@@ -414,6 +482,47 @@ Lastly, increasing the sample size on the estimation set (`marginal/arguments`),
 
 ```{r}
 all_envs = c("geth", "evmone")
+# [SECTION] final report
+# changing from COINBASE originally, b/c it is very expensive in evmone
+pivot_opcode = "EXP"
+
+pivot_statistics = sqldf(paste0("SELECT estimate_marginal_ns, env FROM estimated_cost WHERE opcode='", pivot_opcode, "'"))
+pivot_gas_cost = current_gas_cost$constant_current_gas[which(current_gas_cost$opcode==pivot_opcode)]
+  
+row.names(pivot_statistics) = pivot_statistics$env
+
+for (env in all_envs) {
+  estimated_cost$estimate_marginal_ns_rel[which(estimated_cost$env==env)] = estimated_cost$estimate_marginal_ns[which(estimated_cost$env == env)] /
+                                                                            pivot_statistics[env, 'estimate_marginal_ns']
+  estimated_cost$arg0_ns_rel[which(estimated_cost$env==env)] = estimated_cost$arg0_ns[which(estimated_cost$env == env)] /
+                                                                            pivot_statistics[env, 'estimate_marginal_ns']
+  estimated_cost$arg1_ns_rel[which(estimated_cost$env==env)] = estimated_cost$arg1_ns[which(estimated_cost$env == env)] /
+                                                                            pivot_statistics[env, 'estimate_marginal_ns']
+  estimated_cost$arg2_ns_rel[which(estimated_cost$env==env)] = estimated_cost$arg2_ns[which(estimated_cost$env == env)] /
+                                                                            pivot_statistics[env, 'estimate_marginal_ns']
+  estimated_cost$estimate_marginal_gas[which(estimated_cost$env==env)] = estimated_cost$estimate_marginal_ns_rel[which(estimated_cost$env == env)] * pivot_gas_cost
+  estimated_cost$arg0_gas[which(estimated_cost$env==env)] = estimated_cost$arg0_ns_rel[which(estimated_cost$env == env)] * pivot_gas_cost
+  estimated_cost$arg1_gas[which(estimated_cost$env==env)] = estimated_cost$arg1_ns_rel[which(estimated_cost$env == env)] * pivot_gas_cost
+  estimated_cost$arg2_gas[which(estimated_cost$env==env)] = estimated_cost$arg2_ns_rel[which(estimated_cost$env == env)] * pivot_gas_cost
+}
+
+gas_schedule_comparison = sqldf("SELECT current_gas_cost.opcode, constant_current_gas, geth.estimate_marginal_gas as geth_gas, evmone.estimate_marginal_gas as evmone_gas
+                                 FROM current_gas_cost 
+                                 INNER JOIN estimated_cost as geth
+                                   ON geth.opcode = current_gas_cost.opcode AND geth.env = 'geth'
+                                 INNER JOIN estimated_cost as evmone
+                                   ON evmone.opcode = current_gas_cost.opcode AND evmone.env = 'evmone'")
+```
+
+
+```{r}
+# just export the final compiled estimations to a file
+setwd("~/sources/imapp/gas-cost-estimator/src")
+write.csv(estimated_cost, "../../local/final_estimated_cost.csv", quote=FALSE, row.names=FALSE)
+write.csv(gas_schedule_comparison, "../../local/gas_schedule_comparison.csv", quote=FALSE, row.names=FALSE)
+
+# [SECTION] original
+
 extract_opcodes <- function() {
   unique(estimated_cost$opcode)
 }

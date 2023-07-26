@@ -1,0 +1,251 @@
+---
+title: 'R Notebook: validation of caches usage measurement at Evmone; for
+  Gas Cost Estimator'
+output:
+  html_document:
+    df_print: paged
+---
+```{r, setup, include=FALSE}
+knitr::opts_knit$set(root.dir = '~/sources/imapp/gas-cost-estimator/src')
+```
+```{r include=FALSE, fig.width=20}
+library(sqldf)
+library(nlme)
+```
+
+## Intro
+
+This is the validation of cache usage measurements for evmone.
+We examine programs with mixed opcodes in a random order.
+The length of the programs simulate real world contracts.
+Then we check if the profiles of cache usage 
+are comparable to the profiles resulted in the marginal tests.
+
+## Generate data
+
+Test programs are generated in two series: low and high. 
+The low are programs with `opsLimit` of 0, 200, 400, 600, 800, 1000.
+The high are programs with `opsLimit` of 0, 500, 1000,1500, 2000,2500, 3000, 3500, 4000, 4500.
+`opsLimit` is the number of opcodes in a program, including `PUSH` and `POP`.
+There are 10 programs per each `opsLimit`.
+Opcodes are drawn with even distribution and it is expected that longer programs 
+are better balanced. Each opcode occurrence is supplied with required number of `PUSH` and `POP`.
+Zero length programs are actually very short programs.
+
+Each program is executed 1.000.000 times within a single vm instance
+to produce an observable load.
+
+```
+python3 program_generator/pg_validation.py generate --cleanStack --opsLimit=200 --count=10 --fullCsv > ../../local/pg_validataion_ops0200.csv
+cat ../../local/pg_validataion_ops0200.csv | python3 instrumentation_measurement/measurements.py measure --evm evmone --mode perf --sampleSize=1 --nSamples=10 > ../../local/perf_evmone_pg_validataion_ops0200.csv
+```
+
+```{r}
+opsLimitList = list('0000', '0200', '0400', '0500', '0600', '0800', '1000', '1500', '2000', '2500', '3000', '3500', '4000', '4500')
+if (exists("v_measurements")) {
+  remove(v_measurements)
+}
+for (opsLimit in opsLimitList) {
+  s = sprintf("../../local/perf_evmone_pg_validataion_ops%s.csv", opsLimit)
+  v_measurements_data = read.csv(s)
+  s = sprintf("SELECT %s as opsLimit, '%s_'||v_measurements_data.program_id as v_program_id, v_measurements_data.* FROM v_measurements_data", opsLimit, opsLimit)
+  t = sqldf(s)
+  if (exists("v_measurements")) {
+    v_measurements = rbind(v_measurements, t)
+  } else {
+    v_measurements = t
+  }
+}
+v_measurements <- v_measurements[order(v_measurements$opsLimit),]
+```
+
+## Distribution - Low series
+
+The low series are programs with the number of opcodes of 0, 200, 400, 600, 800, 1000.
+Each program is executed 10 times (`nSamples=10`) to capture the right statistics.
+Note that the `v_program_id` is the length and id of program of this length, for instance `0200_3`.
+The results presented in the graphs below are grouped by the length.
+
+```{r fig.width=10}
+selection <- c(0,200,400,600,800,1000)
+a <- v_measurements[v_measurements$opsLimit %in% selection,]
+a$rid <- a$opsLimit/20+a$program_id
+
+boxplot(task_clock~v_program_id,data=a)
+abline(lm(task_clock~rid,data=a), col='blue')
+boxplot(context_switches~v_program_id,data=a)
+abline(lm(context_switches~rid,data=a), col='blue')
+boxplot(page_faults~v_program_id,data=a)
+abline(lm(page_faults~rid,data=a), col='blue')
+boxplot(instructions~v_program_id,data=a)
+abline(lm(instructions~rid,data=a), col='blue')
+boxplot(branches~v_program_id,data=a)
+abline(lm(branches~rid,data=a), col='blue')
+boxplot(branch_misses~v_program_id,data=a)
+abline(lm(branch_misses~rid,data=a), col='blue')
+boxplot(L1_dcache_loads~v_program_id,data=a)
+abline(lm(L1_dcache_loads~rid,data=a), col='blue')
+boxplot(LLC_loads~v_program_id,data=a)
+abline(lm(LLC_loads~rid,data=a), col='blue')
+boxplot(LLC_load_misses~v_program_id,data=a)
+abline(lm(LLC_load_misses~rid,data=a), col='blue')
+boxplot(L1_icache_loads~v_program_id,data=a)
+abline(lm(L1_icache_loads~rid,data=a), col='blue')
+boxplot(L1_icache_load_misses~v_program_id,data=a)
+abline(lm(L1_icache_load_misses~rid,data=a), col='blue')
+boxplot(dTLB_loads~v_program_id,data=a)
+abline(lm(dTLB_loads~rid,data=a), col='blue')
+boxplot(dTLB_load_misses~v_program_id,data=a)
+abline(lm(dTLB_load_misses~rid,data=a), col='blue')
+boxplot(iTLB_loads~v_program_id,data=a)
+abline(lm(iTLB_loads~rid,data=a), col='blue')
+boxplot(iTLB_load_misses~v_program_id,data=a)
+abline(lm(iTLB_load_misses~rid,data=a), col='blue')
+```
+
+Observe that deviations are relatively very low. This allow us to average values in the further study.
+
+## Distribution - High series
+
+The high series are programs with the number of opcodes of 0, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500.
+Each program is executed 10 times (`nSamples=10`) to capture the right statistics.
+Note that the v_program_id the length and id of program of this length, for instance `0500_3`.
+The results presented in the graphs below are grouped by the length.
+
+```{r fig.width=10}
+selection <- c(0,500,1000,1500,2000,2500,3000,3500,4000,4500)
+a <- v_measurements[v_measurements$opsLimit %in% selection,]
+a$rid <- a$opsLimit/50+a$program_id
+
+boxplot(task_clock~v_program_id,data=a)
+abline(lm(task_clock~rid,data=a), col='blue')
+boxplot(context_switches~v_program_id,data=a)
+abline(lm(context_switches~rid,data=a), col='blue')
+boxplot(page_faults~v_program_id,data=a)
+abline(lm(page_faults~rid,data=a), col='blue')
+boxplot(instructions~v_program_id,data=a)
+abline(lm(instructions~rid,data=a), col='blue')
+boxplot(branches~v_program_id,data=a)
+abline(lm(branches~rid,data=a), col='blue')
+boxplot(branch_misses~v_program_id,data=a)
+abline(lm(branch_misses~rid,data=a), col='blue')
+boxplot(L1_dcache_loads~v_program_id,data=a)
+abline(lm(L1_dcache_loads~rid,data=a), col='blue')
+boxplot(LLC_loads~v_program_id,data=a)
+abline(lm(LLC_loads~rid,data=a), col='blue')
+boxplot(LLC_load_misses~v_program_id,data=a)
+abline(lm(LLC_load_misses~rid,data=a), col='blue')
+boxplot(L1_icache_loads~v_program_id,data=a)
+abline(lm(L1_icache_loads~rid,data=a), col='blue')
+boxplot(L1_icache_load_misses~v_program_id,data=a)
+abline(lm(L1_icache_load_misses~rid,data=a), col='blue')
+boxplot(dTLB_loads~v_program_id,data=a)
+abline(lm(dTLB_loads~rid,data=a), col='blue')
+boxplot(dTLB_load_misses~v_program_id,data=a)
+abline(lm(dTLB_load_misses~rid,data=a), col='blue')
+boxplot(iTLB_loads~v_program_id,data=a)
+abline(lm(iTLB_loads~rid,data=a), col='blue')
+boxplot(iTLB_load_misses~v_program_id,data=a)
+abline(lm(iTLB_load_misses~rid,data=a), col='blue')
+```
+
+Observe that deviations are relatively very low. This allow us to average values in the further study.
+
+## Data analysis
+
+As the profile of cache usage we examine the following factors.
+
+- Branch prediction effectiveness. `branch_misses/branches`. These are actually misses so the lower value the better the branch prediction works.
+- L1 icache - instruction cache of the first level - effectiveness. `L1_icache_load_misses/L1_icache_loads`. These are actually misses so the lower value the better cache works. Unfortunately, results for dcache (data cache) are absent.
+- Last Level Cache effectiveness. `LLC_load_misses/LLC_loads`. These are actually misses so the lower value the better cache works.
+- L1 to LLC ratio. `LLC_loads/(L1_icache_loads+L1_dcache_loads)`. It compares loads of L1 and LLC. This demonstrates distribution
+of requests  against cache levels. The lower value, the more requests are are handled by L1 and intermediate level caches.
+- Translation buffers iTLB and dTLB. `iTLB_load_misses/iTLB_loads` and `dTLB_load_misses/dTLB_loads`. These are statistics of less importance.
+
+In the graphs below. The values are average measurements of programs. Values are grouped by `opsLimit`. 
+The blue and red bars refer to detailed measurements of marginal programs for opcodes. 
+The average values of measurements of marginal programs for each opcode are between these bars.
+
+```{r}
+v_measurements_avg <- aggregate(cbind(v_measurements$task_clock,v_measurements$context_switches,v_measurements$page_faults,v_measurements$instructions,v_measurements$branches,v_measurements$branch_misses,v_measurements$L1_dcache_loads,v_measurements$LLC_loads,v_measurements$LLC_load_misses,v_measurements$L1_icache_loads,v_measurements$L1_icache_load_misses,v_measurements$dTLB_loads,v_measurements$dTLB_load_misses,v_measurements$iTLB_loads,v_measurements$iTLB_load_misses), by = list(v_measurements$opsLimit, v_measurements$program_id), FUN = mean, trim=0.1)
+
+colnames(v_measurements_avg) <- c("opsLimit", "program_id", "task_clock", "context_switches", "page_faults", "instructions", "branches", "branch_misses", "L1_dcache_loads","LLC_loads","LLC_load_misses","L1_icache_loads","L1_icache_load_misses","dTLB_loads","dTLB_load_misses","iTLB_loads","iTLB_load_misses")
+
+v_measurements_avg <- v_measurements_avg[order(v_measurements_avg$opsLimit),]
+```
+
+```{r fig.width=10}
+boxplot(branch_misses/branches~opsLimit,data=v_measurements_avg)
+abline(h = 0.00092, col="red")
+abline(h = 0.00104, col="blue")
+```
+
+The branch prediction effectiveness drops to 97%. It is around 99.9% for measurements of marginal programs.
+But the effectiveness is still very high. 
+So the drop has little impact on the cost estimations.
+
+```{r fig.width=10}
+boxplot(L1_icache_load_misses/L1_icache_loads~opsLimit,data=v_measurements_avg,ylim=c(0.0008,0.01))
+abline(h = 0.0008, col="red")
+abline(h = 0.0012, col="blue")
+```
+
+Note that these are measurements just for instruction cache, there are not enough results for data cache.
+The miss ratio is 0.004 - 0.01.
+It is around 0.001 for measurements of marginal programs.
+This is one order difference. But it can be still considered as effective cache usage.
+
+```{r fig.width=10}
+boxplot(LLC_load_misses/LLC_loads~opsLimit,data=v_measurements_avg)
+abline(h = 0.0001, col="red")
+abline(h = 0.0004, col="blue")
+```
+
+It seems that the last level cache usage is much more effective for the validation measurements.
+But note that it may be related to the first level cache usage,
+which is much more effective for the marginal tests.
+
+```{r fig.width=10}
+boxplot(LLC_loads/(L1_icache_loads+L1_dcache_loads)~opsLimit,data=v_measurements_avg)
+abline(h = 0.0009, col="red")
+abline(h = 0.0013, col="blue")
+```
+
+This ratio shows how hits are distributed across cache levels. 
+The higher ratio in case of the validation measurements 
+means that more requests reach the last level cache.
+
+```{r fig.width=10}
+boxplot(iTLB_load_misses/iTLB_loads~opsLimit,data=v_measurements_avg,ylim=c(0.0000024,0.000011))
+abline(h = 0.0000024, col="red")
+abline(h = 0.000003, col="blue")
+boxplot(dTLB_load_misses/dTLB_loads~opsLimit,data=v_measurements_avg)
+abline(h = 0.000025, col="red")
+abline(h = 0.000033, col="blue")
+```
+
+## Conclusion
+
+In both cases, the marginal and validation measurements, 
+each opcode is accompanied with the proper number of `PUSH` and `POP`.
+And this is a part of the results.
+The validation programs consist of mixed opcodes drawn with even probability.
+So longer programs tend to have more even quantitative distribution of opcodes
+but with a random order.
+
+Note that in both tests caches are substantially used.
+And it has essential impact on measurements.
+So we compare usage profiles for the marginal and validation measurements.
+
+The last level cache is used circa 4 times more often for the validation
+programs than for the marginal programs. 
+This is because the miss ratio for the first level caches are 10 times higher.
+And this is compensated by the fact that the miss ratio for the last level caches
+is slightly lower.
+So the big picture is that cache usage is shifted to the higher caches.
+But the shift is relatively little and the effectiveness of caches are still very high.
+The cache usage profiles are actually comparable
+and impose similar impact on the marginal and validation measurements.
+
+Finally, we conclude that a surrounding of examined opcode during an execution
+has negligible impact on the cache usage.

@@ -5,6 +5,7 @@ import os.path
 import re
 import sys
 import subprocess
+from io import StringIO
 
 
 MAX_OPCODE_ARGS = 7

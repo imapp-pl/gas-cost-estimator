@@ -41,6 +41,36 @@ results = rbind(result_evmone, result_geth)
 
 ### Functions
 
+head(measurements)
+```
+
+```{r fig.width=18, fig.height=6}
+remove_outliers <- function(df, col) {
+  boxplot_result = boxplot(df[, col] ~ df[, 'op_count'] + df[, 'env'] + df[, 'opcode'], plot=FALSE)
+  outliers = boxplot_result$out
+  names = boxplot_result$names[boxplot_result$group]
+  all_row_identifiers = paste(df[, col], df[, 'op_count'], df[, 'env'], df[, 'opcode'], sep='.')
+  outlier_row_identifiers = paste(outliers, names, sep='.')
+  no_outliers = df[-which(all_row_identifiers %in% outlier_row_identifiers), ]
+  return(no_outliers)
+}
+
+removed_outliers = TRUE
+
+if (removed_outliers) {
+  # before
+  boxplot(measure_total_time_ns ~ opcode, data=measurements[which(measurements$env == 'geth'), ], las=2, outline=TRUE, log='y')
+  boxplot(measure_total_time_ns ~ opcode, data=measurements[which(measurements$env == 'evmone'), ], las=2, outline=TRUE, log='y')
+  # boxplot(measure_total_time_ns ~ opcode, data=measurements[which(measurements$env == 'openethereum'), ], las=2, outline=TRUE, log='y')
+
+  measurements = remove_outliers(measurements, 'measure_total_time_ns')
+  
+  # after
+  boxplot(measure_total_time_ns ~ opcode, data=measurements[which(measurements$env == 'geth'), ], las=2, outline=TRUE, log='y')
+  boxplot(measure_total_time_ns ~ opcode, data=measurements[which(measurements$env == 'evmone'), ], las=2, outline=TRUE, log='y')
+  # boxplot(measure_total_time_ns ~ opcode, data=measurements[which(measurements$env == 'openethereum'), ], las=2, outline=TRUE, log='y')
+}
+```
 
 ```{r}
 # Extracts all OPCODEs from the `programs` data frame of the given arity (args taken off the stack).
