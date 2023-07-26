@@ -7,12 +7,10 @@ import sys
 import subprocess
 from io import StringIO
 
-
 MAX_OPCODE_ARGS = 7
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 
 CLOCKSOURCE_PATH = '/sys/devices/system/clocksource/clocksource0/current_clocksource'
-
 
 class Program(object):
     """
@@ -186,6 +184,7 @@ class Measurements(object):
         with open(CLOCKSOURCE_PATH) as clocksource:
             return clocksource.readlines() == ['tsc\n']
 
+        Reads programs' CSV from STDIN. Prints measurement results CSV to STDOUT
 
     def run_geth(self, mode, program, sampleSize):
         if mode == 'perf':
@@ -351,7 +350,7 @@ class Measurements(object):
 
         return [instrumenter_result]
 
-    def run_evmone_default(self, mode, program, sampleSize):
+    def run_evmone_default(self, mode, program, sample_size):
         evmone_build_path = './instrumentation_measurement/evmone/build/'
         bin = evmone_build_path + 'bin/evmc'
         vm = evmone_build_path + 'lib/libevmone.so'
@@ -360,7 +359,7 @@ class Measurements(object):
 
         # only measure-total is currently supported
         assert mode == "total"
-        args = ['--vm', evmone_build_path + '/lib/libevmone.so,O=0', '--sample-size', '{}'.format(sampleSize)]
+        args = ['--vm', evmone_build_path + '/lib/libevmone.so,O=0', '--sample-size', '{}'.format(sample_size)]
         invocation = evmone_main + args + [program.bytecode]
         result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
         assert result.returncode == 0
@@ -391,6 +390,15 @@ class Measurements(object):
         args = ['--sampleSize', '{}'.format(sample_size)]
         bytecode_arg = ['--bytecode', program.bytecode]
         invocation = geth_benchmark + args + bytecode_arg
+        return instrumenter_result
+
+    def run_ethereumjs_benchmark(self, program, sample_size):
+        ethereumjs_benchmark = [
+            'node',
+            '-max-old-space-size=4000'  # So that garbage collector won't be executed until program eats 4GB of RAM
+            './instrumentation_measurement/ethereumjs-monorepo/packages/evm/benchmarks/benchmarkOpcodes.js']
+        args = [f'--sampleSize={sample_size}', program.bytecode]
+        invocation = ethereumjs_benchmark + args
         result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
         assert result.returncode == 0
         # strip the final newline
