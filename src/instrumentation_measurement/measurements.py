@@ -11,7 +11,9 @@ MAX_OPCODE_ARGS = 7
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 
 CLOCKSOURCE_PATH = '/sys/devices/system/clocksource/clocksource0/current_clocksource'
-
+# NETHERMIND_EXEC_PATH = './instrumentation_measurement/nethermind_benchmark/src/Nethermind/Imapp.Benchmark.Runner/bin/Release/net6.0/Imapp.Benchmark.Runner'
+NETHERMIND_EXEC_PATH = 'C:\\dev\\imapp\\nethermind\\src\\Nethermind\\Nethermind.Benchmark.Runner\\bin\\Release\\net7.0\\Nethermind.Benchmark.Runner.exe'
+NETHERMIND_WD_PATH = 'C:\\dev\\imapp\\nethermind\\src\\Nethermind\\Nethermind.Benchmark.Runner\\bin\\Release\\net7.0'
 class Program(object):
     """
     POD object for a program
@@ -52,8 +54,15 @@ class Measurements(object):
     """
 
     def __init__(self):
-        reader = csv.DictReader(sys.stdin, delimiter=',', quotechar='"')
-        self._programs = [self._program_from_csv_row(row) for row in reader]
+        self._programs = []
+        with open(DIR_PATH +'/a.csv') as csvfile:
+            reader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
+            for row in reader:
+                # print(row)
+                self._programs.append(self._program_from_csv_row(row))
+                # print(self._programs.count)
+            # print(self._programs.count)
+        print("Loaded {} programs".format(len(self._programs)))
 
     def _program_from_csv_row(self, row):
         program_id = row['program_id']
@@ -74,7 +83,7 @@ class Measurements(object):
         else:
             return bytecode
 
-    def measure(self, sample_size=1, mode="all", evm="geth", n_samples=1):
+    def measure(self, sample_size=1, mode="benchmark", evm="nethermind", n_samples=1):
         """
         Main entrypoint of the CLI tool.
 
@@ -82,11 +91,25 @@ class Measurements(object):
 
         Parameters:
         sample_size (integer): size of a sample to pass into the EVM measuring executable
-        mode (string): Measurement mode. Allowed: total, all, trace
+        mode (string): Measurement mode. Allowed: total, all, trace, benchmark
         evm (string): which evm use. Default: geth. Allowed: geth, evmone
         n_samples (integer): number of samples (individual starts of the EVM measuring executable) to do
-        mode (string): Measurement mode. Allowed: total, all, trace, perf, time
         """
+
+
+        geth_benchmark = [DIR_PATH +'/'+ NETHERMIND_EXEC_PATH]
+        args = ['-m', 'bytecode', '-b', '602050']
+        invocation = geth_benchmark + args
+        str = ' '.join(invocation)
+        print(invocation)
+        print(str)
+        # result = subprocess.run(str, stdout=subprocess.PIPE, universal_newlines=True)
+
+        pro = subprocess.Popen(NETHERMIND_EXEC_PATH, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, shell=True, cwd=NETHERMIND_WD_PATH)
+        stdout, stderr = pro.communicate()
+
+        print(stdout)
+        print(stderr)
 
         geth = "geth"
         evmone = "evmone"
@@ -102,9 +125,9 @@ class Measurements(object):
         measure_time = "time"
         benchmark_mode = "benchmark"
 
-        if not self._check_clocksource():
-            print("clocksource should be tsc, found something different. See docker_timer.md somewhere in the docs")
-            return
+        # if not self._check_clocksource():
+        #     print("clocksource should be tsc, found something different. See docker_timer.md somewhere in the docs")
+        #     return
 
         allowed_evms = {geth, evmone, nethermind, ethereumjs, erigon, revm}
         if evm not in allowed_evms:
@@ -165,9 +188,9 @@ class Measurements(object):
                     instrumenter_result = self.run_ethereumjs_benchmark(program, sample_size)               
                 elif evm == erigon:
                     if mode == benchmark_mode:
-                        instrumenter_result = self.run_geth_benchmark(program, sample_size)
+                        instrumenter_result = self.run_erigon_benchmark(program, sample_size)
                     else:
-                        instrumenter_result = self.run_geth(mode, program, sample_size)
+                        instrumenter_result = self.run_erigon(mode, program, sample_size)
                 elif evm == revm and mode == benchmark_mode:
                     instrumenter_result = self.run_revm_benchmark(program, sample_size)
 
@@ -250,10 +273,10 @@ class Measurements(object):
         return instrumenter_result
 
     def run_nethermind_benchmark(self, program, sample_size):
-        geth_benchmark = [
-            './instrumentation_measurement/nethermind_benchmark/src/Nethermind/Imapp.Benchmark.Runner/bin/Release/net6.0/Imapp.Benchmark.Runner']
-        args = ['--bytecode', program.bytecode, '--print-csv', '--sample-size={}'.format(sample_size)]
+        geth_benchmark = [DIR_PATH +'/'+ NETHERMIND_EXEC_PATH]
+        args = ['-m', 'bytecode', '-b', program.bytecode]
         invocation = geth_benchmark + args
+        print(invocation)
         result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
         assert result.returncode == 0
         # strip the final newline
@@ -476,10 +499,10 @@ class Measurements(object):
                     specs[opcode] = int(row['Removed from stack'])
             return specs
 
-
 def main():
-    fire.Fire(Measurements, name='measure')
-
+    print('Running measurements...')
+    fire.Fire(Measurements, name='measure', command='measure')
+    print('Done')
 
 if __name__ == '__main__':
     main()
