@@ -6,14 +6,19 @@ import re
 import sys
 import subprocess
 from io import StringIO
+import argparse
 
 MAX_OPCODE_ARGS = 7
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 
+
+
 CLOCKSOURCE_PATH = '/sys/devices/system/clocksource/clocksource0/current_clocksource'
+DEFAULT_EXEC_NETHERMIND = './../../gas-cost-estimator-clients/nethermind/src/Nethermind/Nethermind.Benchmark.Runner/bin/Release/net7.0/Nethermind.Benchmark.Runner.exe'
 # NETHERMIND_EXEC_PATH = './instrumentation_measurement/nethermind_benchmark/src/Nethermind/Imapp.Benchmark.Runner/bin/Release/net6.0/Imapp.Benchmark.Runner'
 NETHERMIND_EXEC_PATH = 'C:\\dev\\imapp\\nethermind\\src\\Nethermind\\Nethermind.Benchmark.Runner\\bin\\Release\\net7.0\\Nethermind.Benchmark.Runner.exe'
 NETHERMIND_WD_PATH = 'C:\\dev\\imapp\\nethermind\\src\\Nethermind\\Nethermind.Benchmark.Runner\\bin\\Release\\net7.0'
+
 class Program(object):
     """
     POD object for a program
@@ -23,6 +28,7 @@ class Program(object):
         self.id = id
         self.bytecode = bytecode
         self.measured_op_position = measured_op_position
+
 
 
 class Measurements(object):
@@ -54,15 +60,47 @@ class Measurements(object):
     """
 
     def __init__(self):
+
+        # parser = argparse.ArgumentParser(description='Measure EVM bytecode')
+        # parser.add_argument('--mode', type=str, default='benchmark', help='Measurement mode. Allowed: total, all, trace, benchmark')
+
+
         self._programs = []
-        with open(DIR_PATH +'/a.csv') as csvfile:
-            reader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
-            for row in reader:
-                # print(row)
-                self._programs.append(self._program_from_csv_row(row))
-                # print(self._programs.count)
-            # print(self._programs.count)
-        print("Loaded {} programs".format(len(self._programs)))
+
+        cwd = os.getcwd()
+        relative = '../emvone.csv'
+        relative2 = '../temp/'
+        absolute = os.path.join(cwd, relative)
+
+
+        a1 = os.path.abspath(relative)
+        a2 = os.path.abspath(relative2)
+        a3 = os.path.abspath(absolute)
+
+        if os.path.exists(a1):
+            print("File exist")
+        
+        if os.path.exists(cwd + relative):
+            print("Add File exist")
+        
+        if (os.path.exists(a2)):
+            print("Rel File exist")
+
+        if (os.path.exists(a3)):
+            print("Rel File exist")
+
+    
+
+        print(absolute)
+
+        # with open(DIR_PATH +'/a.csv') as csvfile:
+        #     reader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
+        #     for row in reader:
+        #         # print(row)
+        #         self._programs.append(self._program_from_csv_row(row))
+        #         # print(self._programs.count)
+        #     # print(self._programs.count)
+        # print("Loaded {} programs".format(len(self._programs)))
 
     def _program_from_csv_row(self, row):
         program_id = row['program_id']
@@ -500,9 +538,10 @@ class Measurements(object):
             return specs
 
 def main():
-    print('Running measurements...')
-    fire.Fire(Measurements, name='measure', command='measure')
-    print('Done')
+    fire.Fire(Measurements, name='measure')
+    # print('Running measurements...')
+    # fire.Fire(Measurements, name='measure', command='measure')
+    # print('Done')
 
 if __name__ == '__main__':
     main()

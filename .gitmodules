@@ -7,7 +7,7 @@
 	branch = imapp_benchmark
 [submodule "src/instrumentation_measurement/nethermind_benchmark"]
 	path = src/instrumentation_measurement/nethermind_benchmark
-	url = https://github.com/imapp-pl/nethermind
+	url = https://github.com/imapp-pl/nethermind	
 	branch = imapp_benchmark
 [submodule "src/instrumentation_measurement/erigon_benchmark"]
 	path = src/instrumentation_measurement/erigon_benchmark
