@@ -94,6 +94,7 @@ class Measurements(object):
         ethereumjs = 'ethereumjs'
         erigon = "erigon"
         revm = "revm"
+        besu = "besu"
 
         measure_total = "total"
         measure_all = "all"
@@ -106,7 +107,7 @@ class Measurements(object):
             print("clocksource should be tsc, found something different. See docker_timer.md somewhere in the docs")
             return
 
-        allowed_evms = {geth, evmone, nethermind, ethereumjs, erigon, revm}
+        allowed_evms = {geth, evmone, nethermind, ethereumjs, erigon, revm, besu}
         if evm not in allowed_evms:
             print("Wrong evm parameter. Allowed are: {}".format(','.join(allowed_evms)))
             return
@@ -138,6 +139,8 @@ class Measurements(object):
                 header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,mem_allocs_count,mem_allocs_bytes"
             elif evm == revm:
                 header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,std_dev_time_ns"
+            elif evm == besu:
+                header = "program_id,sample_id,run_id,measure_total_time_ns,measure_total_timer_time_ns,gc_alloc,gc_count"
             print(header)
         elif mode == measure_perf:
             header = "program_id,sample_id,task_clock,context_switches,page_faults,instructions,branches,branch_misses,L1_dcache_loads,LLC_loads,LLC_load_misses,L1_icache_loads,L1_icache_load_misses,dTLB_loads,dTLB_load_misses,iTLB_loads,iTLB_load_misses"
@@ -170,6 +173,8 @@ class Measurements(object):
                         instrumenter_result = self.run_geth(mode, program, sample_size)
                 elif evm == revm and mode == benchmark_mode:
                     instrumenter_result = self.run_revm_benchmark(program, sample_size)
+                elif evm == besu:
+                  instrumenter_result = self.run_besu(mode, program, sample_size)
 
                 if mode == trace_opcodes:
                     instrumenter_result = self.sanitize_tracer_result(instrumenter_result)
@@ -416,6 +421,27 @@ class Measurements(object):
             round(base_benchmark_data['std_dev']['point_estimate'], 2),  # std_dev_time_ns
         ]
         return ','.join(str(col) for col in columns)
+
+    def run_besu(self, mode, program, sample_size):
+        # only measure-total is currently supported
+        assert mode == "total" or mode == "benchmark"
+
+        invocation = [f"{os.environ['JAVA_HOME']}/bin/java", "-jar", "evmtool-jmh.jar", "-foe", "true", "-rf", "json", "-rff", "temp.json", "-bm", "ss", "-i", f"{sample_size}", "-wi", "5", "-prof", "gc", "-p", f"messagesPerRun=1000", "-p", f"code={program.bytecode}"]
+        result = subprocess.run(invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        assert result.returncode == 0
+
+        with open('temp.json', 'r') as f:
+          data = json.load(f)
+        scores = data[0]['primaryMetric']['rawData'][0]
+        if mode == "total":
+          instrumenter_result = [f'{i},{int(score)},0' for i, score in enumerate(scores)]
+        else:
+          gc_alloc = data[0]['secondaryMetrics']['·gc.alloc.rate.norm']['rawData'][0]
+          gc_count = data[0]['secondaryMetrics']['·gc.count']['rawData'][0]
+          instrumenter_result = [f'{i},{int(score)},0,{int(gc_alloc[i])},{int(gc_count[i])}' for i, score in enumerate(scores)]
+
+        return instrumenter_result
+
 
     def csv_row_append_info(self, instrumenter_result, program, sample_id):
         # append program_id and sample_id which are not known to the instrumenter tool
