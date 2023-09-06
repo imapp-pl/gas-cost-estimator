@@ -1,4 +1,4 @@
-cd ..
+cd ../..
 mkdir gas-cost-estimator-clients -p
 cd gas-cost-estimator-clients
 
