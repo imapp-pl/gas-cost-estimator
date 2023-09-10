@@ -372,7 +372,7 @@ class Measurements(object):
     def run_ethereumjs_benchmark(self, program, sample_size):
         ethereumjs_benchmark = [
             'node',
-            '-max-old-space-size=4000'  # So that garbage collector won't be executed until program eats 4GB of RAM
+            '-max-old-space-size=4000',  # So that garbage collector won't be executed until program eats 4GB of RAM
             './instrumentation_measurement/ethereumjs-monorepo/packages/evm/benchmarks/benchmarkOpcodes.js']
         args = [f'--sampleSize={sample_size}', program.bytecode]
         invocation = ethereumjs_benchmark + args
