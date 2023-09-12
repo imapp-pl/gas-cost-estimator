@@ -388,7 +388,7 @@ class Measurements(object):
             'bench',
             '--bench=criterion_bytecode',
         ]
-        args = ['--manifest-path=./instrumentation_measurement/revm/bins/revm-test/Cargo.toml']
+        args = ['--manifest-path=./instrumentation_measurement/revm/crates/revm/Cargo.toml']
         invocation = revm_benchmark + args
         results = []
         for run_id in range(1, sample_size + 1):
