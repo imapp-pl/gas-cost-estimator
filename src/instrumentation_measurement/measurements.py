@@ -394,8 +394,8 @@ class Measurements(object):
         for run_id in range(1, sample_size + 1):
             result = subprocess.run(invocation,
                                     input=program.bytecode.encode('utf-8'),
-                                    shell=True,
-                                    stdout=subprocess.PIPE)
+                                    stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.DEVNULL)
             assert result.returncode == 0
             result_line = self._create_revm_result_line(run_id)
             results.append(result_line)
