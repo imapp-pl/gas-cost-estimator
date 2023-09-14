@@ -414,10 +414,10 @@ class Measurements(object):
         columns = [
             run_id,  # run_id
             iterations,  # iterations_count
-            int(stop_benchmark_data['slope']['point_estimate']),  # engine_overhead_time_ns
+            int(stop_benchmark_data['mean']['point_estimate']),  # engine_overhead_time_ns
             # execution_loop_time_ns
-            int(base_benchmark_data['slope']['point_estimate'] - stop_benchmark_data['slope']['point_estimate']),
-            int(base_benchmark_data['slope']['point_estimate']),  # total_time_ns
+            int(base_benchmark_data['mean']['point_estimate'] - stop_benchmark_data['mean']['point_estimate']),
+            int(base_benchmark_data['mean']['point_estimate']),  # total_time_ns
             round(base_benchmark_data['std_dev']['point_estimate'], 2),  # std_dev_time_ns
         ]
         return ','.join(str(col) for col in columns)
