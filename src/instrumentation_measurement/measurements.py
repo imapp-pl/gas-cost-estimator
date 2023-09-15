@@ -165,7 +165,7 @@ class Measurements(object):
                     else:
                         instrumenter_result = self.run_nethermind(program, sample_size)
                 elif evm == ethereumjs and mode == benchmark_mode:
-                    instrumenter_result = self.run_ethereumjs_benchmark(program, sample_size)               
+                    instrumenter_result = self.run_ethereumjs_benchmark(program, sample_size)
                 elif evm == erigon:
                     if mode == benchmark_mode:
                         instrumenter_result = self.run_geth_benchmark(program, sample_size)
@@ -342,7 +342,7 @@ class Measurements(object):
         assert result.returncode == 0
         # strip additional output information added by evmone
         instrumenter_result = result.stdout.split('\n')[3:-4]
-                                    
+
 
         return instrumenter_result
 
@@ -391,12 +391,26 @@ class Measurements(object):
         args = ['--manifest-path=./instrumentation_measurement/revm/crates/revm/Cargo.toml']
         invocation = revm_benchmark + args
         results = []
+
+        stdout_file = open('revm_stdout.txt', 'a')
+        stderr_file = open('revm_stderr.txt', 'a')
         for run_id in range(1, sample_size + 1):
             result = subprocess.run(invocation,
                                     input=program.bytecode.encode('utf-8'),
-                                    stdout=subprocess.DEVNULL,
-                                    stderr=subprocess.DEVNULL)
-            assert result.returncode == 0
+                                    stdout=stdout_file,
+                                    stderr=stderr_file)
+
+            retry_number = 0
+            while result.returncode != 0 and retry_number < 10:
+                result = subprocess.run(invocation,
+                                        input=program.bytecode.encode('utf-8'),
+                                        stdout=stdout_file,
+                                        stderr=stderr_file)
+                retry_number += 1
+
+            assert result.returncode == 0, \
+                f"Return code: {result.returncode} for program {program.bytecode.encode('utf-8')}."
+
             result_line = self._create_revm_result_line(run_id)
             results.append(result_line)
 
