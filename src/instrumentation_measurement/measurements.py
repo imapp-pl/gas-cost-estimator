@@ -166,6 +166,8 @@ class Measurements(object):
                         instrumenter_result = self.run_nethermind(program, sample_size)
                 elif evm == ethereumjs and mode == benchmark_mode:
                     instrumenter_result = self.run_ethereumjs_benchmark(program, sample_size)               
+                elif evm == ethereumjs and mode == measure_total:
+                    instrumenter_result = self.run_ethereumjs(program, sample_size)
                 elif evm == erigon:
                     if mode == benchmark_mode:
                         instrumenter_result = self.run_geth_benchmark(program, sample_size)
@@ -372,7 +374,7 @@ class Measurements(object):
     def run_ethereumjs_benchmark(self, program, sample_size):
         ethereumjs_benchmark = [
             'node',
-            '-max-old-space-size=4000'  # So that garbage collector won't be executed until program eats 4GB of RAM
+            '-max-old-space-size=4000',  # So that garbage collector won't be executed until program eats 4GB of RAM
             './instrumentation_measurement/ethereumjs-monorepo/packages/evm/benchmarks/benchmarkOpcodes.js']
         args = [f'--sampleSize={sample_size}', program.bytecode]
         invocation = ethereumjs_benchmark + args
@@ -380,6 +382,20 @@ class Measurements(object):
         assert result.returncode == 0
         # strip the final newline
         instrumenter_result = result.stdout.split('\n')[:-1]
+        return instrumenter_result
+
+    def run_ethereumjs(self, program, sample_size):
+        ethereumjs_benchmark = [
+            'node',
+            '-max-old-space-size=4000',  # So that garbage collector won't be executed until program eats 4GB of RAM
+            './instrumentation_measurement/ethereumjs-monorepo/packages/evm/benchmarks/benchmarkOpcodesSamples.js']
+        args = [f'--sampleSize={sample_size}', program.bytecode]
+        invocation = ethereumjs_benchmark + args
+        result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
+        assert result.returncode == 0
+        # strip the final newline
+        scores = result.stdout.split('\n')[:-1]
+        instrumenter_result = [f'{i},{int(score)},0' for i, score in enumerate(scores)]
         return instrumenter_result
 
     def run_revm_benchmark(self, program, sample_size):
