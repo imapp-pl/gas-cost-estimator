@@ -344,7 +344,7 @@ class Measurements(object):
         assert result.returncode == 0
         # strip additional output information added by evmone
         instrumenter_result = result.stdout.split('\n')[3:-4]
-                                    
+
 
         return instrumenter_result
 
@@ -404,15 +404,29 @@ class Measurements(object):
             'bench',
             '--bench=criterion_bytecode',
         ]
-        args = ['--manifest-path=./instrumentation_measurement/revm/bins/revm-test/Cargo.toml']
+        args = ['--manifest-path=./instrumentation_measurement/revm/crates/revm/Cargo.toml']
         invocation = revm_benchmark + args
         results = []
+
+        stdout_file = open('revm_stdout.txt', 'a')
+        stderr_file = open('revm_stderr.txt', 'a')
         for run_id in range(1, sample_size + 1):
             result = subprocess.run(invocation,
                                     input=program.bytecode.encode('utf-8'),
-                                    shell=True,
-                                    stdout=subprocess.PIPE)
-            assert result.returncode == 0
+                                    stdout=stdout_file,
+                                    stderr=stderr_file)
+
+            retry_number = 0
+            while result.returncode != 0 and retry_number < 10:
+                result = subprocess.run(invocation,
+                                        input=program.bytecode.encode('utf-8'),
+                                        stdout=stdout_file,
+                                        stderr=stderr_file)
+                retry_number += 1
+
+            assert result.returncode == 0, \
+                f"Return code: {result.returncode} for program {program.bytecode.encode('utf-8')}."
+
             result_line = self._create_revm_result_line(run_id)
             results.append(result_line)
 
@@ -430,10 +444,10 @@ class Measurements(object):
         columns = [
             run_id,  # run_id
             iterations,  # iterations_count
-            int(stop_benchmark_data['slope']['point_estimate']),  # engine_overhead_time_ns
+            int(stop_benchmark_data['mean']['point_estimate']),  # engine_overhead_time_ns
             # execution_loop_time_ns
-            int(base_benchmark_data['slope']['point_estimate'] - stop_benchmark_data['slope']['point_estimate']),
-            int(base_benchmark_data['slope']['point_estimate']),  # total_time_ns
+            int(base_benchmark_data['mean']['point_estimate'] - stop_benchmark_data['mean']['point_estimate']),
+            int(base_benchmark_data['mean']['point_estimate']),  # total_time_ns
             round(base_benchmark_data['std_dev']['point_estimate'], 2),  # std_dev_time_ns
         ]
         return ','.join(str(col) for col in columns)
