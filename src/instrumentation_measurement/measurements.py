@@ -277,7 +277,6 @@ class Measurements(object):
 
         invocation = [exec_path] + args
 
-        print(invocation)
         pro = subprocess.Popen(invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, shell=True, cwd=exec_parent)
         stdout, stderr = pro.communicate()
 
