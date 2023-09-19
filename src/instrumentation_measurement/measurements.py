@@ -11,10 +11,7 @@ MAX_OPCODE_ARGS = 7
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 
 CLOCKSOURCE_PATH = '/sys/devices/system/clocksource/clocksource0/current_clocksource'
-DEFAULT_EXEC_NETHERMIND = '../../../gas-cost-estimator-clients/build/nethermind/Nethermind.Benchmark.Runner.exe'
-# NETHERMIND_EXEC_PATH = './instrumentation_measurement/nethermind_benchmark/src/Nethermind/Imapp.Benchmark.Runner/bin/Release/net6.0/Imapp.Benchmark.Runner'
-NETHERMIND_EXEC_PATH = 'C:\\dev\\imapp\\nethermind\\src\\Nethermind\\Nethermind.Benchmark.Runner\\bin\\Release\\net7.0\\Nethermind.Benchmark.Runner.exe'
-NETHERMIND_WD_PATH = 'C:\\dev\\imapp\\nethermind\\src\\Nethermind\\Nethermind.Benchmark.Runner\\bin\\Release\\net7.0'
+DEFAULT_EXEC_NETHERMIND = '../../../gas-cost-estimator-clients/build/nethermind/Nethermind.Benchmark.Runner'
 
 class Program(object):
     """
