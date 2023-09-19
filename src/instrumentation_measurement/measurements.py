@@ -6,12 +6,9 @@ import re
 import sys
 import subprocess
 from io import StringIO
-import argparse
 
 MAX_OPCODE_ARGS = 7
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
-
-
 
 CLOCKSOURCE_PATH = '/sys/devices/system/clocksource/clocksource0/current_clocksource'
 DEFAULT_EXEC_NETHERMIND = '../../../gas-cost-estimator-clients/build/nethermind/Nethermind.Benchmark.Runner.exe'
@@ -28,8 +25,6 @@ class Program(object):
         self.id = id
         self.bytecode = bytecode
         self.measured_op_position = measured_op_position
-
-
 
 class Measurements(object):
     """
@@ -64,43 +59,7 @@ class Measurements(object):
         # parser = argparse.ArgumentParser(description='Measure EVM bytecode')
         # parser.add_argument('--mode', type=str, default='benchmark', help='Measurement mode. Allowed: total, all, trace, benchmark')
 
-
-        self._programs = []
-
-        cwd = os.getcwd()
-        relative = '../emvone.csv'
-        relative2 = '../temp/'
-        absolute = os.path.join(cwd, relative)
-
-
-        a1 = os.path.abspath(relative)
-        a2 = os.path.abspath(relative2)
-        a3 = os.path.abspath(absolute)
-
-        if os.path.exists(a1):
-            print("File exist")
-        
-        if os.path.exists(cwd + relative):
-            print("Add File exist")
-        
-        if (os.path.exists(a2)):
-            print("Rel File exist")
-
-        if (os.path.exists(a3)):
-            print("Rel File exist")
-
-    
-
-        print(absolute)
-
-        # with open(DIR_PATH +'/a.csv') as csvfile:
-        #     reader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
-        #     for row in reader:
-        #         # print(row)
-        #         self._programs.append(self._program_from_csv_row(row))
-        #         # print(self._programs.count)
-        #     # print(self._programs.count)
-        # print("Loaded {} programs".format(len(self._programs)))
+        print(DIR_PATH)
 
     def _program_from_csv_row(self, row):
         program_id = row['program_id']
@@ -116,12 +75,12 @@ class Measurements(object):
             bytecode += '00'  # STOP
             # watch out to not hit the hard `MAX_ARG_STRLEN` limit of `131072` chars,
             # c.f. https://tousu.in/qa/?qa=833087/
-            bytecode += '03' * ((1 << 15) - len(bytecode) // 2)
+            bytecode += '03' * ((1 << 11) - len(bytecode) // 2)
             return bytecode
         else:
             return bytecode
 
-    def measure(self, sample_size=1, mode="benchmark", evm="nethermind", n_samples=1, input_file="", exec_path=""):
+    def measure(self, sample_size=1, mode="all", evm="evmone", n_samples=1, input_file="", exec_path=""):
         """
         Main entrypoint of the CLI tool.
 
@@ -134,21 +93,18 @@ class Measurements(object):
         n_samples (integer): number of samples (individual starts of the EVM measuring executable) to do
         """
 
-
-        geth_benchmark = [DIR_PATH +'/'+ NETHERMIND_EXEC_PATH]
-        args = ['-m', 'bytecode', '-b', '602050']
-        invocation = geth_benchmark + args
-        str = ' '.join(invocation)
-        print(invocation)
-        print(str)
-        # result = subprocess.run(str, stdout=subprocess.PIPE, universal_newlines=True)
-
-        pro = subprocess.Popen(NETHERMIND_EXEC_PATH, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, shell=True, cwd=NETHERMIND_WD_PATH)
-        stdout, stderr = pro.communicate()
-
-        print(stdout)
-        print(stderr)
-
+        if (input_file != ""):
+            input_file_full_path = os.path.abspath(input_file)
+            self._programs = []
+            with open(input_file_full_path) as csvfile:
+                reader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
+                for row in reader:
+                    self._programs.append(self._program_from_csv_row(row))
+        else:
+            reader = csv.DictReader(sys.stdin, delimiter=',', quotechar='"')
+            self._programs = [self._program_from_csv_row(row) for row in reader]
+        # print("Loaded {} programs".format(len(self._programs)))
+    
         geth = "geth"
         evmone = "evmone"
         nethermind = "nethermind"
@@ -219,7 +175,7 @@ class Measurements(object):
                     instrumenter_result = self.run_evmone(mode, program, sample_size)
                 elif evm == nethermind:
                     if mode == benchmark_mode:
-                        instrumenter_result = self.run_nethermind_benchmark(program, sample_size)
+                        instrumenter_result = self.run_nethermind_benchmark(program, sample_size, exec_path)
                     else:
                         instrumenter_result = self.run_nethermind(program, sample_size)
                 elif evm == ethereumjs and mode == benchmark_mode:
@@ -310,15 +266,27 @@ class Measurements(object):
         instrumenter_result = result.stdout.split('\n')[:-1]
         return instrumenter_result
 
-    def run_nethermind_benchmark(self, program, sample_size):
-        geth_benchmark = [DIR_PATH +'/'+ NETHERMIND_EXEC_PATH]
+    def run_nethermind_benchmark(self, program, sample_size, exec_path):
+        if exec_path == "":
+            exec_path = os.path.abspath(DIR_PATH +'/'+ DEFAULT_EXEC_NETHERMIND)
+        else:
+            exec_path = os.path.abspath(exec_path)
+        exec_parent = os.path.dirname(exec_path)
+
         args = ['-m', 'bytecode', '-b', program.bytecode]
-        invocation = geth_benchmark + args
+
+        invocation = [exec_path] + args
+
         print(invocation)
-        result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
-        assert result.returncode == 0
-        # strip the final newline
-        instrumenter_result = result.stdout.split('\n')[:-1]
+        pro = subprocess.Popen(invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, shell=True, cwd=exec_parent)
+        stdout, stderr = pro.communicate()
+
+        if (stderr != ""):
+            print("Error in nethermind benchmark")
+            print(stderr)
+            return
+
+        instrumenter_result = stdout.split('\n')[:-1]
         return instrumenter_result
 
 
