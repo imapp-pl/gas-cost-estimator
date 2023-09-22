@@ -51,12 +51,12 @@ class Measurements(object):
     ```
     """
 
-    def __init__(self):
+    # def __init__(self):
 
-        # parser = argparse.ArgumentParser(description='Measure EVM bytecode')
-        # parser.add_argument('--mode', type=str, default='benchmark', help='Measurement mode. Allowed: total, all, trace, benchmark')
+    #     # parser = argparse.ArgumentParser(description='Measure EVM bytecode')
+    #     # parser.add_argument('--mode', type=str, default='benchmark', help='Measurement mode. Allowed: total, all, trace, benchmark')
 
-        print(DIR_PATH)
+    #     print(DIR_PATH)
 
     def _program_from_csv_row(self, row):
         program_id = row['program_id']
@@ -270,21 +270,24 @@ class Measurements(object):
             exec_path = os.path.abspath(exec_path)
         exec_parent = os.path.dirname(exec_path)
 
-        args = ['-m', 'bytecode', '-b', program.bytecode]
+        args = ['--mode', 'bytecode', '--bytecode', program.bytecode]
 
         invocation = [exec_path] + args
 
-        pro = subprocess.Popen(invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, shell=True, cwd=exec_parent)
-        stdout, stderr = pro.communicate()
+        results = []
+        for run_id in range(1, sample_size + 1):
+            pro = subprocess.Popen(invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, cwd=exec_parent)
+            stdout, stderr = pro.communicate()
 
-        if (stderr != ""):
-            print("Error in nethermind benchmark")
-            print(stderr)
-            return
-
-        instrumenter_result = stdout.split('\n')[:-1]
-        return instrumenter_result
-
+            if (stderr != ""):
+                print("Error in nethermind benchmark")
+                print(stderr)
+                return
+            
+            a = stdout.split('\n')
+            instrumenter_result = a[0]
+            results.append(str(run_id) + "," + instrumenter_result)
+        return results
 
     def run_evmone(self, mode, program, sampleSize):
         if mode == 'perf':
