@@ -12,6 +12,7 @@ DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 
 CLOCKSOURCE_PATH = '/sys/devices/system/clocksource/clocksource0/current_clocksource'
 DEFAULT_EXEC_NETHERMIND = '../../../gas-cost-estimator-clients/build/nethermind/Nethermind.Benchmark.Runner'
+DEFAULT_EXEC_ERIGON = '../../../gas-cost-estimator-clients/build/erigon/imapp_benchmark'
 
 class Program(object):
     """
@@ -179,7 +180,7 @@ class Measurements(object):
                     instrumenter_result = self.run_ethereumjs_benchmark(program, sample_size)               
                 elif evm == erigon:
                     if mode == benchmark_mode:
-                        instrumenter_result = self.run_erigon_benchmark(program, sample_size)
+                        instrumenter_result = self.run_erigon_benchmark(program, sample_size, exec_path)
                     else:
                         instrumenter_result = self.run_erigon(mode, program, sample_size)
                 elif evm == revm and mode == benchmark_mode:
@@ -284,8 +285,7 @@ class Measurements(object):
                 print(stderr)
                 return
             
-            a = stdout.split('\n')
-            instrumenter_result = a[0]
+            instrumenter_result = stdout.split('\n')[0]
             results.append(str(run_id) + "," + instrumenter_result)
         return results
 
@@ -381,15 +381,23 @@ class Measurements(object):
 
         return instrumenter_result
 
-    def run_erigon_benchmark(self, program, sample_size):
-        geth_benchmark = ['./instrumentation_measurement/erigon_benchmark/tests/imapp_benchmark/imapp_benchmark']
-
-        # alternative just-in-time compilation (could run 50% slower)
-        # geth_benchmark = ['go', 'run', './instrumentation_measurement/geth_benchmark/tests/imapp_benchmark/imapp_bench.go']
+    def run_erigon_benchmark(self, program, sample_size, exec_path):
+        if exec_path == "":
+            exec_path = os.path.abspath(DIR_PATH +'/'+ DEFAULT_EXEC_ERIGON)
+        else:
+            exec_path = os.path.abspath(exec_path)
 
         args = ['--sampleSize', '{}'.format(sample_size)]
         bytecode_arg = ['--bytecode', program.bytecode]
-        invocation = geth_benchmark + args + bytecode_arg
+        invocation = [exec_path] + args + bytecode_arg
+        pro = subprocess.Popen(invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        stdout, stderr = pro.communicate()
+        if (stderr != ""):
+            print("Error in nethermind benchmark")
+            print(stderr)
+            return
+        
+        instrumenter_result = stdout.split('\n')[0]
         return instrumenter_result
 
     def run_ethereumjs_benchmark(self, program, sample_size):
