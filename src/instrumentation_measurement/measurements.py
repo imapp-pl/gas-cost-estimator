@@ -397,7 +397,10 @@ class Measurements(object):
             print(stderr)
             return
         
-        instrumenter_result = stdout.split('\n')[0]
+        # print(stdout)
+        
+        instrumenter_result = stdout.split('\n')
+        instrumenter_result = instrumenter_result[:-1]
         return instrumenter_result
 
     def run_ethereumjs_benchmark(self, program, sample_size):
