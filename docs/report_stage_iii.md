@@ -66,10 +66,10 @@ In this chapter we show the measurement approach for individual EVM implementati
 
 Nethermind is developed in .NET framework using C# language. Our benchmark is based on the exiting solution and uses `DotNetBenchmark` library. In `Nethermind.Benchmark.Bytecode` project we have added a new benchmark class `BytecodeBenchmark` that contains the benchmarking methods. This uses in-memory database for a minimal impact. The EVM engine is contained in `Nethermind.Evm` library. The host is minimal.
 
-The following script executes benchamrks:
+The following script executes benchmarks:
 
-```
-python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./src/stage3/test.csv --evm nethermind --sample_size 10
+```bash
+    python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm nethermind --sample_size 10
 ```
 
 *Results*
@@ -99,6 +99,7 @@ Measure marginal sample results:
 Nethermind general characteristics of benchmark follows what is expected. Rather small differences between OPCODEs times suggest there is rather large engine overhead. This could be removed from results, before making further gas cost estimations.
 
 A repeatable pattern can be observed in jump OPCODEs:
+**Figure 2: Execution times of JUMP opcodes**
 <img src="./report_stage_iii_assets/nethermind_marginal_odd_jump.png" width="700"/>
 <img src="./report_stage_iii_assets/nethermind_marginal_odd_jumpdest.png" width="700"/>
 <img src="./report_stage_iii_assets/nethermind_marginal_odd_jumpi.png" width="700"/>
@@ -111,35 +112,52 @@ This might suggest that invoking a sinlge JUMP instruction initiates some engine
 
 *Setup*
 
-EtherumJS is written in TypeScript and executed in NodeJS environment. It proved particularly tricky to measure due to unstable results.
+EtherumJS is written in TypeScript and executed in NodeJS environment. For benchmarks we use npm `benchmark` library. The EVM engine is contained in `@ethereumjs/evm` library. There is no concept of a host in EthereumJS, so we use a minimal implementation.
+
+The following script executes benchmarks:
+
+```bash
+    python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm ethereumjs --sample_size 10
+```
 
 *Results*
 
 [Full details](./report_stage_iii_assets/ethereumjs_measure_marginal_single.html)
 
-**Figure 1a: Execution time (`total_time_ns`) of all programs**
+**Figure 3a: Execution time (`total_time_ns`) of all programs**
 
 <img src="./report_stage_iii_assets/ethereumjs_marginal_all_no_outliers.png" width="700"/>
 
-**Figure 1b: Execution time of ADD opcode**
+**Figure 3b: Execution time of ADD opcode**
 
 <img src="./report_stage_iii_assets/ethereumjs_marginal_add.png" width="700"/>
 
-**Figure 1c: Execution time of DIV opcode**
+**Figure 3c: Execution time of DIV opcode**
 
 <img src="./report_stage_iii_assets/ethereumjs_marginal_div.png" width="700"/>
 
-**Figure 1d: Execution time of MULMOD opcode**
+**Figure 3d: Execution time of MULMOD opcode**
 
 <img src="./report_stage_iii_assets/ethereumjs_marginal_mulmod.png" width="700"/>
 
 *Analysis* 
 
+EthereumJS results are visibly slower that the rest and that's expected.
+Most of the measured times are in the expected range. One specific to note is that PUSHx opcodes are not constant, but times increase linearly with the number of bytes pushed. The same cannot be observed for DUPx and SWAPx opcodes. This might suggest that EthereumJS has a special implementation for PUSHx opcodes.
+
 ### Erigon
 
 *Setup*
 
-Erigon share some of the code base with GoEthereum. 
+Erigon share some of the code base with GoEthereum. We used GO's `testing` library for benchmarking, and the code can be found in `test/imapp_benchmark/imapp_bench.go`. We used in-memory database for a minimal impact with a minimal host.
+
+
+The following script executes benchmarks:
+
+```
+    python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm erigon --sample_size 10
+```
+
 
 *Results*
 
@@ -162,6 +180,12 @@ Erigon share some of the code base with GoEthereum.
 <img src="./report_stage_iii_assets/erigon_marginal_mulmod.png" width="700"/>
 
 *Analysis* 
+
+Erigon overall results follow the expected pattern. The engine overhead is rather small, which is expected from a Go implementation.
+
+Again, PUSHx opcodes are not constant, but times increase linearly with the number of bytes pushed. The same cannot be observed for DUPx and SWAPx opcodes. This might suggest that Erigon has a special implementation for PUSHx opcodes.
+
+When looking at individual OPCODEs, there is an interesing non-linear pattern in simple opcodes like ADD, DIV, MULMOD, etc. The first 3 executions are visibly faster that the following. The rest behave in more linear fashion. The reason for this is not clear.
 
 ### Besu
 
