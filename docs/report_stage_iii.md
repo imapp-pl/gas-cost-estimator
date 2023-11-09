@@ -39,21 +39,46 @@ To eliminate the unwanted and unpredictable impacts of the factors above, and tw
 Additional factor is what we call 'engine overhead'. This is the cost of time and resources incurred between receiving the BYTECODE by the engine and executing the first OPCODE. Some EVM implementations have minimal overhead required just to load the BYTECODE. While others use this opportunity to parse it, spin up the engine, pre-fetch required data and prepare any accounts required for execution. We are of the opinion that this cost is the true cost of the OPCODE execution and should be divided proportionally. This is done individually for each implementation. 
 
 
-## EVM Implementations
-In this chapter we show the measurement approach individual EVM implementation and then preset and analyze results 
+For all the measurements we used a reference machine with the following specification:
+- Intel® Core™ i5-13500
+- 64 GB DDR4
+- 2 x 512 GB NVMe SSD
+- Ubuntu 22.04
+
+The required tooling can be installed using:
+```bash
+./src/setup_tools.sh
+```
+
+The individual EVM implementations are setup using:
+```bash
+./src/clone_clients.sh
+./src/build_clients.sh
+```
+
+## EVM Implementations results
+In this chapter we show the measurement approach for individual EVM implementations and then preset and analyze the results.
+
 
 ### Nethermind
 
 *Setup*
 
-Nethermind is developed in .NET framework using C# language. The EVM engine is contained in `XXX` library. The host is minimal.
-For benchmarking strategy we followed existing approach in the project with the following amendments
+Nethermind is developed in .NET framework using C# language. Our benchmark is based on the exiting solution and uses `DotNetBenchmark` library. In `Nethermind.Benchmark.Bytecode` project we have added a new benchmark class `BytecodeBenchmark` that contains the benchmarking methods. This uses in-memory database for a minimal impact. The EVM engine is contained in `Nethermind.Evm` library. The host is minimal.
+
+The following script executes benchamrks:
+
+```
+python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./src/stage3/test.csv --evm nethermind --sample_size 10
+```
 
 *Results*
 
 [Full details](./report_stage_iii_assets/nethermind_measure_marginal_single.html)
 
-**Figure 1a: Execution time (`total_time_ns`) of all programs**
+Measure marginal sample results:
+
+**Figure 1a: Execution time (`total_time_ns`) of all programs in measure marginal mode**
 
 <img src="./report_stage_iii_assets/nethermind_marginal_all_no_outliers.png" width="700"/>
 
@@ -70,6 +95,17 @@ For benchmarking strategy we followed existing approach in the project with the 
 <img src="./report_stage_iii_assets/nethermind_marginal_mulmod.png" width="700"/>
 
 *Analysis* 
+
+Nethermind general characteristics of benchmark follows what is expected. Rather small differences between OPCODEs times suggest there is rather large engine overhead. This could be removed from results, before making further gas cost estimations.
+
+A repeatable pattern can be observed in jump OPCODEs:
+<img src="./report_stage_iii_assets/nethermind_marginal_odd_jump.png" width="700"/>
+<img src="./report_stage_iii_assets/nethermind_marginal_odd_jumpdest.png" width="700"/>
+<img src="./report_stage_iii_assets/nethermind_marginal_odd_jumpi.png" width="700"/>
+
+The first program with no JUMP instructions is significantly faster than the next one with one JUMP instruction. The follow-up programs behave in a normal linear fasion.
+This might suggest that invoking a sinlge JUMP instruction initiates some engine functionality that is reused by any other JUMP instructions.
+
 
 ### EthereumJS
 
