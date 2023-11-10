@@ -232,7 +232,15 @@ As seen on the charts, the execution times for ADD, DIV and MULMOD are not consi
 
 *Setup*
 
+Rust EVM is developed in Rust. We used `criterion` library for benchmarking. The EVM engine is contained in `revm` library. We used `DummyHost` as a host object for a minimal impact.
 
+The benchmark code can be found at https://github.com/imapp-pl/revm/tree/evm_gas_cost_stage_3.
+
+
+The following script executes benchmarks:
+```
+    python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm revm --sample_size 10
+```
 
 *Results*
 
@@ -255,6 +263,10 @@ As seen on the charts, the execution times for ADD, DIV and MULMOD are not consi
 <img src="./report_stage_iii_assets/revm_marginal_mulmod.png" width="700"/>
 
 *Analysis* 
+
+Rust EVM results are very consistent and follow the expected pattern. The engine overhead is rather small, which is expected from a Rust implementation.
+
+In some opcodes like ADD, DIV and MULMOD there is a visible pattern of the first execution being slower than the rest. After running the specific opcode for a few times, the execution time stabilizes. This might be due to some caching or other Rust internals.
 
 ## Conclusions
 
