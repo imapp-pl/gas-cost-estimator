@@ -66,6 +66,8 @@ In this chapter we show the measurement approach for individual EVM implementati
 
 Nethermind is developed in .NET framework using C# language. Our benchmark is based on the exiting solution and uses `DotNetBenchmark` library. In `Nethermind.Benchmark.Bytecode` project we have added a new benchmark class `BytecodeBenchmark` that contains the benchmarking methods. This uses in-memory database for a minimal impact. The EVM engine is contained in `Nethermind.Evm` library. The host is minimal.
 
+The benchmark code can be found at https://github.com/imapp-pl/nethermind/tree/evm_gas_cost_stage_3.
+
 The following script executes benchmarks:
 
 ```bash
@@ -114,6 +116,8 @@ This might suggest that invoking a sinlge JUMP instruction initiates some engine
 
 EtherumJS is written in TypeScript and executed in NodeJS environment. For benchmarks we use npm `benchmark` library. The EVM engine is contained in `@ethereumjs/evm` library. There is no concept of a host in EthereumJS, so we use a minimal implementation.
 
+The benchmark code can be found at https://github.com/imapp-pl/ethereumjs-monorepo/tree/evm_gas_cost_stage_3.
+
 The following script executes benchmarks:
 
 ```bash
@@ -151,9 +155,9 @@ Most of the measured times are in the expected range. One specific to note is th
 
 Erigon share some of the code base with GoEthereum. We used GO's `testing` library for benchmarking, and the code can be found in `test/imapp_benchmark/imapp_bench.go`. We used in-memory database for a minimal impact with a minimal host.
 
+The benchmark code can be found at https://github.com/imapp-pl/erigon/tree/imapp_benchmark
 
 The following script executes benchmarks:
-
 ```
     python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm erigon --sample_size 10
 ```
@@ -163,21 +167,22 @@ The following script executes benchmarks:
 
 [Full details](./report_stage_iii_assets/erigon_measure_marginal_single.html)
 
-**Figure 1a: Execution time (`total_time_ns`) of all programs**
+**Figure 4a: Execution time (`total_time_ns`) of all programs**
 
 <img src="./report_stage_iii_assets/erigon_marginal_all_no_outliers.png" width="700"/>
 
-**Figure 1b: Execution time of ADD opcode**
+**Figure 4b: Execution time of ADD opcode**
 
 <img src="./report_stage_iii_assets/erigon_marginal_add.png" width="700"/>
 
-**Figure 1c: Execution time of DIV opcode**
+**Figure 4c: Execution time of DIV opcode**
 
 <img src="./report_stage_iii_assets/erigon_marginal_div.png" width="700"/>
 
-**Figure 1d: Execution time of MULMOD opcode**
+**Figure 4d: Execution time of MULMOD opcode**
 
 <img src="./report_stage_iii_assets/erigon_marginal_mulmod.png" width="700"/>
+
 
 *Analysis* 
 
@@ -191,29 +196,37 @@ When looking at individual OPCODEs, there is an interesing non-linear pattern in
 
 *Setup*
 
+Besu is developed in Java. We used JMH library for benchmarking. The EVM engine is contained in `besu-vm` library. This implementation utilizes the concept of a `MessageFrame`, which acts as a host object too. 
+
+The benchmark code an be found at https://github.com/imapp-pl/besu/tree/benchmarking.
 
 
 *Results*
 
 [Full details](./report_stage_iii_assets/besu_measure_marginal_single.html)
 
-**Figure 1a: Execution time (`total_time_ns`) of all programs**
+**Figure 5a: Execution time (`total_time_ns`) of all programs**
 
 <img src="./report_stage_iii_assets/besu_marginal_all_no_outliers.png" width="700"/>
 
-**Figure 1b: Execution time of ADD opcode**
+**Figure 5b: Execution time of ADD opcode**
 
 <img src="./report_stage_iii_assets/besu_marginal_add.png" width="700"/>
 
-**Figure 1c: Execution time of DIV opcode**
+**Figure 5c: Execution time of DIV opcode**
 
 <img src="./report_stage_iii_assets/besu_marginal_div.png" width="700"/>
 
-**Figure 1d: Execution time of MULMOD opcode**
+**Figure 5d: Execution time of MULMOD opcode**
 
 <img src="./report_stage_iii_assets/besu_marginal_mulmod.png" width="700"/>
 
+
 *Analysis* 
+
+The timings for Besu are characterised by rather singificant scatter, even after removing outliers. This might be due to the JVM garbage collector, which is not controlled in our setup. Additionally the engine overhead is rather large. We tried to remove it from the results, but the results were not consistent.
+
+As seen on the charts, the execution times for ADD, DIV and MULMOD are not consistent. While the majority behaves in linear fashion, there is a large portion that ofter takes longer. Again, we attribute it to the JVM garbage collector or other JVM internals.
 
 ### Rust EVM
 
@@ -225,19 +238,19 @@ When looking at individual OPCODEs, there is an interesing non-linear pattern in
 
 [Full details](./report_stage_iii_assets/revm_measure_marginal_single.html)
 
-**Figure 1a: Execution time (`total_time_ns`) of all programs**
+**Figure 6a: Execution time (`total_time_ns`) of all programs**
 
 <img src="./report_stage_iii_assets/revm_marginal_all_no_outliers.png" width="700"/>
 
-**Figure 1b: Execution time of ADD opcode**
+**Figure 6b: Execution time of ADD opcode**
 
 <img src="./report_stage_iii_assets/revm_marginal_add.png" width="700"/>
 
-**Figure 1c: Execution time of DIV opcode**
+**Figure 6c: Execution time of DIV opcode**
 
 <img src="./report_stage_iii_assets/revm_marginal_div.png" width="700"/>
 
-**Figure 1d: Execution time of MULMOD opcode**
+**Figure 6d: Execution time of MULMOD opcode**
 
 <img src="./report_stage_iii_assets/revm_marginal_mulmod.png" width="700"/>
 
