@@ -27,6 +27,7 @@ Research and experiments in Stage II has shown the importance of removing uncont
 - Operating System process priority and multithreading
 - Garbage Collector impact
 - Virtualization impact
+- Node synchronization and data model impact
 
 While we appreciate the fact that these factors might influence the final cost of the OPCODE executions, their unpredictable nature means that it is not possible to accurately assess the impact. As a result, it is down to the network node operator to ensure that the optimal environment conditions are provided to the running node, or bear the additional cost.
 
