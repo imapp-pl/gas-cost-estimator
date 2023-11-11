@@ -77,25 +77,19 @@ The following script executes benchmarks:
 
 *Results*
 
-[Full details](./report_stage_iii_assets/nethermind_measure_marginal_single.html)
+Full details:
+- [Measure marginal](./report_stage_iii_assets/nethermind_measure_marginal_single.html)
+- [Measure arguments](./report_stage_iii_assets/nethermind_measure_arguments_single.html)
 
-Measure marginal sample results:
+Sample results:
 
 **Figure 1a: Execution time (`total_time_ns`) of all programs in measure marginal mode**
 
 <img src="./report_stage_iii_assets/nethermind_marginal_all_no_outliers.png" width="700"/>
 
-**Figure 1b: Execution time of ADD opcode**
+**Figure 1b: Execution time of EXP opcode in measure arguments mode, 2nd argument variable length**
 
-<img src="./report_stage_iii_assets/nethermind_marginal_add.png" width="700"/>
-
-**Figure 1c: Execution time of DIV opcode**
-
-<img src="./report_stage_iii_assets/nethermind_marginal_div.png" width="700"/>
-
-**Figure 1d: Execution time of MULMOD opcode**
-
-<img src="./report_stage_iii_assets/nethermind_marginal_mulmod.png" width="700"/>
+<img src="./report_stage_iii_assets/nethermind_arguments_exp_arg1.png" width="700"/>
 
 *Analysis* 
 
@@ -104,11 +98,10 @@ Nethermind general characteristics of benchmark follows what is expected. Rather
 A repeatable pattern can be observed in jump OPCODEs:
 **Figure 2: Execution times of JUMP opcodes**
 <img src="./report_stage_iii_assets/nethermind_marginal_odd_jump.png" width="700"/>
-<img src="./report_stage_iii_assets/nethermind_marginal_odd_jumpdest.png" width="700"/>
-<img src="./report_stage_iii_assets/nethermind_marginal_odd_jumpi.png" width="700"/>
 
-The first program with no JUMP instructions is significantly faster than the next one with one JUMP instruction. The follow-up programs behave in a normal linear fasion.
+The first program with no JUMP instructions is significantly faster than the next one with one JUMP instruction. The follow-up programs behave in a normal linear fasion. The same is true for JUMPDEST and JUMPI opcodes.
 This might suggest that invoking a sinlge JUMP instruction initiates some engine functionality that is reused by any other JUMP instructions.
+The EXP opcode is one of few which cost depeends on the size of arguments. The other notable opcodes being CALLDATACOPY, RETURNDATACCOPY, and CODECOPY. In EXP case, there are two separeate lines clearly visible. This indicates that the execution time, not only depends on argument size, but also it's value.
 
 
 ### EthereumJS
@@ -127,23 +120,23 @@ The following script executes benchmarks:
 
 *Results*
 
-[Full details](./report_stage_iii_assets/ethereumjs_measure_marginal_single.html)
+Full details:
+- [Measure marginal](./report_stage_iii_assets/ethereumjs_measure_marginal_single.html)
+- [Measure arguments](./report_stage_iii_assets/ethereumjs_measure_arguments_single.html)
+
+Sample results:
 
 **Figure 3a: Execution time (`total_time_ns`) of all programs**
 
 <img src="./report_stage_iii_assets/ethereumjs_marginal_all_no_outliers.png" width="700"/>
 
-**Figure 3b: Execution time of ADD opcode**
+**Figure 3b: Execution time of EXP opcode in measure arguments mode, 2nd argument variable length**
 
-<img src="./report_stage_iii_assets/ethereumjs_marginal_add.png" width="700"/>
+<img src="./report_stage_iii_assets/ethereumjs_arguments_exp_arg1.png" width="700"/>
 
-**Figure 3c: Execution time of DIV opcode**
+**Figure 3c: Execution time of ISZERO opcode in measure arguments mode, 1st argument variable length**
 
-<img src="./report_stage_iii_assets/ethereumjs_marginal_div.png" width="700"/>
-
-**Figure 3d: Execution time of MULMOD opcode**
-
-<img src="./report_stage_iii_assets/ethereumjs_marginal_mulmod.png" width="700"/>
+<img src="./report_stage_iii_assets/ethereumjs_arguments_iszero_arg0.png" width="700"/>
 
 *Analysis* 
 
