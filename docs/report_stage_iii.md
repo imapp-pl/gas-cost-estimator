@@ -121,19 +121,20 @@ Sample results:
 
 **Figure 1a: Execution time (`total_time_ns`) of all programs in measure marginal mode**
 
-<img src="./report_stage_iii_assets/nethermind_marginal_all_no_outliers.png" width="700"/>
+<img src="./report_stage_iii_assets/nethermind_marginal_all_no_outliers.png" width="700"/>&nbsp;
 
 **Figure 1b: Execution time of `EXP` opcode in measure arguments mode, 2nd argument variable length**
 
-<img src="./report_stage_iii_assets/nethermind_arguments_exp_arg1.png" width="700"/>
+<img src="./report_stage_iii_assets/nethermind_arguments_exp_arg1.png" width="700"/>&nbsp;
 
 *Analysis*
 
 Nethermind general characteristics of benchmark follow what is expected. Rather small differences between OPCODEs times suggest there is a rather large engine overhead. This could be removed from the results, before making further gas cost estimations.
 
 A repeatable pattern can be observed in jump OPCODEs:
+
 **Figure 2: Execution times of `JUMP` opcodes**
-<img src="./report_stage_iii_assets/nethermind_marginal_odd_jump.png" width="700"/>
+<img src="./report_stage_iii_assets/nethermind_marginal_odd_jump.png" width="700"/>&nbsp;
 
 The first program with no `JUMP` instructions is significantly faster than the next one with one `JUMP` instruction. The follow-up programs behave in a normal linear fashion. The same is true for `JUMPDEST` and JUMPI opcodes.
 This might suggest that invoking a single `JUMP` instruction initiates some engine functionality reused by any other `JUMP` instructions.
@@ -164,15 +165,15 @@ Sample results:
 
 **Figure 3a: Execution time (`total_time_ns`) of all programs**
 
-<img src="./report_stage_iii_assets/ethereumjs_marginal_all_no_outliers.png" width="700"/>
+<img src="./report_stage_iii_assets/ethereumjs_marginal_all_no_outliers.png" width="700"/>&nbsp;
 
 **Figure 3b: Execution time of `EXP` opcode in measure arguments mode, 2nd argument variable length**
 
-<img src="./report_stage_iii_assets/ethereumjs_arguments_exp_arg1.png" width="700"/>
+<img src="./report_stage_iii_assets/ethereumjs_arguments_exp_arg1.png" width="700"/>&nbsp;
 
 **Figure 3c: Execution time of `ISZERO` opcode in measure arguments mode, 1st argument variable length**
 
-<img src="./report_stage_iii_assets/ethereumjs_arguments_iszero_arg0.png" width="700"/>
+<img src="./report_stage_iii_assets/ethereumjs_arguments_iszero_arg0.png" width="700"/>&nbsp;
 
 *Analysis*
 
@@ -202,12 +203,11 @@ Sample results:
 
 **Figure 4a: Execution time (`total_time_ns`) of all programs**
 
-<img src="./report_stage_iii_assets/erigon_marginal_all_no_outliers.png" width="700"/>
+<img src="./report_stage_iii_assets/erigon_marginal_all_no_outliers.png" width="700"/>&nbsp;
 
 **Figure 4b: Execution time of `EXP` opcode in measure arguments mode, 2nd argument variable length**
 
-<img src="./report_stage_iii_assets/erigon_arguments_exp_arg1.png" width="700"/>
-
+<img src="./report_stage_iii_assets/erigon_arguments_exp_arg1.png" width="700"/>&nbsp;
 
 *Analysis*
 
@@ -236,12 +236,11 @@ Sample results:
 
 **Figure 5a: Execution time (`total_time_ns`) of all programs**
 
-<img src="./report_stage_iii_assets/besu_marginal_all_no_outliers.png" width="700"/>
+<img src="./report_stage_iii_assets/besu_marginal_all_no_outliers.png" width="700"/>&nbsp;
 
 **Figure 5b: Execution time of `EXP` opcode in measure arguments mode, 2nd argument variable length**
 
-<img src="./report_stage_iii_assets/besu_arguments_exp_arg1.png" width="700"/>
-
+<img src="./report_stage_iii_assets/besu_arguments_exp_arg1.png" width="700"/>&nbsp;
 
 *Analysis*
 
@@ -275,12 +274,11 @@ Sample results:
 
 **Figure 6a: Execution time (`total_time_ns`) of all programs**
 
-<img src="./report_stage_iii_assets/revm_marginal_all_no_outliers.png" width="700"/>
+<img src="./report_stage_iii_assets/revm_marginal_all_no_outliers.png" width="700"/>&nbsp;
 
 **Figure 6b: Execution time of `EXP` opcode in measure arguments mode, 2nd argument variable length**
 
-<img src="./report_stage_iii_assets/revm_arguments_exp_arg1.png" width="700"/>
-
+<img src="./report_stage_iii_assets/revm_arguments_exp_arg1.png" width="700"/>&nbsp;
 
 *Analysis*
 
@@ -292,10 +290,163 @@ This implementation does not have a separation of lines seen for the EXP argumen
 
 ## Conclusions
 
+Full etails:
+- [Analysis](./report_stage_iii_assets/final_estimation.html)
+- [Alternative gas cost schedule](./report_stage_iii_assets/gas_schedule_comparison.csv)
+
+The results for each individual EMV has been scaled and compared with the current gas cost schedule as per our methodology. 
 
 
+**Figure 7: Scaled calculated costs in comparison to the nominal gas schedule**
+
+<img src="./report_stage_iii_assets/final_all.png" width="700"/>&nbsp;
 
 
+Calculating the averages, we get the following alternative gas cost schedule:
+
+**Figure 8: Alternative gas schedule**
+
+<img src="./report_stage_iii_assets/final_proposal.png" width="700"/>&nbsp;
 
 
+This table present the full comparison between the current gas cost schedule and the alternative gas cost schedule. In the last column, we suggest a change if the difference is large enough and client variability allows it.
 
+Opcode|Nominal Gas|Scaled Calculated Cost|Change %|Client Variability (Std Err %)|Change Suggested
+:----- | ----: | -----: | ----: | -----: | :-----:
+ADD|3|1.87|-37.71%|10.87%|Yes
+MUL|5|3.79|-24.23%|19.83%|Yes
+SUB|3|2.36|-21.44%|25.17%|Yes
+DIV|5|3.38|-32.44%|23.02%
+DIV expensive_cost|5|8.06|61.24%|18.16%
+SDIV|5|5.01|0.19%|29.03%
+SDIV expensive_cost|5|10.32|106.45%|20.26%
+MOD|5|3.95|-21.00%|20.38%
+MOD expensive_cost|5|8.69|73.70%|16.47%
+SMOD|5|4.61|-7.90%|22.25%
+SMOD expensive_cost|5|9.27|85.48%|17.34%
+ADDMOD|8|5.57|-30.31%|24.75%
+ADDMOD expensive_cost|8|13.52|68.99%|26.03%
+MULMOD|8|8.64|7.95%|19.85%|Yes
+MULMOD_expensive_cost|8|16.44|105.47%|18.71%
+EXP|10|13.86|38.62%|14.17%
+EXP_arg1_cost|50|21.84|-56.32%|20.94%
+SIGNEXTEND|5|3.82|-23.62%|21.60%|Yes
+LT|3|2.81|-6.30%|32.36%
+GT|3|2.74|-8.72%|33.50%
+SLT|3|2.11|-29.63%|14.32%
+SGT|3|2.10|-29.97%|14.19%
+EQ|3|2.26|-24.64%|26.02%
+ISZERO|3|1.56|-48.04%|19.30%|Yes
+AND|3|2.40|-20.04%|27.09%
+OR|3|2.41|-19.54%|26.11%
+XOR|3|2.43|-19.15%|26.52%
+NOT|3|1.79|-40.34%|18.57%|Yes
+BYTE|3|2.99|-0.21%|23.42%
+SHL|3|3.11|3.71%|15.52%
+SHR|3|3.18|6.10%|21.77%
+SAR|3|3.78|26.15%|23.36%
+ADDRESS|2|3.16|58.16%|23.87%|Yes*
+ORIGIN|2|2.74|36.81%|29.00%|Yes*
+CALLER|2|2.42|21.14%|22.15%
+CALLVALUE|2|1.56|-21.78%|19.41%
+CALLDATALOAD|3|2.55|-15.00%|16.10%
+CALLDATASIZE|2|1.25|-37.63%|9.06%|Yes
+CALLDATACOPY|2|6.75|237.63%|17.57%|Yes
+CODESIZE|2|1.25|-37.32%|8.55%|Yes
+CODECOPY|2|6.43|221.49%|16.38%|Yes
+GASPRICE|2|1.88|-5.97%|29.41%
+RETURNDATASIZE|2|1.32|-34.12%|10.92%|Yes
+RETURNDATACOPY|3|6.41|113.82%|24.00%|Yes
+COINBASE|2|3.07|53.29%|28.14%|Yes
+TIMESTAMP|2|1.58|-20.87%|14.08%
+NUMBER|2|1.59|-20.27%|13.46%
+DIFFICULTY|2|2.83|41.71%|32.81%
+GASLIMIT|2|1.60|-19.96%|12.87%
+CHAINID|2|2.06|3.17%|27.41%
+SELFBALANCE|5|8.01|60.22%|43.98%|Yes*
+POP|2|1.06|-46.83%|17.14%
+MLOAD|3|3.93|31.14%|14.38%
+MSTORE|3|7.72|157.34%|28.72%|Yes
+MSTORE8|3|3.12|3.87%|18.98%
+JUMP|8|2.03|-74.68%|30.75%|Yes**
+JUMPI|10|2.94|-70.56%|30.08%|Yes**
+PC|2|1.14|-42.95%|10.19%|Yes
+MSIZE|2|1.23|-38.53%|9.76%|Yes
+GAS|2|1.20|-39.99%|8.60%
+JUMPDEST|1|0.90|-10.41%|8.49%
+PUSH1|3|2.05|-31.79%|34.68%
+PUSH2|3|2.52|-15.97%|30.48%
+PUSH3|3|2.65|-11.79%|29.64%
+PUSH4|3|2.74|-8.63%|30.05%
+PUSH5|3|2.86|-4.53%|31.82%
+PUSH6|3|2.90|-3.42%|33.10%
+PUSH7|3|3.09|2.91%|33.31%
+PUSH8|3|3.12|3.83%|35.37%
+PUSH9|3|3.22|7.37%|35.79%
+PUSH10|3|3.30|10.15%|36.83%
+PUSH11|3|3.45|14.88%|36.19%
+PUSH12|3|3.53|17.82%|37.52%
+PUSH13|3|3.60|19.90%|37.88%
+PUSH14|3|3.74|24.69%|38.22%
+PUSH15|3|3.88|29.17%|37.79%
+PUSH16|3|3.88|29.43%|38.89%
+PUSH17|3|4.04|34.68%|39.35%
+PUSH18|3|4.18|39.35%|39.87%
+PUSH19|3|4.28|42.74%|39.74%
+PUSH20|3|4.33|44.46%|41.48%
+PUSH21|3|4.40|46.82%|42.24%
+PUSH22|3|4.53|50.93%|42.33%
+PUSH23|3|4.65|55.15%|42.26%
+PUSH24|3|4.69|56.36%|43.29%
+PUSH25|3|4.76|58.68%|43.43%
+PUSH26|3|4.97|65.65%|43.82%
+PUSH27|3|5.00|66.79%|44.21%
+PUSH28|3|5.09|69.63%|44.33%
+PUSH29|3|5.17|72.38%|45.69%
+PUSH30|3|5.24|74.54%|46.09%
+PUSH31|3|5.42|80.72%|45.58%
+PUSH32|3|5.42|80.68%|47.23%
+DUP1|3|1.29|-56.94%|17.04%
+DUP2|3|1.27|-57.58%|19.33%
+DUP3|3|1.24|-58.75%|18.21%
+DUP4|3|1.22|-59.27%|18.88%
+DUP5|3|1.22|-59.46%|19.64%
+DUP6|3|1.27|-57.67%|19.07%
+DUP7|3|1.15|-61.63%|14.61%
+DUP8|3|1.14|-62.04%|14.48%
+DUP9|3|1.26|-57.92%|18.24%
+DUP10|3|1.21|-59.77%|17.61%
+DUP11|3|1.14|-62.00%|15.86%
+DUP12|3|1.27|-57.59%|16.66%
+DUP13|3|1.16|-61.18%|15.49%
+DUP14|3|1.17|-61.11%|14.09%
+DUP15|3|1.29|-56.85%|17.36%
+DUP16|3|1.16|-61.32%|14.24%
+SWAP1|3|1.45|-51.66%|15.97%
+SWAP2|3|1.47|-50.92%|14.43%
+SWAP3|3|1.47|-51.07%|14.16%
+SWAP4|3|1.46|-51.41%|14.78%
+SWAP5|3|1.44|-52.03%|16.43%
+SWAP6|3|1.51|-49.79%|16.35%
+SWAP7|3|1.61|-46.33%|17.06%
+SWAP8|3|1.45|-51.60%|14.60%
+SWAP9|3|1.44|-52.14%|16.21%
+SWAP10|3|1.69|-43.61%|19.15%
+SWAP11|3|1.42|-52.57%|15.01%
+SWAP12|3|1.52|-49.42%|15.98%
+SWAP13|3|1.52|-49.31%|16.78%
+SWAP14|3|1.40|-53.19%|15.40%
+SWAP15|3|1.70|-43.37%|21.62%
+SWAP16|3|1.63|-45.50%|19.30%
+
+Notes:
+
+[*] - Alghouth the data suggest a change, but these particular OPCODEs were not supposed to generate such high costs, especially `SELFBALANCE`. More investigation needed.
+
+[**] - With the introduction of new relative jumps and disallowing dynamic jumps (EIP-4750 and EIP-4200) these OPCODEs might become irrelevant.
+
+> **Final Remark**
+>
+> The data clearly shows that some changes can be made to the current gas proposal. Still, any such changes should be carefully considered, as there are other factors not taken into account in this research: ease of implementation, backward compatibility, hard fork requirement, existing tooling, hardcoded values in auxiliary software, etc.
+>
+>The alternative gas cost schedule is a proposal and should be treated as such. We believe that the methodology presented in this report is a good starting point for further research and discussion.
