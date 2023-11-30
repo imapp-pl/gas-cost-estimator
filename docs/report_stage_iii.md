@@ -74,7 +74,7 @@ The calculated costs need to be scaled, to get to a common denominator, so an al
 
 The resulting estimated costs (scaled calculated costs) can be compared now and an alternative gas cost schedule can be proposed. This is the second methodological decision. We simply take the average of scaled calculated costs with equal weight for each EVM. The resulting costs are assessed with two factors:
 - The relative difference. You can consider it as the percentage difference between the current gas cost schedule and the alternative gas cost schedule. The greater the value is, the more an opcode is underpriced or overpriced.
-- The relative standard deviation. This is the standard deviation of scaled calculated costs of a given opcode for all EVMs, but divided by the current gas cost of an opcode to get a relative value. Note that a low value means that the majority of EVMs yield very similar scaled estimated costs for an opcode and that is good because the alternative cost is more reliable.
+- The relative standard deviation. This is the standard deviation of scaled calculated costs of a given opcode for all EVMs but divided by the current gas cost of an opcode to get a relative value. Note that a low value means that the majority of EVMs yield very similar scaled estimated costs for an opcode and that is good because the alternative cost is more reliable.
 
 As the final step, the alternative gas cost schedule is assessed as the whole system. When can it be considered as ‘good’? We informally say that ‘good’ means it is informative: delivers clear and effective guidelines on how to improve the gas cost schedule. First, low values of the relative standard deviations make the whole alternative gas cost schedule more reliable. Second, opcodes can be divided into those that have similar alternative and current gas cost and those that are clearly underpriced or overpriced. It seems to be very handy if most of the opcodes would fall into the first group.
 
@@ -84,11 +84,11 @@ The following alternatives have been considered:
 1. Do Not use scaling at all but compare calculated costs directly. This alternative has been rejected because the differences between EVMs are too big and the alternative gas cost schedule would be less informative.
 1. Scale, but rather than using all OPCODEs in the l2 norm, use the selected ones. This is similar to the approach taken in Stage II. This alternative has been rejected because it is not possible to objectively decide what OPCODEs to use for scaling.
 1. When building the alternative schedule all EVMs are given the same weight. This could be adjusted so the weights depend on:
-    - popularity: more popular EVMs have more impact on the alternative gas cost schedule
-    - performance: more performant EVMs have more impact on the alternative gas cost schedule
+	- popularity: more popular EVMs have more impact on the alternative gas cost schedule
+	- performance: more performant EVMs have more impact on the alternative gas cost schedule
 
-### Addional remarks
-- Once created, the alternative gas cost schedule can be scaled again to fit better  the current gas cost schedule. This would minimize the impact of the alternative gas cost schedule on the current gas cost schedule.
+### Additional remarks
+- Once created, the alternative gas cost schedule can be scaled again to fit better the current gas cost schedule. This would minimize the impact of the alternative gas cost schedule on the current gas cost schedule.
 - The relative standard deviation effectively depends on how calculated costs are scaled. The system could be optimized towards minimising the number of opcodes with significant deviation. The method presented in this paper seemed to be more straightforward for the authors.
 
 ## EVM Implementations results
@@ -106,7 +106,7 @@ The benchmark code can be found at https://github.com/imapp-pl/nethermind/tree/e
 The following script executes benchmarks:
 
 ```bash
-	python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm nethermind --sample_size 10
+    python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm nethermind --sample_size 10
 ```
 
 #### Results
@@ -150,7 +150,7 @@ The benchmark code can be found at https://github.com/imapp-pl/ethereumjs-monore
 The following script executes benchmarks:
 
 ```bash
-	python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm ethereumjs --sample_size 10
+    python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm ethereumjs --sample_size 10
 ```
 
 #### Results
@@ -182,13 +182,13 @@ On the argument side, the `EXP` opcode behaves as expected. The execution time i
 
 #### Setup
 
-Erigon shares some of the code-base with GoEthereum. We used GO's `testing` library for benchmarking, and the code can be found in `test/imapp_benchmark/imapp_bench.go`. We used an in-memory database for a minimal impact with a minimal host.
+Erigon shares some of the code base with GoEthereum. We used GO's `testing` library for benchmarking, and the code can be found in `test/imapp_benchmark/imapp_bench.go`. We used an in-memory database for a minimal impact with a minimal host.
 
 The benchmark code can be found at https://github.com/imapp-pl/erigon/tree/imapp_benchmark
 
 The following script executes benchmarks:
 ```
-	python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm erigon --sample_size 10
+    python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm erigon --sample_size 10
 ```
 
 #### Results
@@ -246,7 +246,7 @@ The timings for Besu are characterised by a rather significant scatter, even aft
 
 As seen on the charts, the execution times for `ADD`, `DIV` and `MULMOD` are not consistent. While the majority behaves in a linear fashion, there is a large portion that often takes longer. Again, we attribute it to the JVM garbage collector or other JVM internals.
 
-The execution time for `EXP` increases linearly with the size of the second argument. Again the separation into two different lines shows that the execution time depends not only on the size of the argument but also its value. In contrast to other implementations, the second line has a constant slope.
+The execution time for `EXP` increases linearly with the size of the second argument. Again the separation into two different lines shows that the execution time depends not only on the size of the argument but also on its value. In contrast to other implementations, the second line has a constant slope.
 
 ### Rust EVM
 
@@ -259,7 +259,7 @@ The benchmark code can be found at https://github.com/imapp-pl/revm/tree/evm_gas
 
 The following script executes benchmarks:
 ```
-	python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm revm --sample_size 10
+    python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm revm --sample_size 10
 ```
 
 #### Results
@@ -288,11 +288,11 @@ This implementation does not have a separation of lines seen for the EXP argumen
 
 ## Analysis
 
-Full etails:
+Full details:
 - [Gas cost estimation analysis](./report_stage_iii_assets/final_estimation.html)
 - [Alternative gas cost schedule](./report_stage_iii_assets/gas_schedule_comparison.csv)
 
-The results for each individual EMV has been scaled and compared with the current gas cost schedule as per our methodology. 
+The results for each EMV have been scaled and compared with the current gas cost schedule as per our methodology.
 
 
 **Figure 7: Scaled calculated costs in comparison to the nominal gas schedule**
@@ -307,7 +307,7 @@ Calculating the averages, we get the following alternative gas cost schedule:
 <img src="./report_stage_iii_assets/final_proposal.png" width="700"/>&nbsp;
 
 
-This table present the full comparison between the current gas cost schedule and the alternative gas cost schedule. In the last column, we suggest a change if the difference is large enough and client variability allows it.
+This table presents the full comparison between the current gas cost schedule and the alternative gas cost schedule. In the last column, we suggest a change if the difference is large enough and client variability allows it.
 
 Opcode|Nominal Gas|Scaled Calculated Cost|Change %|Client Variability (Std Err %)
 :----- | ----: | -----: | ----: | -----:
@@ -449,7 +449,7 @@ SWAP16|3|1.63|-45.50%|19.30%
 ## Recommendations
 
 ### Proposed gas cost schedule
-After fitting the alternative gas cost schedule to the current gas cost schedule, we looked at the second parameter: client variablity. It only makes sense to propose a change if the client consistenlty shows a different result. We decided to use 15% as a cut-off, above which we the results are deemed as too diversified to be reliable. The following table shows the results:
+After fitting the alternative gas cost schedule to the current gas cost schedule, we looked at the second parameter: client variability. It only makes sense to propose a change if the client consistently shows a different result. We decided to use 15% as a cut-off, above which the results are deemed as too diversified to be reliable. The following table shows the results:
 
 Opcode|Nominal Gas Cost|Proposed Gas Cost|Notes
 :----- | ----: | -----: | :----
@@ -475,12 +475,12 @@ JUMPI|10|3|
 ### Opcode specific recommendations
 
 #### `SDIV` and `SMOD`
-Both opcodes show a slight sensibility to the size of the first argument, numerator. This dependence is not enought to introduce dynamic element of the gas cost.
+Both opcodes show a slight sensibility to the size of the first argument, the numerator. This dependence is not enough to introduce the dynamic element of the gas cost.
 
 **Recommendation**: Keep the gas cost as is. Revisit in the future.
 
 #### `MULMOD`
-This opcode is not sensitive to the size of the arguments. Still the actual gas cost is higher than the current 8. 
+This opcode is not sensitive to the size of the arguments. Still, the actual gas cost is higher than the current 8.
 
 **Recommendation**: Increase the gas cost to 10.
 
@@ -490,7 +490,7 @@ The current gas is calculated as follows:
 static gas = 10
 dynamic gas = 50 * exponent byte size
 ```
-Our analysis confirm the base, static gas cost of 10. But the dynamic gas cost is significantly lower than the current calculations. That indicates that EVM implementations are more efficient in calculating the exponentiation than expected.
+Our analysis confirms the base, static gas cost of 10. However the dynamic gas cost is significantly lower than the current calculations. That indicates that EVM implementations are more efficient in calculating the exponentiation than expected.
 
 **Recommendation**: Change the calculation to:
 ```
@@ -499,32 +499,32 @@ dynamic gas = 3 * exponent byte size
 ```
 
 #### Transaction context
-There are several OPCODEs that push to the stack data from the transaction context. These are `ADDRESS`, `ORIGIN`, `CALLER`, `COINBASE`, `CHAINID`. The current gas cost is 2 for all of them. In theory it makes sense as the context is already available to the EVM and it is just a matter of pushing xit to the stack. Moreover the data is never longer than 20 bytes.
+Several OPCODEs push to the stack data from the transaction context. These are `ADDRESS`, `ORIGIN`, `CALLER`, `COINBASE`, `CHAINID`. The current gas cost is 2 for all of them. In theory, it makes sense as the context is already available to the EVM and it is just a matter of pushing it to the stack. Moreover, the data is never longer than 20 bytes.
 
-Simmilarly, the `SELFBALANCE` OPCODE pushes the balance of the executing account to the stack. The account must have been retrieved before the execution, so it is safe to assume that the balance is already available to the EVM and it is just a matter of pushing it to the stack. The current gas cost is 5.
+Similarly, the `SELFBALANCE` OPCODE pushes the balance of the executing account to the stack. The account must have been retrieved before the execution, so it is safe to assume that the balance is already available to the EVM and it is just a matter of pushing it to the stack. The current gas cost is 5.
 
 Still, our analysis shows that the real gas cost is consistently higher.
 
-**Recommendation**: In the short term, the gas cost of these OPCODEs should be increased as per table above. But in our opinion the original estimation of the gas cost is correct and EVM implementations teams should investigate why the real gas cost is higher. This should be revisited in the future.
+**Recommendation**: In the short term, the gas cost of these OPCODEs should be increased as per the table above. But in our opinion the original estimation of the gas cost is correct and EVM implementation teams should investigate why the real gas cost is higher. This should be revisited in the future.
 
 #### Memory Copy, Store and Load OPCODEs
-There are three OPCODEs that copy data into memory: `CALLDATACOPY`, `CODECOPY` and `RETURNDATACOPY`. Our analysis shows that the real gas cost is consistently higher than the current gas cost. 
+Three OPCODEs copy data into memory: `CALLDATACOPY`, `CODECOPY` and `RETURNDATACOPY`. Our analysis shows that the real gas cost is consistently higher than the current gas cost.
 
 Similarly, there are three memory-operations OPCODEs: `MLOAD`, `MSTORE` and `MSTORE8`. As above, the real gas cost is consistently higher than the current gas cost.
 
-This indicates that the memory management for all EVM is consistently more expensive than expected.
+This indicates that the memory management for all EVMs is consistently more expensive than expected.
 
-**Recommendation**: Increase the gas cost of these OPCODEs as per table above. In the long term the EVM implementations teams should investigate why the real gas cost is higher. This should be revisited in the future.
+**Recommendation**: Increase the gas cost of these OPCODEs as per the table above. In the long term, the EVM implementation teams should investigate why the real gas cost is higher. This should be revisited in the future.
 
 #### Jump OPCODEs
 There are two jump OPCODEs: `JUMP` and `JUMPI`. Our analysis shows that the real gas cost is consistently lower than the current gas cost.
 
-This suggest that the cost could be lowered. But with the introduction of new relative jumps and disallowing dynamic jumps (EIP-4750 and EIP-4200) these OPCODEs might become irrelevant.
+This suggests that the cost could be lowered. But with the introduction of new relative jumps and disallowing dynamic jumps (EIP-4750 and EIP-4200), these OPCODEs might become irrelevant.
 
-**Recommendation**: Asses when EIP-4750 and EIP-4200 are to be implemented. If it is likely to happen in more distant future, lower the gas cost of these OPCODEs as per table above.
+**Recommendation**: Asses when EIP-4750 and EIP-4200 are to be implemented. If it is likely to happen in a more distant future, lower the gas cost of these OPCODEs as per the table above.
 
 
-### Client specific recommendations
+### Client-specific recommendations
 
 #### Besu
 Some common OPCODEs perform worse than expected. Improving them would have a positive impact on the overall execution time. These are `LT`, `GT`, `AND`, `OR`, `XOR` and `BYTE`.
@@ -534,7 +534,7 @@ The `SELFBALANCE` performance is significantly worse than others.
 **Recommendation**: Investigate the performance of the above OPCODEs and improve the implementation.
 
 #### EthereumJS
-The `PUSHx` opcodes are not constant, but times increase linearly with the number of bytes pushed. The same cannot be observed for `DUPx` and `SWAPx` opcodes. Also any other OPCODEs pushing to the stack behave better than a simple `PUSH1`.
+The `PUSHx` opcodes are not constant, but times increase linearly with the number of bytes pushed. The same cannot be observed for `DUPx` and `SWAPx` opcodes. Also, any other OPCODEs pushing to the stack behave better than a simple `PUSH1`.
 
 **Recommendation**: Investigate the performance of the `PUSHx` OPCODEs and improve the implementation.
 
