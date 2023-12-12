@@ -76,7 +76,7 @@ The resulting estimated costs (scaled calculated costs) can be compared now and 
 - The relative difference. You can consider it as the percentage difference between the current gas cost schedule and the alternative gas cost schedule. The greater the value is, the more an opcode is underpriced or overpriced.
 - The relative standard deviation. This is the standard deviation of scaled calculated costs of a given opcode for all EVMs but divided by the current gas cost of an opcode to get a relative value. Note that a low value means that the majority of EVMs yield very similar scaled estimated costs for an opcode and that is good because the alternative cost is more reliable.
 
-As the final step, the alternative gas cost schedule is assessed as the whole system. When can it be considered as ‘good’? We informally say that ‘good’ means it is informative: delivers clear and effective guidelines on how to improve the gas cost schedule. First, low values of the relative standard deviations make the whole alternative gas cost schedule more reliable. Second, opcodes can be divided into those that have similar alternative and current gas cost and those that are clearly underpriced or overpriced. It seems to be very handy if most of the opcodes would fall into the first group.
+As the final step, the alternative gas cost schedule is assessed as the whole system. When can it be considered as ‘good’? We informally say that ‘good’ means it is informative: delivers clear and effective guidelines on how to improve the gas cost schedule. First, low values of the relative standard deviations make the whole alternative gas cost schedule more reliable. Second, opcodes can be divided into those that have similar alternative and current gas costs and those that are clearly underpriced or overpriced. It seems to be very handy if most of the opcodes would fall into the first group.
 
 As such, once created, the alternative gas cost schedule should be scaled again to fit better the current gas cost schedule. This would minimize the impact of the alternative gas cost schedule on the current gas cost schedule. To achieve this we manually select OPCODEs that make the base for the scaling. We have chosen the following OPCODEs: arithmetic, bitwise and `PUSH1`.
 
@@ -86,14 +86,14 @@ The following alternatives have been considered:
 1. Do Not use scaling at all but compare calculated costs directly. This alternative has been rejected because the differences between EVMs are too big and the alternative gas cost schedule would be less informative.
 1. Scale, but rather than using all OPCODEs in the l2 norm, use the selected ones. This is similar to the approach taken in Stage II. This alternative has been rejected because it is not possible to objectively decide what OPCODEs to use for scaling.
 1. When building the alternative schedule all EVMs are given the same weight. This could be adjusted so the weights depend on:
-	- popularity: more popular EVMs have more impact on the alternative gas cost schedule
-	- performance: more performant EVMs have more impact on the alternative gas cost schedule
+    - popularity: more popular EVMs have more impact on the alternative gas cost schedule
+    - performance: more performant EVMs have more impact on the alternative gas cost schedule
 1. The relative standard deviation effectively depends on how calculated costs are scaled. The system could be optimized towards minimising the number of opcodes with significant deviation. The method presented in this paper seemed to be more straightforward for the authors.
 
 ## EVM Implementations results
 In this chapter, we show the measurement approach for individual EVM implementations and then present and analyze the results.
 
-For some EVMs we have found interesting anomalies. Where possible, we left recommendations for the implementations teams. We believe that it would be very difficult to come to the same conclusions without the broad research presented in this report.
+For some EVMs, we have found interesting anomalies. Where possible, we left recommendations for the implementation teams. We believe that it would be very difficult to come to the same conclusions without the broad research presented in this report.
 
 ### Nethermind
 
@@ -106,7 +106,7 @@ The benchmark code can be found at https://github.com/imapp-pl/nethermind/tree/e
 The following script executes benchmarks:
 
 ```bash
-    python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm nethermind --sample_size 10
+	python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm nethermind --sample_size 10
 ```
 
 #### Results
@@ -127,7 +127,7 @@ Sample results:
 
 #### Analysis
 
-Nethermind general characteristics of benchmark follow what is expected. Rather small differences between OPCODEs times suggest there is a rather large engine overhead. This could be removed from the results, before making further gas cost estimations.
+Nethermind’s general characteristics of benchmark follow what is expected. Rather small differences between OPCODEs times suggest there is a rather large engine overhead. This could be removed from the results, before making further gas cost estimations.
 
 A repeatable pattern can be observed in jump OPCODEs:
 
@@ -136,7 +136,7 @@ A repeatable pattern can be observed in jump OPCODEs:
 
 The first program with no `JUMP` instructions is significantly faster than the next one with one `JUMP` instruction. The follow-up programs behave in a normal linear fashion. The same is true for `JUMPDEST` and JUMPI opcodes.
 This might suggest that invoking a single `JUMP` instruction initiates some engine functionality reused by any other `JUMP` instructions.
-The EXP opcode is one of few that cost depends on the size of arguments. The other notable opcodes are `CALLDATACOPY`, `RETURNDATACCOPY`, and `CODECOPY`. In EXP case, there are two separate lines clearly visible. This indicates that the execution time, not only depends on argument size but also its value.
+The EXP opcode is one of few that cost depends on the size of arguments. The other notable opcodes are `CALLDATACOPY`, `RETURNDATACCOPY`, and `CODECOPY`. In the EXP case, there are two separate lines clearly visible. This indicates that the execution time, not only depends on argument size but also its value.
 
 
 ### EthereumJS
@@ -150,7 +150,7 @@ The benchmark code can be found at https://github.com/imapp-pl/ethereumjs-monore
 The following script executes benchmarks:
 
 ```bash
-    python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm ethereumjs --sample_size 10
+	python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm ethereumjs --sample_size 10
 ```
 
 #### Results
@@ -194,7 +194,7 @@ The benchmark code can be found at https://github.com/imapp-pl/erigon/tree/imapp
 
 The following script executes benchmarks:
 ```
-    python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm erigon --sample_size 10
+	python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm erigon --sample_size 10
 ```
 
 #### Results
@@ -280,7 +280,7 @@ The benchmark code can be found at https://github.com/imapp-pl/revm/tree/evm_gas
 
 The following script executes benchmarks:
 ```
-    python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm revm --sample_size 10
+	python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm revm --sample_size 10
 ```
 
 #### Results
@@ -303,7 +303,7 @@ Sample results:
 
 Rust EVM results are very consistent and follow the expected pattern. The engine overhead is rather small, which is expected from a Rust implementation.
 
-In some opcodes like `ADD`, `DIV` and `MULMOD` there is a visible pattern of the first execution being slower than the rest. After running the specific opcode for a few times, the execution time stabilizes. This might be due to some caching or other Rust internals.
+In some opcodes like `ADD`, `DIV` and `MULMOD` there is a visible pattern of the first execution being slower than the rest. After running the specific opcode a few times, the execution time stabilizes. This might be due to some caching or other Rust internals.
 
 This implementation does not have a separation of lines seen for the EXP arguments in other implementations.
 
@@ -334,7 +334,7 @@ Calculating the averages, we get the following alternative gas cost schedule:
 <img src="./report_stage_iii_assets/final_proposal.png" width="700"/>&nbsp;
 
 
-The raw results of alternative gas cost schedule have been re-scaled to fit the current gas cost schedule using manually selected OPCODEs as the base. Our analysis showed that the sclae of 1.4 gives the best fit.
+The raw results of the alternative gas cost schedule have been re-scaled to fit the current gas cost schedule using manually selected OPCODEs as the base. Our analysis showed that the scale of 1.4 gives the best fit.
 
 This table presents the full comparison between the current gas cost schedule and the final alternative gas cost schedule.
 
@@ -473,13 +473,51 @@ SWAP16|3|2.29|-23.70%|19.30%
 >
 >The alternative gas cost schedule is a proposal and should be treated as such. We believe that the methodology presented in this report is a good starting point for further research and discussion.
 
+
+### EXP
+For the detailed analysis of the `EXP` opcode, we have used the following data:
+- [EvmOne](./report_stage_iii_assets/evmone_measure_arguments_single_exp.html)
+- [Geth](./report_stage_iii_assets/geth_measure_arguments_single_exp.html)
+- [Netehrmind](./report_stage_iii_assets/nethermind_measure_arguments_single_exp.html)
+- [EtherumJS](./report_stage_iii_assets/ethereumjs_measure_arguments_single_exp.html)
+- [Erigon](./report_stage_iii_assets/erigon_measure_arguments_single_exp.html)
+- [Besu](./report_stage_iii_assets/besu_measure_arguments_single_exp.html)
+- [Rust EVM](./report_stage_iii_assets/revm_measure_arguments_single_exp.html)
+
+Please see 'EXP' section in the corresponding files.
+
+The `EXP` opcode proved quite difficult to estimate due to high client variability. Additionally, the measure marginal method was not able to sufficiently estimate the base cost of the opcode. The `EXP` measure marginal method used the argument size of 1 byte, as this provided the most consistent results. Still, for some clients, the measured cost was below 0.
+
+For a more accurate estimation, we compare EXP base and dynamic times to the execution of `ADD` and `MUL` opcodes. These opcodes are used as a reference as they are the most basic arithmetic ones. Given this data we can estimate the cost of the single byte exponentiation as follows:
+
+```math
+	exp_byte_cost = exp_byte_time / (add_time + mul_time) * (add_cost + mul_cost)
+```
+
+With this formula we can further estimate the base cost of the `EXP` opcode, by subtracting the cost of the arguments from the total cost of `EXP`. We disregard values below 0.
+
+The following table shows the results:
+
+Client|ADD ns|MUL ns|EXP per byte ns|EXP per byte gas| EXP base ns | EXP base gas
+:----- | ----: | -----: | ----: | -----: | -----: | -----:
+EvmOne|18.30|30.34|214.25|35.23|15.35|0
+Geth|19.78|28.21|98.74|16.46|82.88|0
+Netehrmind|31.44|61.78|274.48|23.55|870.21|51.12
+EtherumJS|290|381|1590|18.96|4623|36.16
+Erigon|6.68|7.81|84.63|46.72|0|0
+Besu*|58815|75348|154635|9.22|415094|15.53
+Rust EVM|2.86|3.59|35.13|43.57|15.38|0
+
+*Besu results inflated by the internal loop of 10k times.
+
 ## Recommendations
 
 ### Proposed gas cost schedule
-After fitting the alternative gas cost schedule to the current gas cost schedule, we looked at the second parameter: client variability. It only makes sense to propose a change if the client consistently shows a different result. OPCODEs with high client variablity were removed as the results are deemed too diversified to be reliable. The following table shows the results:
+After fitting the alternative gas cost schedule to the current gas cost schedule, we looked at the second parameter: client variability. It only makes sense to propose a change if the client consistently shows a different result. OPCODEs with high client variability were removed as the results were deemed too diversified to be reliable. The following table shows the results:
 
 Opcode|Nominal Gas Cost|Proposed Gas Cost|Notes
 :----- | ----: | -----: | :----
+EXP|10|10|See notes below
 ISZERO|3|2|
 SHL|3|5|
 SHR|3|5|
@@ -518,12 +556,12 @@ The current gas is calculated as follows:
 static gas = 10
 dynamic gas = 50 * exponent byte size
 ```
-Our analysis confirms the base, static gas cost of 10. However the dynamic gas cost is significantly lower than the current calculations. That indicates that EVM implementations are more efficient in calculating the exponentiation than expected.
+As there is no unequivocal consensus on the base cost of the `EXP` opcode, we recommend keeping it as is. However, for the dynamic part, there is a clear consensus that the current gas cost is too high.
 
-**Recommendation**: Change the calculation to:
+**Recommendation**: Change the formula to:
 ```
 static gas = 10
-dynamic gas = 30 * exponent byte size
+dynamic gas = 25 * exponent byte size
 ```
 
 #### Transaction context
@@ -550,7 +588,3 @@ There are two jump OPCODEs: `JUMP` and `JUMPI`. Our analysis shows that the real
 This suggests that the cost could be lowered. But with the introduction of new relative jumps and disallowing dynamic jumps (EIP-4750 and EIP-4200), these OPCODEs might become irrelevant.
 
 **Recommendation**: Asses when EIP-4750 and EIP-4200 are to be implemented. If it is likely to happen in a more distant future, lower the gas cost of these OPCODEs as per the table above.
-
-## Conclusion
-
-In this report, we have presented a methodology for estimating the gas cost of EVM OPCODEs. We have used it to propose an alternative gas cost schedule. We have also presented recommendations for specific OPCODEs and the implementations teams.
