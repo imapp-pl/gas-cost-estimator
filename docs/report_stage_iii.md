@@ -78,22 +78,22 @@ The resulting estimated costs (scaled calculated costs) can be compared now and 
 
 As the final step, the alternative gas cost schedule is assessed as the whole system. When can it be considered as ‘good’? We informally say that ‘good’ means it is informative: delivers clear and effective guidelines on how to improve the gas cost schedule. First, low values of the relative standard deviations make the whole alternative gas cost schedule more reliable. Second, opcodes can be divided into those that have similar alternative and current gas costs and those that are clearly underpriced or overpriced. It seems to be very handy if most of the opcodes would fall into the first group.
 
-As such, once created, the alternative gas cost schedule should be scaled again to fit better the current gas cost schedule. This would minimize the impact of the alternative gas cost schedule on the current gas cost schedule. To achieve this we manually select OPCODEs that make the base for the scaling. We have chosen the following OPCODEs: arithmetic, bitwise and `PUSH1`.
+As such, once created, the alternative gas cost schedule should be scaled again to fit better the current gas cost schedule. This would reduce the impact of the alternative gas cost schedule on the current gas cost schedule. To achieve this we select by expert knowledge OPCODEs that make the base for the scaling. We have chosen the following OPCODEs: arithmetic, bitwise and `PUSH1`.
 
 ### Alternatives
 The following alternatives have been considered:
 1. When scaling calculated costs to scaled calculated costs, the same scale could be used for all EVMs. This alternative has been rejected because it would blur the actual differences and make the alternative gas cost schedule less informative.
-1. Do Not use scaling at all but compare calculated costs directly. This alternative has been rejected because the differences between EVMs are too big and the alternative gas cost schedule would be less informative.
-1. Scale, but rather than using all OPCODEs in the l2 norm, use the selected ones. This is similar to the approach taken in Stage II. This alternative has been rejected because it is not possible to objectively decide what OPCODEs to use for scaling.
-1. When building the alternative schedule all EVMs are given the same weight. This could be adjusted so the weights depend on:
+2. Do Not use scaling at all but compare calculated costs directly. This alternative has been rejected because the differences between EVMs are too big and the alternative gas cost schedule would be less informative.
+3. Scale, but rather than using all OPCODEs in the l2 norm, use the selected ones. This is similar to the approach taken in Stage II. This alternative has been rejected because it is not possible to objectively decide what OPCODEs to use for scaling.
+4. When building the alternative schedule all EVMs are given the same weight. This could be adjusted so the weights depend on:
     - popularity: more popular EVMs have more impact on the alternative gas cost schedule
     - performance: more performant EVMs have more impact on the alternative gas cost schedule
-1. The relative standard deviation effectively depends on how calculated costs are scaled. The system could be optimized towards minimising the number of opcodes with significant deviation. The method presented in this paper seemed to be more straightforward for the authors.
+5. The relative standard deviation effectively depends on how calculated costs are scaled. The system could be optimized towards minimising the number of opcodes with significant deviation. The method presented in this paper seemed to be more straightforward for the authors.
 
 ## EVM Implementations results
 In this chapter, we show the measurement approach for individual EVM implementations and then present and analyze the results.
 
-For some EVMs, we have found interesting anomalies. Where possible, we left recommendations for the implementation teams. We believe that it would be very difficult to come to the same conclusions without the broad research presented in this report.
+For some EVMs, we observed interesting behaviours. Where possible, we left recommendations for the implementation teams. We believe that it would be very difficult to come to the same conclusions without the broad research presented in this report.
 
 ### Nethermind
 
@@ -178,7 +178,7 @@ Sample results:
 EthereumJS results are visibly slower than the rest and that's expected, though most of the measured times are in the expected range. One specific thing to note is that `PUSHx` opcodes are not constant, but times increase linearly with the number of bytes pushed. The same cannot be observed for DUPx and SWAPx opcodes. This might suggest that EthereumJS has a special implementation for `PUSHx` opcodes.
 On the argument side, the `EXP` opcode behaves as expected. The execution time increases linearly with the size of the second argument. Again the separation into two different lines shows that the execution time depends not only on the size of the argument but also its value. The `ISZERO` opcode behaves in a similar fashion, but the execution time increases linearly with the size of the first argument.
 
-The `PUSHx` opcodes are not constant, but times increase linearly with the number of bytes pushed. The same cannot be observed for `DUPx` and `SWAPx` opcodes. Also, any other OPCODEs pushing to the stack behave better than a simple `PUSH1`.
+The `PUSHx` opcodes are not constant, but times increase linearly with the number of bytes pushed. The same cannot be observed for `DUPx` and `SWAPx` opcodes. Also, any other OPCODEs pushing to the stack behave better than a simple `PUSH1`. This may be related to the fact that `PUSHx` read from contract's bytecode.
 
 #### Recommendation
 
@@ -221,7 +221,7 @@ Again, `PUSHx` opcodes are not constant, but times increase linearly with the nu
 
 When looking at individual OPCODEs, there is an interesting non-linear pattern in simple opcodes like `ADD`, `DIV`, `MULMOD`, etc. The first 3 executions are visibly faster than the following. The rest behave in a more linear fashion. The reason for this is not clear.
 
-The `PUSHx` opcodes are not constant, but times increase linearly with the number of bytes pushed. The same cannot be observed for `DUPx` and `SWAPx` opcodes.
+The `PUSHx` opcodes are not constant, but times increase linearly with the number of bytes pushed. The same cannot be observed for `DUPx` and `SWAPx` opcodes. This may be related to the fact that `PUSHx` read from contract's bytecode.
 
 #### Recommendation
 
@@ -259,11 +259,13 @@ The timings for Besu are characterised by a rather significant scatter, even aft
 
 As seen on the charts, the execution times for `ADD`, `DIV` and `MULMOD` are not consistent. While the majority behaves in a linear fashion, there is a large portion that often takes longer. Again, we attribute it to the JVM garbage collector or other JVM internals.
 
-The execution time for `EXP` increases linearly with the size of the second argument. Again the separation into two different lines shows that the execution time depends not only on the size of the argument but also on its value. In contrast to other implementations, the second line has a constant slope.
+The execution time for `EXP` increases linearly with the size of the second argument. Again the separation into two different lines shows that the execution time depends not only on the size of the argument but also on its value. This indicates some form of optimization to cut executions times. In contrast to other implementations, the optimized path executes in O(1).
 
 Some common OPCODEs perform worse than expected. Improving them would have a positive impact on the overall execution time. These are `LT`, `GT`, `AND`, `OR`, `XOR` and `BYTE`.
 
-The `SELFBALANCE` performance is significantly worse than others.
+For the `LT`, `GT`, `AND`, `OR`, `XOR` and `BYTE` the execution times are higher than expected. This might indicate that there is a room for optimization.
+
+The `SELFBALANCE` performance is significantly slower when compared to other implementations.
 
 #### Recommendation
 
@@ -587,4 +589,4 @@ There are two jump OPCODEs: `JUMP` and `JUMPI`. Our analysis shows that the real
 
 This suggests that the cost could be lowered. But with the introduction of new relative jumps and disallowing dynamic jumps (EIP-4750 and EIP-4200), these OPCODEs might become irrelevant.
 
-**Recommendation**: Asses when EIP-4750 and EIP-4200 are to be implemented. If it is likely to happen in a more distant future, lower the gas cost of these OPCODEs as per the table above.
+**Recommendation**: Assess when EIP-4750 and EIP-4200 are to be implemented. If it is likely to happen in a distant future, lower the gas cost of these OPCODEs as per the table above.
