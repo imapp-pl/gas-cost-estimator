@@ -309,7 +309,7 @@ In some opcodes like `ADD`, `DIV` and `MULMOD` there is a visible pattern of the
 
 This implementation does not have a separation of lines seen for the EXP arguments in other implementations.
 
-Some common OPCODEs perform worse than expected. Improving them would have a positive impact on the overall execution time. These are `BYTE`, `SHL`, `SHR` and `SAR`.
+For the `BYTE`, `SHL`, `SHR` and `SAR` the execution times are higher than expected. This might indicate that there is a room for optimization.
 
 #### Recommendation
 
@@ -336,7 +336,7 @@ Calculating the averages, we get the following alternative gas cost schedule:
 <img src="./report_stage_iii_assets/final_proposal.png" width="700"/>&nbsp;
 
 
-The raw results of the alternative gas cost schedule have been re-scaled to fit the current gas cost schedule using manually selected OPCODEs as the base. Our analysis showed that the scale of 1.4 gives the best fit.
+The raw results of the alternative gas cost schedule have been re-scaled to fit the current gas cost schedule. For this we have excluded OPCODEs with high client variability (like `EXP` or `SELFBALANCE`) and those visible inconsistency (like `PUSH2` to `PUSH32`). Instead we focused on the most common OPCODEs. Our analysis showed that the scale of 1.4 gives the best fit. This scale results in the least number of changes, for OPCODEs where it is worth the effort.
 
 This table presents the full comparison between the current gas cost schedule and the final alternative gas cost schedule.
 
@@ -477,7 +477,7 @@ SWAP16|3|2.29|-23.70%|19.30%
 
 
 ### EXP
-For the detailed analysis of the `EXP` opcode, we have used the following data:
+Notice that `EXP` opcode execution cost is expressed with the formula: the base cost (currently 10) and a dynamic cost for each byte of an exponent (currently 50 for each byte). For the detailed analysis of the `EXP` opcode, we have used the following data:
 - [EvmOne](./report_stage_iii_assets/evmone_measure_arguments_single_exp.html)
 - [Geth](./report_stage_iii_assets/geth_measure_arguments_single_exp.html)
 - [Netehrmind](./report_stage_iii_assets/nethermind_measure_arguments_single_exp.html)
@@ -488,17 +488,17 @@ For the detailed analysis of the `EXP` opcode, we have used the following data:
 
 Please see 'EXP' section in the corresponding files.
 
-The `EXP` opcode proved quite difficult to estimate due to high client variability. Additionally, the measure marginal method was not able to sufficiently estimate the base cost of the opcode. The `EXP` measure marginal method used the argument size of 1 byte, as this provided the most consistent results. Still, for some clients, the measured cost was below 0.
+The `EXP` opcode proved quite difficult to estimate due to high client variability. Additionally, the measure marginal method was not able to sufficiently estimate the base cost of the opcode. The `EXP` measure marginal method used the argument size of 1 byte, as this provided the most consistent results. With the measure argument method, the linear regresion placed some of the base `EXP` costs below zero. This values were disregarded in the further calculations.
 
-For a more accurate estimation, we compare EXP base and dynamic times to the execution of `ADD` and `MUL` opcodes. These opcodes are used as a reference as they are the most basic arithmetic ones. Given this data we can estimate the cost of the single byte exponentiation as follows:
+For a more accurate estimation, we compare EXP base and dynamic estimates to the execution of `ADD` and `MUL` opcodes. These opcodes are used as a reference as they are the most basic arithmetic ones. Given this data we can estimate the cost of the single byte exponentiation as follows:
 
 ```math
 	exp_byte_cost = exp_byte_time / (add_time + mul_time) * (add_cost + mul_cost)
 ```
 
-With this formula we can further estimate the base cost of the `EXP` opcode, by subtracting the cost of the arguments from the total cost of `EXP`. We disregard values below 0.
+With this formula we can further estimate the base cost of the `EXP` opcode, by subtracting the cost of the arguments from the total cost of `EXP`.
 
-The following table shows the results:
+The following table shows the results*:
 
 Client|ADD ns|MUL ns|EXP per byte ns|EXP per byte gas| EXP base ns | EXP base gas
 :----- | ----: | -----: | ----: | -----: | -----: | -----:
@@ -507,10 +507,10 @@ Geth|19.78|28.21|98.74|16.46|82.88|0
 Netehrmind|31.44|61.78|274.48|23.55|870.21|51.12
 EtherumJS|290|381|1590|18.96|4623|36.16
 Erigon|6.68|7.81|84.63|46.72|0|0
-Besu*|58815|75348|154635|9.22|415094|15.53
+Besu|58815|75348|154635|9.22|415094|15.53
 Rust EVM|2.86|3.59|35.13|43.57|15.38|0
 
-*Besu results inflated by the internal loop of 10k times.
+* Again, the execution times are not directly comparable between clients, as they have different setup, e.g. Besu's internal loop of ~10k times.
 
 ## Recommendations
 
@@ -576,7 +576,7 @@ Still, our analysis shows that the real gas cost is consistently higher.
 **Recommendation**: In the short term, the gas cost of these OPCODEs should be increased as per the table above. But in our opinion the original estimation of the gas cost is correct and EVM implementation teams should investigate why the real gas cost is higher. This should be revisited in the future.
 
 #### Memory Copy, Store and Load OPCODEs
-Three OPCODEs copy data into memory: `CALLDATACOPY`, `CODECOPY` and `RETURNDATACOPY`. Our analysis shows that the real gas cost is consistently higher than the current gas cost.
+Three OPCODEs copy data into memory: `CALLDATACOPY`, `CODECOPY` and `RETURNDATACOPY`. Our analysis shows that the measured gas cost is consistently higher than the current gas cost. Additionally the real-life cost of `CODECOPY` might be even higher as it depends on the context, which was outside of the scope of our measurements.
 
 Similarly, there are three memory-operations OPCODEs: `MLOAD`, `MSTORE` and `MSTORE8`. As above, the real gas cost is consistently higher than the current gas cost.
 
