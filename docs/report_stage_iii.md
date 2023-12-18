@@ -16,6 +16,8 @@ In this stage we apply the method of estimating gas costs of EVM OPCODEs suggest
 
 Also, we have improved the tooling so it is easier to reproduce the measurements. This work will be further continued in phase four, where we’ll deliver complete tooling, reproduction environment setup and measurement methods.
 
+Some OPCODEs have been excluded from this stage. They were either introduced after stage I and we omitted them for consistency and comparability, or they were excluded due to the complexity of the measurement process. The missing OPCODEs will be researched in the next stage. These are: `SHA3`, `BALANCE`, `EXTCODESIZE`, `EXTCODECOPY`, `EXTCODEHASH`, `BLOCKHASH`, `BASEFEE`, `SLOAD`, `STORE`, `PUSH0`, `LOG0`, `LOG1`, `LOG2`, `LOG3`, `LOG4`, `CALL`, `CALLCODE`, `DELEGATECALL`, `STATICCALL`, `CREATE`, `CREATE2`, `TLOAD` and `TSTORE`.
+
 ## Methodology
 
 ### Measurement approach
@@ -67,7 +69,7 @@ The individual EVM implementations are setup using:
 
 The results for each EVM are obtained using various setups and benchmarking tools. They do not express the cost of a single opcode execution directly. Thus results between different EVMs cannot be compared, for instance, `ADD` for geth cannot be compared with `ADD` for EthereumJS. But results within a given EVM can be compared, for instance, `ADD` with `MUL` for geth.
 
-The calculated costs need to be scaled, to get to a common denominator, so an alternative gas cost schedule based on all EVMs can be proposed. The choice of scaling factors is the first methodological decision. We refer to the calculated costs for each EVM to the current gas cost schedule. The scale we are looking for is the solution to the following minimization problem: find the scale that the scaled calculated costs of all OPCODEs are the closest to the current gas cost schedule in the l2 norm (sqrt of the sum of squared differences). Optimisation in l2 norm is similar to the lease squares method in regression analysis. Note that the scales are set independently for EVMs. There are three remarks for l2 norm calculations:
+The calculated costs need to be scaled, to get to a common denominator, so an alternative gas cost schedule based on all EVMs can be proposed. The choice of scaling factors is the first methodological decision. We refer to the calculated costs for each EVM to the current gas cost schedule. The scale we are looking for is the solution to the following minimization problem: find the scale that the scaled calculated costs of all OPCODEs are the closest to the current gas cost schedule in the l2 norm (sqrt of the sum of squared differences). Optimisation in the l2 norm is similar to the lease squares method in regression analysis. Note that the scales are set independently for EVMs. There are three remarks for l2 norm calculations:
 - From PUSH1, …, PUSH32 only PUSH1 is taken into account. There are 32 PUSH opcodes so they would have excessive impact. The same for DUPs and SWAPs. Note that for some EVMs calculated costs for PUSH1, …, PUSH32 are noticeably different.
 - The current gas cost schedule is taken as counterweights. So EXP and ADD have the same impact, for instance.
 - The variability of argument size (`measure arguments`) has not been included in the gas schedule proposal
@@ -85,9 +87,9 @@ The following alternatives have been considered:
 1. When scaling calculated costs to scaled calculated costs, the same scale could be used for all EVMs. This alternative has been rejected because it would blur the actual differences and make the alternative gas cost schedule less informative.
 2. Do Not use scaling at all but compare calculated costs directly. This alternative has been rejected because the differences between EVMs are too big and the alternative gas cost schedule would be less informative.
 3. Scale, but rather than using all OPCODEs in the l2 norm, use the selected ones. This is similar to the approach taken in Stage II. This alternative has been rejected because it is not possible to objectively decide what OPCODEs to use for scaling.
-4. When building the alternative schedule all EVMs are given the same weight. This could be adjusted so the weights depend on:
-    - popularity: more popular EVMs have more impact on the alternative gas cost schedule
-    - performance: more performant EVMs have more impact on the alternative gas cost schedule
+4. All EVMs are given the same weight when building the alternative schedule. This could be adjusted so the weights depend on:
+	- popularity: more popular EVMs have more impact on the alternative gas cost schedule
+	- performance: more performant EVMs have more impact on the alternative gas cost schedule
 5. The relative standard deviation effectively depends on how calculated costs are scaled. The system could be optimized towards minimising the number of opcodes with significant deviation. The method presented in this paper seemed to be more straightforward for the authors.
 
 ## EVM Implementations results
@@ -99,14 +101,14 @@ For some EVMs, we observed interesting behaviours. Where possible, we left recom
 
 #### Setup
 
-Nethermind is developed in the .NET framework using C# language. Our benchmark is based on the existing solution and uses `DotNetBenchmark` library. In `Nethermind.Benchmark.Bytecode` project we have added a new benchmark class `BytecodeBenchmark` that contains the benchmarking methods. This uses an in-memory database for a minimal impact. The EVM engine is contained in `Nethermind.Evm` library. The host is minimal.
+Nethermind is developed in the .NET framework using C# language. Our benchmark is based on the existing solution and uses `DotNetBenchmark` library. In the `Nethermind.Benchmark.Bytecode` project we have added a new benchmark class `BytecodeBenchmark` that contains the benchmarking methods. This uses an in-memory database for a minimal impact. The EVM engine is contained in `Nethermind.Evm` library. The host is minimal.
 
 The benchmark code can be found at https://github.com/imapp-pl/nethermind/tree/evm_gas_cost_stage_3.
 
 The following script executes benchmarks:
 
 ```bash
-	python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm nethermind --sample_size 10
+    python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm nethermind --sample_size 10
 ```
 
 #### Results
@@ -150,7 +152,7 @@ The benchmark code can be found at https://github.com/imapp-pl/ethereumjs-monore
 The following script executes benchmarks:
 
 ```bash
-	python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm ethereumjs --sample_size 10
+    python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm ethereumjs --sample_size 10
 ```
 
 #### Results
@@ -178,7 +180,7 @@ Sample results:
 EthereumJS results are visibly slower than the rest and that's expected, though most of the measured times are in the expected range. One specific thing to note is that `PUSHx` opcodes are not constant, but times increase linearly with the number of bytes pushed. The same cannot be observed for DUPx and SWAPx opcodes. This might suggest that EthereumJS has a special implementation for `PUSHx` opcodes.
 On the argument side, the `EXP` opcode behaves as expected. The execution time increases linearly with the size of the second argument. Again the separation into two different lines shows that the execution time depends not only on the size of the argument but also its value. The `ISZERO` opcode behaves in a similar fashion, but the execution time increases linearly with the size of the first argument.
 
-The `PUSHx` opcodes are not constant, but times increase linearly with the number of bytes pushed. The same cannot be observed for `DUPx` and `SWAPx` opcodes. Also, any other OPCODEs pushing to the stack behave better than a simple `PUSH1`. This may be related to the fact that `PUSHx` read from contract's bytecode.
+The `PUSHx` opcodes are not constant, but times increase linearly with the number of bytes pushed. The same cannot be observed for `DUPx` and `SWAPx` opcodes. Also, any other OPCODEs pushing to the stack behave better than a simple `PUSH1`. This may be related to the fact that `PUSHx` reads from the contract's bytecode.
 
 #### Recommendation
 
@@ -188,13 +190,13 @@ Investigate the performance of the `PUSHx` OPCODEs.
 
 #### Setup
 
-Erigon shares some of the code base with GoEthereum. We used GO's `testing` library for benchmarking, and the code can be found in `test/imapp_benchmark/imapp_bench.go`. We used an in-memory database for a minimal impact with a minimal host.
+Erigon shares some of the codebase with GoEthereum. We used GO's `testing` library for benchmarking, and the code can be found in `test/imapp_benchmark/imapp_bench.go`. We used an in-memory database for a minimal impact with a minimal host.
 
 The benchmark code can be found at https://github.com/imapp-pl/erigon/tree/imapp_benchmark
 
 The following script executes benchmarks:
 ```
-	python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm erigon --sample_size 10
+    python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm erigon --sample_size 10
 ```
 
 #### Results
@@ -221,7 +223,7 @@ Again, `PUSHx` opcodes are not constant, but times increase linearly with the nu
 
 When looking at individual OPCODEs, there is an interesting non-linear pattern in simple opcodes like `ADD`, `DIV`, `MULMOD`, etc. The first 3 executions are visibly faster than the following. The rest behave in a more linear fashion. The reason for this is not clear.
 
-The `PUSHx` opcodes are not constant, but times increase linearly with the number of bytes pushed. The same cannot be observed for `DUPx` and `SWAPx` opcodes. This may be related to the fact that `PUSHx` read from contract's bytecode.
+The `PUSHx` opcodes are not constant, but times increase linearly with the number of bytes pushed. The same cannot be observed for `DUPx` and `SWAPx` opcodes. This may be related to the fact that `PUSHx` reads from the contract's bytecode.
 
 #### Recommendation
 
@@ -259,11 +261,11 @@ The timings for Besu are characterised by a rather significant scatter, even aft
 
 As seen on the charts, the execution times for `ADD`, `DIV` and `MULMOD` are not consistent. While the majority behaves in a linear fashion, there is a large portion that often takes longer. Again, we attribute it to the JVM garbage collector or other JVM internals.
 
-The execution time for `EXP` increases linearly with the size of the second argument. Again the separation into two different lines shows that the execution time depends not only on the size of the argument but also on its value. This indicates some form of optimization to cut executions times. In contrast to other implementations, the optimized path executes in O(1).
+The execution time for `EXP` increases linearly with the size of the second argument. Again the separation into two different lines shows that the execution time depends not only on the size of the argument but also on its value. This indicates some form of optimization to cut execution times. In contrast to other implementations, the optimized path executes in O(1).
 
 Some common OPCODEs perform worse than expected. Improving them would have a positive impact on the overall execution time. These are `LT`, `GT`, `AND`, `OR`, `XOR` and `BYTE`.
 
-For the `LT`, `GT`, `AND`, `OR`, `XOR` and `BYTE` the execution times are higher than expected. This might indicate that there is a room for optimization.
+For the `LT`, `GT`, `AND`, `OR`, `XOR` and `BYTE` the execution times are higher than expected. This might indicate that there is room for optimization.
 
 The `SELFBALANCE` performance is significantly slower when compared to other implementations.
 
@@ -282,7 +284,7 @@ The benchmark code can be found at https://github.com/imapp-pl/revm/tree/evm_gas
 
 The following script executes benchmarks:
 ```
-	python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm revm --sample_size 10
+    python3 ./src/instrumentation_measurement/measurements.py measure --mode benchmark --input_file ./local/pg_marginal_full5_c50_step1_shuffle.csv --evm revm --sample_size 10
 ```
 
 #### Results
@@ -309,7 +311,7 @@ In some opcodes like `ADD`, `DIV` and `MULMOD` there is a visible pattern of the
 
 This implementation does not have a separation of lines seen for the EXP arguments in other implementations.
 
-For the `BYTE`, `SHL`, `SHR` and `SAR` the execution times are higher than expected. This might indicate that there is a room for optimization.
+For the `BYTE`, `SHL`, `SHR` and `SAR` the execution times are higher than expected. This might indicate that there is room for optimization.
 
 #### Recommendation
 
@@ -318,8 +320,8 @@ Investigate the performance of the `BYTE`, `SHL`, `SHR` and `SAR` OPCODEs.
 ## Measurement Analysis
 
 Full details:
-- [Gas cost estimation analysis](./report_stage_iii_assets/final_estimation.html)
-- [Alternative gas cost schedule](./report_stage_iii_assets/gas_schedule_comparison.csv)
+- [Gas cost estimation analysis](./report_stage_iii_assets/estimation_analysis.html)
+- [Gas calculation comparison](./report_stage_iii_assets/gas_schedule_comparison.csv)
 
 The results for each EMV have been scaled and compared with the current gas cost schedule as per our methodology.
 
@@ -329,14 +331,14 @@ The results for each EMV have been scaled and compared with the current gas cost
 <img src="./report_stage_iii_assets/final_all.png" width="700"/>&nbsp;
 
 
-Calculating the averages, we get the following alternative gas cost schedule:
+Calculating the averages, we get the following unified gas cost schedule:
 
-**Figure 8: Alternative gas schedule**
+**Figure 8: Unified gas schedule**
 
 <img src="./report_stage_iii_assets/final_proposal.png" width="700"/>&nbsp;
 
 
-The raw results of the alternative gas cost schedule have been re-scaled to fit the current gas cost schedule. For this we have excluded OPCODEs with high client variability (like `EXP` or `SELFBALANCE`) and those visible inconsistency (like `PUSH2` to `PUSH32`). Instead we focused on the most common OPCODEs. Our analysis showed that the scale of 1.4 gives the best fit. This scale results in the least number of changes, for OPCODEs where it is worth the effort.
+The unified results have been re-scaled again to fit better the current gas cost schedule and create the alternative gas schedule. For this, we have excluded OPCODEs with high client variability (like `EXP` or `SELFBALANCE`) and those with visible inconsistencies (like `PUSH2` to `PUSH32`). Instead, we focused on the most common OPCODEs. Our analysis showed that the scale of 1.4 gives the best fit. This scale results in the least number of changes, for OPCODEs where it is worth the effort.
 
 This table presents the full comparison between the current gas cost schedule and the final alternative gas cost schedule.
 
@@ -488,15 +490,15 @@ Notice that `EXP` opcode execution cost is expressed with the formula: the base 
 
 Please see 'EXP' section in the corresponding files.
 
-The `EXP` opcode proved quite difficult to estimate due to high client variability. Additionally, the measure marginal method was not able to sufficiently estimate the base cost of the opcode. The `EXP` measure marginal method used the argument size of 1 byte, as this provided the most consistent results. With the measure argument method, the linear regresion placed some of the base `EXP` costs below zero. This values were disregarded in the further calculations.
+The `EXP` opcode proved quite difficult to estimate due to high client variability. Additionally, the measure marginal method was not able to sufficiently estimate the base cost of the opcode. The `EXP` measure marginal method used the argument size of 1 byte, as this provided the most consistent results. With the measure argument method, the linear regression placed some of the base `EXP` costs below zero. These values were disregarded in the further calculations.
 
-For a more accurate estimation, we compare EXP base and dynamic estimates to the execution of `ADD` and `MUL` opcodes. These opcodes are used as a reference as they are the most basic arithmetic ones. Given this data we can estimate the cost of the single byte exponentiation as follows:
+For a more accurate estimation, we compare EXP base and dynamic estimates to the execution of `ADD` and `MUL` opcodes. These opcodes are used as a reference as they are the most basic arithmetic ones. Given this data we can estimate the cost of the single-byte exponentiation as follows:
 
 ```math
-	exp_byte_cost = exp_byte_time / (add_time + mul_time) * (add_cost + mul_cost)
+    exp_byte_cost = exp_byte_time / (add_time + mul_time) * (add_cost + mul_cost)
 ```
 
-With this formula we can further estimate the base cost of the `EXP` opcode, by subtracting the cost of the arguments from the total cost of `EXP`.
+With this formula, we can further estimate the base cost of the `EXP` opcode, by subtracting the cost of the arguments from the total cost of `EXP`.
 
 The following table shows the results*:
 
@@ -510,7 +512,7 @@ Erigon|6.68|7.81|84.63|46.72|0|0
 Besu|58815|75348|154635|9.22|415094|15.53
 Rust EVM|2.86|3.59|35.13|43.57|15.38|0
 
-* Again, the execution times are not directly comparable between clients, as they have different setup, e.g. Besu's internal loop of ~10k times.
+* Again, the execution times are not directly comparable between clients, as they have different setups, e.g. Besu's internal loop of ~10k times.
 
 ## Recommendations
 
@@ -589,4 +591,4 @@ There are two jump OPCODEs: `JUMP` and `JUMPI`. Our analysis shows that the real
 
 This suggests that the cost could be lowered. But with the introduction of new relative jumps and disallowing dynamic jumps (EIP-4750 and EIP-4200), these OPCODEs might become irrelevant.
 
-**Recommendation**: Assess when EIP-4750 and EIP-4200 are to be implemented. If it is likely to happen in a distant future, lower the gas cost of these OPCODEs as per the table above.
+**Recommendation**: Assess when EIP-4750 and EIP-4200 are to be implemented. If it is likely to happen in the distant future, lower the gas cost of these OPCODEs now as per the table above.
