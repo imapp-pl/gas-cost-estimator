@@ -148,7 +148,7 @@ The layout of the `measure_marginal` generated program is an evolution of this t
 | | |
 |-|-|
 | `PUSH1` | `max_op_count` times |
-| `{OPCODE}` | `op_count` times |
+| `{OPCODE, POP}` | `op_count` times |
 | `POP` | `max_op_count - op_count` times |
 
 An `op_count + 1` program differs from an `op_count` program by only a single instance of the `OPCODE` instruction.
