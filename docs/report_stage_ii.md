@@ -361,7 +361,7 @@ Further investigation is required to explain such difference.
 Looking at the distributions of relative increases, we can say that they are very similar.
 So even if using perf tool has an impact on measurements, it is proportional and does not modify relative comparison.
 
-<img src="./gas_cost_estimator_doc_assets/geth_perf_overhead.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/evmone_perf_overhead.png" width="425"/> 
+<img src="./report_stage_ii_assets/geth_perf_overhead.png" width="425"/> <img src="./report_stage_ii_assets/evmone_perf_overhead.png" width="425"/> 
 
 For detailed graphs see [here](https://gascost.local.imapp.pl/perf-overhead-geth.html) and [here](https://gascost.local.imapp.pl/perf-overhead-evmone.html).
 
@@ -386,7 +386,7 @@ This means again that L1 cache performance has a huge impact on measurements but
 For completeness, the branch prediction effectiveness varies between `0.008` and `0.014`. 
 And it may be considered almost equal for all opcodes. 
 
-<img src="./gas_cost_estimator_doc_assets/geth_perf_marginal_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/evmone_perf_marginal_total_effectiveness.png" width="425"/> 
+<img src="./report_stage_ii_assets/geth_perf_marginal_total_effectiveness.png" width="425"/> <img src="./report_stage_ii_assets/evmone_perf_marginal_total_effectiveness.png" width="425"/> 
 
 For detailed graphs see [here](https://gascost.local.imapp.pl/cache-marginal-geth.html) and [here](https://gascost.local.imapp.pl/cache-marginal-evmone.html).
 
@@ -402,13 +402,13 @@ But note that high values are attained for 0-length programs. These are not 0 le
 For other programs, the ratios significantly drop. 
 So computations are executed almost entirely in caches, also for these programs, regardless of the fact ratios rised compering to marginal programs. 
 
-<img src="./gas_cost_estimator_doc_assets/geth_perf_validation_total_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_total_effectiveness.png" width="425"/> 
+<img src="./report_stage_ii_assets/geth_perf_validation_total_effectiveness.png" width="425"/> <img src="./report_stage_ii_assets/evmone_perf_validation_total_effectiveness.png" width="425"/> 
 
 As expected, the branch prediction is less effective compared to the marginal programs. 
 The effective ratio varies between `0` and `0.035` for evmone and between `0.013` and `0.025` for geth.
 The longer program, the higher ratio. This is still low comparing to other software.
 
-<img src="./gas_cost_estimator_doc_assets/geth_perf_validation_branch_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_branch_effectiveness.png" width="425"/> 
+<img src="./report_stage_ii_assets/geth_perf_validation_branch_effectiveness.png" width="425"/> <img src="./report_stage_ii_assets/evmone_perf_validation_branch_effectiveness.png" width="425"/> 
 
 Let us estimate the impact of the branch misprediction on measurements.
 It is hard to determine exactly the misprediction penalty. 
@@ -435,7 +435,7 @@ As expected, the branch prediction is less effective compared to the marginal pr
 The effective ratio varies between `0` and `0.035` for evmone and between `0.013` and `0.025` for geth.
 The longer program, the higher ratio. This is still low comparing to other software.
 
-<img src="./gas_cost_estimator_doc_assets/evmone_perf_validation_branch_effectiveness.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/geth_perf_validation_branch_effectiveness.png" width="425"/> 
+<img src="./report_stage_ii_assets/evmone_perf_validation_branch_effectiveness.png" width="425"/> <img src="./report_stage_ii_assets/geth_perf_validation_branch_effectiveness.png" width="425"/> 
 
 Let us estimate the impact of the branch misprediction on measurements.
 It is hard to determine exactly the misprediction penalty. 
@@ -637,7 +637,7 @@ Here is the boxplot demonstrating the increasing trend captured by the `measure_
 
 **Figure 1: The increasing trend for `EXP` `measure_marginal` for geth and evmone**
 
-<img src="./gas_cost_estimator_doc_assets/marginal_exp_geth.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/marginal_exp_evmone.png" width="425"/> 
+<img src="./report_stage_ii_assets/marginal_exp_geth.png" width="425"/> <img src="./report_stage_ii_assets/marginal_exp_evmone.png" width="425"/> 
 
 The trend is easily visible and much stronger than the variation pictured by the boxplots.
 
@@ -645,7 +645,7 @@ The standard linear regression diagnostic plots:
 
 **Figure 2: Linear regression diagnostics for `EXP` `measure_marginal` for geth and evmone**
 
-<img src="./gas_cost_estimator_doc_assets/marginal_exp_diag_geth.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/marginal_exp_diag_evmone.png" width="425"/> 
+<img src="./report_stage_ii_assets/marginal_exp_diag_geth.png" width="425"/> <img src="./report_stage_ii_assets/marginal_exp_diag_evmone.png" width="425"/> 
 
 And the complete summary of the fitted models:
 
@@ -693,7 +693,7 @@ A subset of OPCODEs exhibits a bi-modal distribution of measurements:
 
 **Figure 4: Bimodal trend of `PUSH32` `measure_marginal` results for `evmone`, along with the bimodal distribution and the corrected `measure_marginal` trend**
 
-<img src="./gas_cost_estimator_doc_assets/bimodal_PUSH32_evmone.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/bimodal_PUSH32_evmone_corrected.png" width="425"/> 
+<img src="./report_stage_ii_assets/bimodal_PUSH32_evmone.png" width="425"/> <img src="./report_stage_ii_assets/bimodal_PUSH32_evmone_corrected.png" width="425"/> 
 
 In the first plot we can still visually pick up the constant trend, irrespective of whether we're looking at the "top-mode" or "bottom-mode" measurements.
 We also see the two strong batches of measurements clustered around their respective modes.
@@ -771,7 +771,7 @@ For `EXP` and `geth` we can plot the trend and also the 2-dimensional illustrati
 
 **Figure 7: Relation between `EXP` exponent argument and `measure_arguments` program cost.** The second plot demonstrates the relationship between cost and both arguments from low-cost (yellow) to high-cost (red)
 
-<img src="./gas_cost_estimator_doc_assets/arguments_EXP_evmone.png" width="425"/> <img src="./gas_cost_estimator_doc_assets/arguments_EXP_evmone_heat.png" width="425"/> 
+<img src="./report_stage_ii_assets/arguments_EXP_evmone.png" width="425"/> <img src="./report_stage_ii_assets/arguments_EXP_evmone_heat.png" width="425"/> 
 
 The linear regression diagnostic plots indicate that the model is properly fitted.
 The artefacts visible can be attributed to the fact that our observations are clustered in three distinct groups: `op_count` respectively 0, 15 and 30.
@@ -783,7 +783,7 @@ Since this situation occurs less likely as `x` increases (or `y` decreases), the
 
 **Figure 8: Relation between `MOD` arguments and `measure_arguments` program cost.** Points below the `y = x` indicate more costly programs, which is exactly where `x > y` for `MOD(x, y)`
 
-<img src="./gas_cost_estimator_doc_assets/arguments_MOD_evmone_heat.png" width="425"/>
+<img src="./report_stage_ii_assets/arguments_MOD_evmone_heat.png" width="425"/>
 
 This prompts us to model the division OPCODEs using a meta-variable `expensive = 1 if x > y 0 otherwise`.
 This variable's coefficient estimate is clearly significant.
@@ -831,13 +831,13 @@ Firstly, we ran three random programs on freshly booted up system. We can observ
 
 **Figure 9: Execution time (`measure_total_time_ns`) of three random programs (`program_id`) for each run (`run_id`) on fresh system**
 
-<img src="./gas_cost_estimator_doc_assets/warmup_results_geth_pre.png" width="700"/>
+<img src="./report_stage_ii_assets/warmup_results_geth_pre.png" width="700"/>
 
 When executing the same programs again, immediately after the previous test, the warm-up effect disappears.
 
 **Figure 10: Execution time (`measure_total_time_ns`) of three random programs (`program_id`) for each run (`run_id`) on warmed-up system**
 
-<img src="./gas_cost_estimator_doc_assets/warmup_geth_results_post.png" width="700"/>
+<img src="./report_stage_ii_assets/warmup_geth_results_post.png" width="700"/>
 
 This proves that any warm-up effects are diminished by subsequent runs. All our measurements above were taken in a properly warmed-up environment.
 
@@ -852,7 +852,7 @@ For this exercise, we ran the same 50 random programs using two different method
 
 **Figure 11: Execution time (`total_time_ns`) of 50 random programs (`program_id`) using two different methods `measure_total` and `benchmark`**
 
-<img src="./gas_cost_estimator_doc_assets/benchmark_comparison_results.png" width="700"/>
+<img src="./report_stage_ii_assets/benchmark_comparison_results.png" width="700"/>
 
 From the Figure 11, we can deduct that our `measure_total` method is successfully eliminating negative effects of caching, warmups, memory allocation, garbage collection, process management, external programs impact and clock measurements. As the same method constitutes the basis for `measure_marginal` and `measure_arguments`, we also assume that those negative effects are correctly dealt with.
 
@@ -862,7 +862,7 @@ This exercise estimates _engine overhead_ - the cost of processing the contract 
 
 **Figure 12: Execution time (`total_time_ns`) of 50 random programs (`program_id`) using two different methods `measure_total` and `benchmark`**
 
-<img src="./gas_cost_estimator_doc_assets/overhead_sequence_results.png" width="700"/>
+<img src="./report_stage_ii_assets/overhead_sequence_results.png" width="700"/>
 
 As we can see, for the simplest case, the execution time is already quite significant compared to the expected gas cost. The engine overhead estimation method confirms that most of the time is actually taken by the execution preparation, while the execution time is nearing 0.
 The longer the bytecode, the more negligible overhead cost becomes.
@@ -879,7 +879,7 @@ We can see the data points (each for a given `measure_validation` program) much 
 
 **Figure 13: Comparison of trivial (`program_length`) estimations the current gas cost schedule (`current_gas_cost`) estimations with our `gas_cost_estimator` estimates (labelled `cost_ns`).** Logarithmic scale on both axes, the curve represents the estimated regression line. The points represent the validation programs and labels are their respective dominant OPCODEs
 
-<img src="./gas_cost_estimator_doc_assets/validation_compare.png" width="700"/>
+<img src="./report_stage_ii_assets/validation_compare.png" width="700"/>
 
 The summaries of the linear regression validation models for our estimates are:
 
@@ -937,11 +937,11 @@ Using this pivot, we calculate the alternative gas cost schedule.
 
 **Figure 15a: Comparison of current and alternative gas cost schedules - `cloud`.** Each point represents an OPCODE (or a special cost factor to an OPCODE, like an increase in argument size). The figures are in gas units, relative to the gas cost and estimate of the pivot OPCODE. Results for the `cloud` measurement setup.
 
-<img src="./gas_cost_estimator_doc_assets/alternative_gas_cost_schedule_cloud.png" width="1000"/>
+<img src="./report_stage_ii_assets/alternative_gas_cost_schedule_cloud.png" width="1000"/>
 
 **Figure 15b: Comparison of current and alternative gas cost schedules - `laptop`**
 
-<img src="./gas_cost_estimator_doc_assets/alternative_gas_cost_schedule_laptop.png" width="1000"/>
+<img src="./report_stage_ii_assets/alternative_gas_cost_schedule_laptop.png" width="1000"/>
 
 We observe, that the final result (the alternative gas cost schedule) doesn't differ much from environment to environment, but it does differ significantly from EVM to EVM.
 
