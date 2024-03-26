@@ -1,0 +1,218 @@
+---
+title: "R Notebook: comparison of obtained estimates for all envs - the final results; for Gas Cost Estimator"
+output: html_document
+---
+In this script we conduct the comparison procedure of the obtained estimates.
+
+```{r, setup, include=FALSE}
+# NOTE: change this to your respective path
+knitr::opts_knit$set(root.dir = '~/sources/imapp3/gas-cost-estimator/src')
+source('common.R')
+all_envs = c("geth", "evmone", "besu", "nethermind", "ethereumjs", "erigon", "revm")
+```
+
+```{r}
+current_gas_cost = read.csv("program_generator/data/current_gas_cost.csv")
+
+if (exists("estimated_cost")) {
+  rm(estimated_cost)
+}
+for (env in all_envs) {
+  if (exists("estimated_cost")) {
+    estimated_cost = rbind(estimated_cost, read.csv(paste0("../../local/", env, "_argument_estimated_cost.csv")))
+  } else {
+    estimated_cost = read.csv(paste0("../../local/", env, "_argument_estimated_cost.csv"))
+  }
+}
+
+if (exists("marginal")) {
+  rm(marginal)
+}
+for (env in all_envs) {
+  if (exists("marginal")) {
+    marginal = rbind(marginal, read.csv(paste0("../../local/", env, "_marginal_estimated_cost.csv")))
+  } else {
+    marginal = read.csv(paste0("../../local/", env, "_marginal_estimated_cost.csv"))
+  }
+}
+
+order1 = order(estimated_cost$opcode, estimated_cost$env)
+order2 = order(marginal$op, marginal$env)
+
+estimated_cost[order1, 'estimate_marginal_ns'] = marginal[order2, 'estimate_marginal_ns']
+estimated_cost[order1, 'estimate_marginal_ns_stderr'] = marginal[order2, 'estimate_marginal_ns_stderr']
+
+estimated_cost$arg0_ns[which(is.na(estimated_cost$arg0_ns))] = 0
+estimated_cost$arg1_ns[which(is.na(estimated_cost$arg1_ns))] = 0
+estimated_cost$arg2_ns[which(is.na(estimated_cost$arg2_ns))] = 0
+estimated_cost$expensive_ns[which(is.na(estimated_cost$expensive_ns))] = 0
+
+head(estimated_cost)
+head(marginal)
+```
+
+Here we calculate the scales. Each estimated evm gas cost is scaled to get the best match with the current gas schedule.
+There are many PUSH, DUP and SWAP opcodes.
+To avoid other opcodes being overran, we use only PUSH1, DUP1 and SWAP1 as representatives when calculating the scales.
+
+```{r}
+# [SECTION] original
+
+extract_opcodes <- function() {
+  unique(estimated_cost$opcode)
+}
+all_opcodes = extract_opcodes()
+excluded_opcodes = c('PUSH2', 'PUSH3', 'PUSH4', 'PUSH5', 'PUSH6', 'PUSH7', 'PUSH8', 'PUSH9', 'PUSH10', 'PUSH11', 'PUSH12', 'PUSH13', 'PUSH14', 'PUSH15', 'PUSH16', 
+                     'PUSH17', 'PUSH18', 'PUSH19', 'PUSH20', 'PUSH21', 'PUSH22', 'PUSH23', 'PUSH24', 'PUSH25', 'PUSH26', 'PUSH27', 'PUSH28', 'PUSH29', 'PUSH30', 
+                     'PUSH31', 'PUSH32', 
+                     'DUP2', 'DUP3', 'DUP4', 'DUP5', 'DUP6', 'DUP7', 'DUP8', 'DUP9', 'DUP10', 'DUP11', 'DUP12', 'DUP13', 'DUP14', 'DUP15', 'DUP16', 
+                     'SWAP2', 'SWAP3', 'SWAP4', 'SWAP5', 'SWAP6', 'SWAP7', 'SWAP8', 'SWAP9', 'SWAP10', 'SWAP11', 'SWAP12', 'SWAP13', 'SWAP14', 'SWAP15', 'SWAP16')
+
+```
+
+```{r}
+excluded_opcodes_df <- data.frame(excluded_opcodes)
+colnames(excluded_opcodes_df) <- 'opcode'
+q = c("SELECT ")
+for (env in all_envs) {
+  q <- append(q, paste0("avg(", env, ".estimate_marginal_ns/current_gas_cost.constant_current_gas) as ", env, "_scale,"))
+}
+q <- append(q, " 1 FROM current_gas_cost")
+for (env in all_envs) {
+  q <- append(q, paste0(" INNER JOIN estimated_cost as ", env, " ON ", env, ".opcode = current_gas_cost.opcode AND ", env, ".env = '", env, "'"))
+}
+q <- append(q, paste0(" WHERE current_gas_cost.opcode NOT IN (SELECT opcode FROM excluded_opcodes_df)"))
+scales <- sqldf(paste(q, collapse = ""))[1:length(all_envs)]
+```
+
+This allows us to have gas cost schedules with the least divergence between EVMs.
+
+```{r}
+q = c("SELECT ")
+for (env in all_envs) {
+  q <- append(q, paste0(env, ".estimate_marginal_ns/", env, "_scale as ", env, "_gas,"))
+}
+for (env in all_envs) {
+  q <- append(q, paste0(env, ".estimate_marginal_ns_stderr/", env, "_scale as ", env, "_gas_stderr,"))
+}
+q <- append(q, " current_gas_cost.opcode, current_gas_cost.constant_current_gas FROM current_gas_cost, scales")
+for (env in all_envs) {
+  q <- append(q, paste0(" INNER JOIN estimated_cost as ", env, " ON ", env, ".opcode = current_gas_cost.opcode AND ", env, ".env = '", env, "'"))
+}
+
+gas_schedule_comparison <- sqldf(paste(q, collapse = ""))
+```
+
+We continue to fill in the additional special entries of our gas cost schedule, being the costs of the arguments.
+
+```{r}
+arg_cost <- function(opcode, arg, opcode_name, opcode_current_gas_cost) {
+  r1 <- list()
+  r2 <- list()
+  for (env in all_envs) {
+    r1 <- append(r1, estimated_cost[which(estimated_cost$env==env & estimated_cost$opcode==opcode),paste0('arg', arg, '_ns')])
+    r2 <- append(r2, estimated_cost[which(estimated_cost$env==env & estimated_cost$opcode==opcode),paste0('arg', arg, '_ns_stderr')])
+  }
+  append(append(r1/scales, r2/scales), list(opcode_name, opcode_current_gas_cost))
+}
+
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] = arg_cost('EXP', '1', "EXP_arg1_cost", 50)
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] = arg_cost('CALLDATACOPY', '2', "CALLDATACOPY_arg2_cost", 3)
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] = arg_cost('RETURNDATACOPY', '2', "RETURNDATACOPY_arg2_cost", 3)
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] = arg_cost('CODECOPY', '2', "CODECOPY_arg2_cost", 3)
+```
+
+```{r}
+expensive_cost <- function(opcode, opcode_name, opcode_current_gas_cost) {
+  r1 <- list()
+  r2 <- list()
+  for (env in all_envs) {
+    v1 <- estimated_cost$expensive_ns[which(estimated_cost$env==env & estimated_cost$opcode==opcode)] + estimated_cost$estimate_marginal_ns[which(estimated_cost$env==env & estimated_cost$opcode==opcode)]
+    r1 <- append(r1, v1)
+    v2 <- sqrt(estimated_cost$expensive_ns_stderr[which(estimated_cost$env==env & estimated_cost$opcode==opcode)]^2 + estimated_cost$estimate_marginal_ns_stderr[which(estimated_cost$env==env & estimated_cost$opcode==opcode)]^2)
+    r2 <- append(r2, v2) 
+  }
+  append(append(r1/scales, r2/scales), list(opcode_name, opcode_current_gas_cost))
+}
+
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] = expensive_cost('DIV', "DIV_expensive_cost", 5)
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] = expensive_cost('SDIV', "SDIV_expensive_cost", 5)
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] = expensive_cost('MOD', "MOD_expensive_cost", 5)
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] = expensive_cost('SMOD', "SMOD_expensive_cost", 5)
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] = expensive_cost('ADDMOD', "ADDMOD_expensive_cost", 8)
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] = expensive_cost('MULMOD', "MULMOD_expensive_cost", 8)
+```
+
+```{r}
+gas_schedule_comparison[, c(which(names(gas_schedule_comparison) == 'opcode'), 1:length(all_envs))]
+```
+
+Plot the scaled gas cost schedules.
+
+```{r fig.width=30, fig.height=10}
+maximum_gas_cost = max(gas_schedule_comparison[,!names(gas_schedule_comparison) %in% c('opcode')])
+curr_env_colors = env_colors[1:length(all_envs)]
+
+plot(gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(0,maximum_gas_cost * 1.1), xlab="", ylab="")
+axis(1, at=1:nrow(gas_schedule_comparison), labels=gas_schedule_comparison$opcode, las=2)
+for (i in 1:length(all_envs)) {
+  points(gas_schedule_comparison[,i], col=curr_env_colors[i], bg=curr_env_colors[i], xaxt='n', pch=21)
+}
+legend(0, maximum_gas_cost, c(all_envs, "Current gas cost schedule"), fill=c(curr_env_colors, 'grey'), cex=2)
+```
+
+And individual plots of scaled gas schedules for EVMs.
+
+```{r fig.width=30, fig.height=10}
+maximum_gas_cost = max(gas_schedule_comparison[,!names(gas_schedule_comparison) %in% c('opcode')])
+
+for (i in 1:length(all_envs)) {
+  plot(gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(0,maximum_gas_cost * 1.1), xlab="", ylab="")
+  axis(1, at=1:nrow(gas_schedule_comparison), labels=gas_schedule_comparison$opcode, las=2)
+  points(gas_schedule_comparison[,i], col=curr_env_colors[i], bg=curr_env_colors[i], xaxt='n', pch=21)
+  legend(0, maximum_gas_cost, c(all_envs[i], "Current gas cost schedule"), fill=c(env_colors[i], 'grey'), cex=2)
+}
+```
+
+Calculate and plot the alternative gas cost schedule.
+The calculated values are:
+- alternative_gas: the average of evms gas schedules, without any weights,
+- alternative_gas_stderr: the standard deviation of evms gas schedules,
+- alternative_gas_rel_diff: the relative difference between the current gas schedule and the alternative gas schedule, as a fraction,
+- alternative_gas_rel_stderr: the relative standard deviation of evms gas schedules, relative to the alternative gas schedule, as a fraction.
+
+```{r}
+gas_schedule_comparison$alternative_gas <- rowMeans(gas_schedule_comparison[, 1:length(all_envs)], na.rm = TRUE)
+mf <- function(x){sd(gas_schedule_comparison[x,1:length(all_envs)])/sqrt(length(all_envs))}
+gas_schedule_comparison$alternative_gas_stderr <- sapply(1:nrow(gas_schedule_comparison),mf)
+gas_schedule_comparison$alternative_gas_rel_stderr <- gas_schedule_comparison$alternative_gas_stderr / gas_schedule_comparison$alternative_gas
+gas_schedule_comparison$alternative_gas_rel_diff <- abs((gas_schedule_comparison$constant_current_gas - gas_schedule_comparison$alternative_gas) / gas_schedule_comparison$constant_current_gas)
+
+gas_schedule_comparison[, c('opcode', 'constant_current_gas', 'alternative_gas', 'alternative_gas_rel_diff', 'alternative_gas_rel_stderr')]
+```
+
+```{r fig.width=30, fig.height=10}
+maximum_gas_cost = max(gas_schedule_comparison[,!names(gas_schedule_comparison) %in% c('opcode')])
+
+plot(gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(0,maximum_gas_cost * 1.1), xlab="", ylab="")
+axis(1, at=1:nrow(gas_schedule_comparison), labels=gas_schedule_comparison$opcode, las=2)
+points(gas_schedule_comparison$alternative_gas, col='orange', bg='orange', xaxt='n', pch=21)
+legend(0, maximum_gas_cost, c("Alternative gas cost schedule", "Current gas cost schedule"), fill=c('orange', 'grey'), cex=2)
+```
+```{r fig.width=30, fig.height=15}
+maximum_gas_cost = 13
+max_values = nrow(gas_schedule_comparison) - 10
+constant_current_gas_color = rgb(0.4,0.4,0.4,1.0)
+alternative_gas_color = rgb(0.1,0.2,1.0,1.0)
+
+plot(gas_schedule_comparison[1:max_values, 'constant_current_gas'], col=constant_current_gas_color, bg=constant_current_gas_color, xaxt='n', pch=21, ylim=c(0,maximum_gas_cost * 1.1), xlab="", ylab="")
+axis(1, at=1:max_values, labels=gas_schedule_comparison[1:max_values, 'opcode'], las=2)
+points(gas_schedule_comparison[1:max_values, 'alternative_gas'], col=alternative_gas_color, bg=alternative_gas_color, xaxt='n', pch=21, cex=1.5)
+legend(75, maximum_gas_cost, c("Alternative gas cost schedule", "Current gas cost schedule"), fill=c(alternative_gas_color, constant_current_gas_color), cex=2)
+```
+
+```{r}
+# just export the final compiled estimations to a file
+write.csv(estimated_cost, "../../local/final_estimated_cost.csv", quote=FALSE, row.names=FALSE)
+write.csv(gas_schedule_comparison, "../../local/gas_schedule_comparison.csv", quote=FALSE, row.names=FALSE)
+```

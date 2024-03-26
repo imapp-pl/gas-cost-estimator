@@ -1,0 +1,269 @@
+---
+title: "R Notebook: comparison of obtained estimates for all envs - the final results; for Gas Cost Estimator"
+output: html_document
+---
+In this script we conduct the comparison procedure of the obtained estimates.
+
+```{r, setup, include=FALSE}
+# NOTE: change this to your respective path
+knitr::opts_knit$set(root.dir = '~/sources/imapp3/gas-cost-estimator/src')
+source('common.R')
+all_envs = c("geth", "evmone", "besu", "nethermind", "ethereumjs", "erigon", "revm")
+
+# changing from COINBASE originally, b/c it is very expensive in evmone
+# decision based on pivot_results
+pivot_opcode = "CODECOPY"
+```
+
+```{r}
+current_gas_cost = read.csv("program_generator/data/current_gas_cost.csv")
+
+if (exists("estimated_cost")) {
+  rm(estimated_cost)
+}
+for (env in all_envs) {
+  if (exists("estimated_cost")) {
+    estimated_cost = rbind(estimated_cost, read.csv(paste0("../../local/", env, "_argument_estimated_cost.csv")))
+  } else {
+    estimated_cost = read.csv(paste0("../../local/", env, "_argument_estimated_cost.csv"))
+  }
+}
+
+if (exists("marginal")) {
+  rm(marginal)
+}
+for (env in all_envs) {
+  if (exists("marginal")) {
+    marginal = rbind(marginal, read.csv(paste0("../../local/", env, "_marginal_estimated_cost.csv")))
+  } else {
+    marginal = read.csv(paste0("../../local/", env, "_marginal_estimated_cost.csv"))
+  }
+}
+
+order1 = order(estimated_cost$opcode, estimated_cost$env)
+order2 = order(marginal$op, marginal$env)
+
+estimated_cost[order1, 'estimate_marginal_ns'] = marginal[order2, 'estimate_marginal_ns']
+estimated_cost[order1, 'estimate_marginal_ns_stderr'] = marginal[order2, 'estimate_marginal_ns_stderr']
+
+estimated_cost$arg0_ns[which(is.na(estimated_cost$arg0_ns))] = 0
+estimated_cost$arg1_ns[which(is.na(estimated_cost$arg1_ns))] = 0
+estimated_cost$arg2_ns[which(is.na(estimated_cost$arg2_ns))] = 0
+estimated_cost$expensive_ns[which(is.na(estimated_cost$expensive_ns))] = 0
+
+head(estimated_cost)
+head(marginal)
+```
+
+```{r}
+# [SECTION] original
+
+extract_opcodes <- function() {
+  unique(estimated_cost$opcode)
+}
+all_opcodes = extract_opcodes()
+
+get_gas_schedule_comparison <- function(pivot_opcode_, df) {
+  pivot_statistics = sqldf(paste0("SELECT estimate_marginal_ns, env FROM df WHERE opcode='", pivot_opcode_, "'"))
+  pivot_gas_cost = current_gas_cost$constant_current_gas[which(current_gas_cost$opcode==pivot_opcode_)]
+    
+  row.names(pivot_statistics) = pivot_statistics$env
+  # 
+  for (env in all_envs) {
+    multiplier = pivot_gas_cost / pivot_statistics[env, 'estimate_marginal_ns']
+    df$estimate_marginal_gas[which(df$env==env)] = df$estimate_marginal_ns[which(df$env == env)] * multiplier
+    df$arg0_gas[which(df$env==env)] = df$arg0_ns[which(df$env == env)] * multiplier
+    df$arg1_gas[which(df$env==env)] = df$arg1_ns[which(df$env == env)] * multiplier
+    df$arg2_gas[which(df$env==env)] = df$arg2_ns[which(df$env == env)] * multiplier
+    df$expensive_gas[which(df$env==env)] = df$expensive_ns[which(df$env == env)] * multiplier
+    # stderrs
+    df$estimate_marginal_gas_stderr[which(df$env==env)] = df$estimate_marginal_ns_stderr[which(df$env == env)] * multiplier
+    df$arg0_gas_stderr[which(df$env==env)] = df$arg0_ns_stderr[which(df$env == env)] * multiplier
+    df$arg1_gas_stderr[which(df$env==env)] = df$arg1_ns_stderr[which(df$env == env)] * multiplier
+    df$arg2_gas_stderr[which(df$env==env)] = df$arg2_ns_stderr[which(df$env == env)] * multiplier
+    df$expensive_gas_stderr[which(df$env==env)] = df$expensive_ns_stderr[which(df$env == env)] * multiplier
+  }
+  
+  q = c("SELECT ")
+  for (env in all_envs) {
+    q <- append(q, paste0(env, ".estimate_marginal_gas as ", env, "_gas,"))
+  }
+  for (env in all_envs) {
+    q <- append(q, paste0(env, ".estimate_marginal_gas_stderr as ", env, "_gas_stderr,"))
+  }
+  q <- append(q, "current_gas_cost.opcode, constant_current_gas FROM current_gas_cost")
+  for (env in all_envs) {
+    q <- append(q, paste0(" INNER JOIN df as ", env, " ON ", env, ".opcode = current_gas_cost.opcode AND ", env, ".env = '", env, "'"))
+  }
+
+  gas_schedule_comparison = sqldf(paste(q, collapse = ""))
+  return(list(gas_schedule_comparison, df))
+}
+```
+
+Here we choose the pivot which allows us to have an alternative gas cost schedule with the least divergence between EVMs.
+
+```{r}
+pivot_results = data.frame(matrix(ncol=5, nrow=0))
+colnames(pivot_results) = c('pivot_opcode', 'distance1', 'distance2', 'distance3', 'distance4')
+excluded_opcodes = c('PUSH2', 'PUSH3', 'PUSH4', 'PUSH5', 'PUSH6', 'PUSH7', 'PUSH8', 'PUSH9', 'PUSH10', 'PUSH11', 'PUSH12', 'PUSH13', 'PUSH14', 'PUSH15', 'PUSH16', 
+                     'PUSH17', 'PUSH18', 'PUSH19', 'PUSH20', 'PUSH21', 'PUSH22', 'PUSH23', 'PUSH24', 'PUSH25', 'PUSH26', 'PUSH27', 'PUSH28', 'PUSH29', 'PUSH30', 
+                     'PUSH31', 'PUSH32', 
+                     'DUP2', 'DUP3', 'DUP4', 'DUP5', 'DUP6', 'DUP7', 'DUP8', 'DUP9', 'DUP10', 'DUP11', 'DUP12', 'DUP13', 'DUP14', 'DUP15', 'DUP16', 
+                     'SWAP2', 'SWAP3', 'SWAP4', 'SWAP5', 'SWAP6', 'SWAP7', 'SWAP8', 'SWAP9', 'SWAP10', 'SWAP11', 'SWAP12', 'SWAP13', 'SWAP14', 'SWAP15', 'SWAP16')
+for (pivot_opcode_ in setdiff(all_opcodes, excluded_opcodes)) {
+  c(gas_schedule_comparison, ...) %<-% get_gas_schedule_comparison(pivot_opcode_, estimated_cost)
+  gas_schedule_comparison <- gas_schedule_comparison[ !(gas_schedule_comparison$opcode %in% excluded_opcodes), , drop=FALSE]
+  ccg = gas_schedule_comparison$constant_current_gas
+  gas_schedule_comparison <- gas_schedule_comparison[, c(1:length(all_envs))]
+  rm = rowMeans(gas_schedule_comparison)
+  for (i in c(1:length(all_envs))) {
+    gas_schedule_comparison[,i] = abs(gas_schedule_comparison[,i]-rm)
+  }
+  distance1 = sum(rowSums(gas_schedule_comparison))
+  distance2 = sqrt(sum(rowSums(gas_schedule_comparison^2)))
+  distance3 = sum(rowSums(gas_schedule_comparison)/ccg)
+  distance4 = sqrt(sum(rowSums(gas_schedule_comparison^2)/(ccg^2)))
+  pivot_results[nrow(pivot_results) + 1, ] = data.frame(pivot_opcode_, distance1, distance2, distance3, distance4)
+}
+pivot_results
+```
+
+We select the pivot by inspection of the `pivot_results` and later continue to fill in the additional special entries of our gas cost schedule, being the costs of the arguments.
+
+```{r}
+c(gas_schedule_comparison, estimated_cost) %<-% get_gas_schedule_comparison(pivot_opcode, estimated_cost)
+
+r1 <- list()
+r2 <- list()
+for (env in all_envs) {
+  r1 <- append(r1, estimated_cost$arg1_gas[which(estimated_cost$env==env & estimated_cost$opcode=='EXP')])
+  r2 <- append(r2, estimated_cost$arg1_gas_stderr[which(estimated_cost$env==env & estimated_cost$opcode=='EXP')])
+}
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] = append(append(r1, r2), list("EXP_arg1_cost", 50))
+
+r1 <- list()
+r2 <- list()
+for (env in all_envs) {
+  r1 <- append(r1, estimated_cost$arg2_gas[which(estimated_cost$env==env & estimated_cost$opcode=='CALLDATACOPY')])
+  r2 <- append(r2, estimated_cost$arg2_gas_stderr[which(estimated_cost$env==env & estimated_cost$opcode=='CALLDATACOPY')])
+}
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] = append(append(r1, r2), list("CALLDATACOPY_arg2_cost", 3))
+
+r1 <- list()
+r2 <- list()
+for (env in all_envs) {
+  r1 <- append(r1, estimated_cost$arg2_gas[which(estimated_cost$env==env & estimated_cost$opcode=='RETURNDATACOPY')])
+  r2 <- append(r2, estimated_cost$arg2_gas_stderr[which(estimated_cost$env==env & estimated_cost$opcode=='RETURNDATACOPY')])
+}
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] = append(append(r1, r2), list("RETURNDATACOPY_arg2_cost", 3))
+
+r1 <- list()
+r2 <- list()
+for (env in all_envs) {
+  r1 <- append(r1, estimated_cost$arg2_gas[which(estimated_cost$env==env & estimated_cost$opcode=='CODECOPY')])
+  r2 <- append(r2, estimated_cost$arg2_gas_stderr[which(estimated_cost$env==env & estimated_cost$opcode=='CODECOPY')])
+}
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] = append(append(r1, r2), list("CODECOPY_arg2_cost", 3))
+
+
+expensive_division_cost <- function(df, env, opcode) {
+  df$expensive_gas[which(df$env==env & df$opcode==opcode)] + df$estimate_marginal_gas[which(df$env==env & df$opcode==opcode)]
+}
+expensive_division_cost_stderr <- function(df, env, opcode) {
+  sqrt(df$expensive_gas_stderr[which(df$env==env & df$opcode==opcode)]^2 + df$estimate_marginal_gas_stderr[which(df$env==env & df$opcode==opcode)]^2)
+}
+
+r1 <- list()
+r2 <- list()
+for (env in all_envs) {
+  r1 <- append(r1, expensive_division_cost(estimated_cost, env, 'DIV'))
+  r2 <- append(r2, expensive_division_cost_stderr(estimated_cost, env, 'DIV'))
+}
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] = append(append(r1, r2), list("DIV_expensive_cost", 5))
+
+r1 <- list()
+r2 <- list()
+for (env in all_envs) {
+  r1 <- append(r1, expensive_division_cost(estimated_cost, env, 'SDIV'))
+  r2 <- append(r2, expensive_division_cost_stderr(estimated_cost, env, 'SDIV'))
+}
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] = append(append(r1, r2), list("SDIV_expensive_cost", 5))
+
+r1 <- list()
+r2 <- list()
+for (env in all_envs) {
+  r1 <- append(r1, expensive_division_cost(estimated_cost, env, 'MOD'))
+  r2 <- append(r2, expensive_division_cost_stderr(estimated_cost, env, 'MOD'))
+}
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] = append(append(r1, r2), list("MOD_expensive_cost", 5))
+
+r1 <- list()
+r2 <- list()
+for (env in all_envs) {
+  r1 <- append(r1, expensive_division_cost(estimated_cost, env, 'SMOD'))
+  r2 <- append(r2, expensive_division_cost_stderr(estimated_cost, env, 'SMOD'))
+}
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] = append(append(r1, r2), list("SMOD_expensive_cost", 5))
+
+r1 <- list()
+r2 <- list()
+for (env in all_envs) {
+  r1 <- append(r1, expensive_division_cost(estimated_cost, env, 'ADDMOD'))
+  r2 <- append(r2, expensive_division_cost_stderr(estimated_cost, env, 'ADDMOD'))
+}
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] = append(append(r1, r2), list("ADDMOD_expensive_cost", 8))
+
+r1 <- list()
+r2 <- list()
+for (env in all_envs) {
+  r1 <- append(r1, expensive_division_cost(estimated_cost, env, 'MULMOD'))
+  r2 <- append(r2, expensive_division_cost_stderr(estimated_cost, env, 'MULMOD'))
+}
+gas_schedule_comparison[nrow(gas_schedule_comparison) + 1, ] = append(append(r1, r2), list("MULMOD_expensive_cost", 8))
+
+
+```
+
+Plot the alternative gas cost schedule.
+
+```{r fig.width=30, fig.height=10}
+gas_schedule_comparison[,!names(gas_schedule_comparison) %in% c('opcode')]
+maximum_gas_cost = max(gas_schedule_comparison[,!names(gas_schedule_comparison) %in% c('opcode')])
+curr_env_colors = env_colors[1:length(all_envs)]
+
+par(mar=c(15,4,4,2))
+plot(gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(0,maximum_gas_cost * 1.1), xlab="", ylab="")
+axis(1, at=1:nrow(gas_schedule_comparison), labels=gas_schedule_comparison$opcode, las=2)
+for (i in 1:length(all_envs)) {
+  points(gas_schedule_comparison[,i], col=curr_env_colors[i], bg=curr_env_colors[i], xaxt='n', pch=21)
+}
+legend(0, maximum_gas_cost, c(all_envs, "Current gas cost schedule"), fill=c(curr_env_colors, 'grey'), cex=2)
+```
+
+And individual plots of alternative gas schedules for EVMs.
+
+```{r fig.width=30, fig.height=10}
+maximum_gas_cost = max(gas_schedule_comparison[,!names(gas_schedule_comparison) %in% c('opcode')])
+
+for (i in 1:length(all_envs)) {
+  plot(gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(0,maximum_gas_cost * 1.1), xlab="", ylab="")
+  axis(1, at=1:nrow(gas_schedule_comparison), labels=gas_schedule_comparison$opcode, las=2)
+  points(gas_schedule_comparison[,i], col=curr_env_colors[i], bg=curr_env_colors[i], xaxt='n', pch=21)
+  legend(0, maximum_gas_cost, c(all_envs[i], "Current gas cost schedule"), fill=c(env_colors[i], 'grey'), cex=2)
+}
+```
+
+
+```{r}
+# TODO
+# gas_schedule_comparison$relative_diff = abs(gas_schedule_comparison$geth_gas - gas_schedule_comparison$evmone_gas) / gas_schedule_comparison$evmone_gas
+# 
+# gas_schedule_comparison$close = gas_schedule_comparison$relative_diff < 0.15
+```
+
+```{r}
+# just export the final compiled estimations to a file
+# write.csv(estimated_cost, "../../local/final_estimated_cost.csv", quote=FALSE, row.names=FALSE)
+# write.csv(gas_schedule_comparison, "../../local/gas_schedule_comparison.csv", quote=FALSE, row.names=FALSE)
+```
