@@ -132,3 +132,4 @@ func setDefaultTracerConfig(cfg *vm.LogConfig) {
 //
 //go:linkname runtimeNano runtime.nanotime
 func runtimeNano() int64
+

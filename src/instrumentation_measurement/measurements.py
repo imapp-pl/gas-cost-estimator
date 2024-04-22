@@ -203,8 +203,6 @@ class Measurements(object):
     def run_geth(self, mode, program, sampleSize):
         if mode == 'perf':
             return self.run_perf_geth(program)
-        elif mode == 'time':
-            return self.run_time_geth(program, sampleSize)
         else:
             return self.run_geth_default(mode, program, sampleSize)
 
@@ -304,7 +302,7 @@ class Measurements(object):
         bin = evmone_build_path + 'bin/evmc'
         vm = evmone_build_path + 'lib/libevmone.so'
         perf_evmone_main = ['perf', 'stat', '-ddd', '-x', ',', bin, 'run']
-        #    perf_evmone_main = ['perf', 'stat', '--event', 'task-clock:D,instructions:D', '-x', ',', bin, 'run']
+        # perf_evmone_main = ['perf', 'stat', '--event', 'task-clock:D,instructions:D', '-x', ',', bin, 'run']
         args = ['--vm', vm]
         bytecode = program.bytecode
         invocation = perf_evmone_main + args + [bytecode]
@@ -398,9 +396,7 @@ class Measurements(object):
             print("Error in nethermind benchmark")
             print(stderr)
             return
-        
-        # print(stdout)
-        
+
         instrumenter_result = stdout.split('\n')
         instrumenter_result = instrumenter_result[:-1]
         return instrumenter_result
