@@ -203,8 +203,6 @@ class Measurements(object):
     def run_geth(self, mode, program, sampleSize):
         if mode == 'perf':
             return self.run_perf_geth(program)
-        elif mode == 'time':
-            return self.run_time_geth(program, sampleSize)
         else:
             return self.run_geth_default(mode, program, sampleSize)
 
@@ -241,11 +239,7 @@ class Measurements(object):
         return instrumenter_result
 
     def run_geth_benchmark(self, program, sample_size):
-        geth_benchmark = ['./instrumentation_measurement/geth_benchmark/tests/imapp_benchmark/imapp_benchmark']
-
-        # alternative just-in-time compilation (could run 50% slower)
-        # geth_benchmark = ['go', 'run', './instrumentation_measurement/geth_benchmark/tests/imapp_benchmark/imapp_bench.go']
-
+        geth_benchmark = ['./bin/imapp_benchmark']
         args = ['--sampleSize', '{}'.format(sample_size)]
         bytecode_arg = ['--bytecode', program.bytecode]
         invocation = geth_benchmark + args + bytecode_arg
@@ -256,10 +250,10 @@ class Measurements(object):
         return instrumenter_result
 
     def run_nethermind(self, program, sample_size):
-        geth_benchmark = [
+        nethermind_benchmark = [
             './instrumentation_measurement/nethermind_benchmark/src/Nethermind/Imapp.Measurement.Runner/bin/Release/net6.0/Imapp.Measurement.Runner']
         args = ['--bytecode', program.bytecode, '--print-csv', '--sample-size={}'.format(sample_size)]
-        invocation = geth_benchmark + args
+        invocation = nethermind_benchmark + args
         result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
         assert result.returncode == 0
         # strip the final newline
@@ -304,7 +298,7 @@ class Measurements(object):
         bin = evmone_build_path + 'bin/evmc'
         vm = evmone_build_path + 'lib/libevmone.so'
         perf_evmone_main = ['perf', 'stat', '-ddd', '-x', ',', bin, 'run']
-        #    perf_evmone_main = ['perf', 'stat', '--event', 'task-clock:D,instructions:D', '-x', ',', bin, 'run']
+        # perf_evmone_main = ['perf', 'stat', '--event', 'task-clock:D,instructions:D', '-x', ',', bin, 'run']
         args = ['--vm', vm]
         bytecode = program.bytecode
         invocation = perf_evmone_main + args + [bytecode]
@@ -398,9 +392,7 @@ class Measurements(object):
             print("Error in nethermind benchmark")
             print(stderr)
             return
-        
-        # print(stdout)
-        
+
         instrumenter_result = stdout.split('\n')
         instrumenter_result = instrumenter_result[:-1]
         return instrumenter_result
