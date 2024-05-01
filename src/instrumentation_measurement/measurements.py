@@ -203,8 +203,6 @@ class Measurements(object):
     def run_geth(self, mode, program, sampleSize):
         if mode == 'perf':
             return self.run_perf_geth(program)
-        elif mode == 'time':
-            return self.run_time_geth(program, sampleSize)
         else:
             return self.run_geth_default(mode, program, sampleSize)
 
@@ -241,7 +239,7 @@ class Measurements(object):
         return instrumenter_result
 
     def run_geth_benchmark(self, program, sample_size):
-        geth_benchmark = ['./instrumentation_measurement/geth_benchmark/tests/imapp_benchmark/imapp_benchmark']
+        geth_benchmark = ['../bin/geth_bench']
 
         # alternative just-in-time compilation (could run 50% slower)
         # geth_benchmark = ['go', 'run', './instrumentation_measurement/geth_benchmark/tests/imapp_benchmark/imapp_bench.go']
