@@ -1,0 +1,27 @@
+FROM python:3.8
+
+WORKDIR /srv/app/
+
+# base for python
+COPY ./src/requirements.txt /srv/app/requirements.txt
+RUN pip install -r requirements.txt
+COPY ./src/program_generator/ /srv/app/program_generator
+COPY ./src/instrumentation_measurement/measurements.py /srv/app/measurements.py
+
+# base for golang
+RUN wget --no-verbose --show-progress --progress=bar:force:noscroll \
+  https://golang.org/dl/go1.18.1.linux-amd64.tar.gz
+
+RUN tar -C /usr/local -xzf ./go1.18.1.linux-amd64.tar.gz
+RUN rm go1.18.1.linux-amd64.tar.gz
+
+ENV PATH=$PATH:/usr/local/go/bin
+ENV GOPATH=/srv/app/.go
+ENV GOBIN=/srv/app/.go/bin
+ENV GOGC=off
+
+RUN git clone --single-branch --branch imapp_benchmark https://github.com/imapp-pl/erigon.git
+WORKDIR /srv/app/erigon
+RUN go build -o ../bin/imapp_benchmark tests/imapp_benchmark/imapp_bench.go
+
+WORKDIR /srv/app/
