@@ -206,7 +206,7 @@ class Measurements(object):
             time_unit = execution_time_match.group(2)
             if time_unit == 'µs':  # convert microseconds to nanoseconds
                 execution_time *= 1000
-            if time_unit == 'ms':  # convert milliseconds to nano seconds
+            if time_unit == 'ms':  # convert milliseconds to nanoseconds
                 execution_time *= 1000000
         else:
             execution_time = None

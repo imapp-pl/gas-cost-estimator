@@ -18,8 +18,3 @@ go run build/ci.go install ./cmd/evm
 mkdir -p ../build/geth
 cp build/bin/evm ../build/geth/
 cd ..
-
-
-
-# ./evm --code 61000F --nomemory=false --noreturndata=false --nostack=false --nostorage=false --prestate=../../cmd/devp2p/internal/ethtest/testdata/genesis.json --json --debug --dump --bench run 
-# ./evm --code 61000F --nomemory=false --noreturndata=false --nostack=false --nostorage=false --prestate=../../go-ethereum/cmd/devp2p/internal/ethtest/testdata/genesis.json --json --debug --dump --bench run
