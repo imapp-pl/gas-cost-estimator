@@ -37,16 +37,16 @@ The env = `r env`, the programs file =`r params$programs`, the resutls file = `r
 programs = read.csv(params$programs)
 results = load_data_set_from_file(params$results)
 # besu may have additional columns with gc stats
-results = results[, c("program_id", "sample_id", "run_id", "measure_total_time_ns", "measure_total_timer_time_ns", "env")]
+results = results[, c("program_id", "sample_id", "run_id", "total_time_ns")]
 # TODO geth short-circuits zero length programs, resulting in zero timing somehow. Drop these more elegantly, not based on measure_total_time_ns
-results = results[which(results$measure_total_time_ns != 0), ]
+results = results[which(results$total_time_ns != 0), ]
 ```
 
 ```{r}
-measurements = sqldf("SELECT opcode, op_count, sample_id, run_id, measure_total_time_ns, env, results.program_id
+measurements = sqldf(paste0("SELECT opcode, op_count, sample_id, run_id, total_time_ns as measure_total_time_ns, '", env, "' as env, results.program_id
                      FROM results
                      INNER JOIN
-                       programs ON(results.program_id = programs.program_id)")
+                       programs ON(results.program_id = programs.program_id)"))
 measurements$opcode = factor(measurements$opcode, levels=unique(programs$opcode))
 # head(measurements)
 ```
