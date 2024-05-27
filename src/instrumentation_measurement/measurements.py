@@ -15,7 +15,7 @@ CLOCKSOURCE_PATH = '/sys/devices/system/clocksource/clocksource0/current_clockso
 DEFAULT_EXEC_GETH = '../../../gas-cost-estimator-clients/build/geth/evm'
 DEFAULT_EXEC_NETHERMIND = '../../../gas-cost-estimator-clients/build/nethermind/Nethermind.Benchmark.Runner'
 DEFAULT_EXEC_ERIGON = '../../../gas-cost-estimator-clients/build/erigon/evm'
-DEFAULT_EXEC_REVM = '../../../gas-cost-estimator-clients/revm/crates/revm/Cargo.toml'
+DEFAULT_EXEC_REVM = '../../../gas-cost-estimator-clients/build/revm/crates/revm/Cargo.toml'
 
 
 class Program(object):
@@ -82,7 +82,7 @@ class Measurements(object):
         else:
             return bytecode
 
-    def measure(self, sample_size=1, mode="all", evm="evmone", n_samples=1, input_file="", exec_path=""):
+    def measure(self, sample_size=1, mode="all", evm="geth", n_samples=1, input_file="", exec_path=""):
         """
         Main entrypoint of the CLI tool.
 
@@ -91,7 +91,7 @@ class Measurements(object):
         Parameters:
         sample_size (integer): size of a sample to pass into the EVM measuring executable
         mode (string): Measurement mode. Allowed: total, all, trace, benchmark
-        evm (string): which evm use. Default: geth. Allowed: geth, evmone
+        evm (string): which evm use. Default: geth
         n_samples (integer): number of samples (individual starts of the EVM measuring executable) to do
         """
 
@@ -105,7 +105,6 @@ class Measurements(object):
         else:
             reader = csv.DictReader(sys.stdin, delimiter=',', quotechar='"')
             self._programs = [self._program_from_csv_row(row) for row in reader]
-        # print("Loaded {} programs".format(len(self._programs)))
     
         geth = "geth"
         evmone = "evmone"
@@ -386,7 +385,7 @@ class Measurements(object):
 
     def run_revm_benchmark(self, program, sample_size, exec_path):
         if exec_path == "":
-            exec_path = os.path.abspath(DIR_PATH +'/'+ DEFAULT_EXEC_REVM)
+            exec_path = os.path.abspath(DIR_PATH + '/' + DEFAULT_EXEC_REVM)
         else:
             exec_path = os.path.abspath(exec_path)
 
@@ -395,36 +394,30 @@ class Measurements(object):
             'bench',
             '--bench=criterion_bytecode',
         ]
-        # args = [             '--manifest-path='+exec_path]
         args = [
-            '--manifest-path='+exec_path,
+            '--manifest-path=' + exec_path,
             '--',
             '--noplot']
         invocation = revm_benchmark + args
         results = []
         for run_id in range(1, sample_size + 1):
-
-            pro = subprocess.Popen(invocation, 
-                                   stdout=subprocess.PIPE, 
-                                   stderr=subprocess.PIPE,
-                                   stdin=subprocess.PIPE, 
-                                   universal_newlines=True)
-            stdout, stderr = pro.communicate(program.bytecode)
-
-            # print(result.stderr)
-            # print(result.stdout)
+            pro = subprocess.Popen(
+                invocation, 
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                stdin=subprocess.PIPE,
+                universal_newlines=True,
+            )
+            _, _ = pro.communicate(program.bytecode)
             result_line = self._create_revm_result_line(run_id, exec_path)
-            # print(result_line)
-            results.append(result_line) 
-
+            results.append(result_line)
         return results
 
     def _create_revm_result_line(self, run_id, exec_path):
-        
-        results_base_folder = os.path.abspath(Path(exec_path).parent / '../../target/criterion/bytecode')
-        base_benchmark_data = json.load(open(results_base_folder+'/bytecode-benchmark/new/estimates.json'))
-        base_benchmark_samples_data = json.load(open(results_base_folder+'/bytecode-benchmark/new/sample.json'))
-        stop_benchmark_data = json.load(open(results_base_folder+'/bytecode-benchmark-stop/new/estimates.json'))
+        results_base_folder = os.path.abspath(Path(exec_path) / '../../../target/criterion/bytecode')
+        base_benchmark_data = json.load(open(results_base_folder + '/bytecode-benchmark/new/estimates.json'))
+        base_benchmark_samples_data = json.load(open(results_base_folder + '/bytecode-benchmark/new/sample.json'))
+        stop_benchmark_data = json.load(open(results_base_folder + '/bytecode-benchmark-stop/new/estimates.json'))
 
         iterations = int(sum(base_benchmark_samples_data['iters']))
         columns = [
