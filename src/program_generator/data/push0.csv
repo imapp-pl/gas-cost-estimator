@@ -1,0 +1,2 @@
+Value,Mnemonic,Gas Used,Subset,Removed from stack,Added to stack,Notes,Formula Notes
+0x5f,PUSH0,2,verylow,0,1,Place 0 on stack.

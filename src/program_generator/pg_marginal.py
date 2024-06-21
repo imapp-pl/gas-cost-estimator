@@ -31,7 +31,7 @@ class ProgramGenerator(object):
 
   """
 
-  def __init__(self, selectionFile='selection.csv', seed=0):
+  def __init__(self, selectionFile='selection_push0.csv', seed=0):
     random.seed(a=seed, version=2)
 
     opcodes = prepare_opcodes(os.path.join(dir_path, 'data', 'opcodes.csv'))
@@ -95,7 +95,7 @@ class ProgramGenerator(object):
 
   def _generate_single_program(self, operation, op_count):
     # for compatibility with the generate_single_marginal function
-    single_op_pushes = ["6003"] * arity(operation)
+    single_op_pushes = ["60ff"] * arity(operation)
 
     return Program(generate_single_marginal(single_op_pushes, operation, op_count), operation['Mnemonic'], op_count)
         

@@ -15,7 +15,8 @@ CLOCKSOURCE_PATH = '/sys/devices/system/clocksource/clocksource0/current_clockso
 DEFAULT_EXEC_GETH = '../../../gas-cost-estimator-clients/build/geth/evm'
 DEFAULT_EXEC_NETHERMIND = '../../../gas-cost-estimator-clients/build/nethermind/Nethermind.Benchmark.Runner'
 DEFAULT_EXEC_ERIGON = '../../../gas-cost-estimator-clients/build/erigon/evm'
-DEFAULT_EXEC_REVM = '../../../gas-cost-estimator-clients/build/revm/crates/revm/Cargo.toml'
+DEFAULT_EXEC_ETHJS = '../../../gas-cost-estimator-clients/build/ethereumjs-monorepo/packages/vm'
+DEFAULT_EXEC_REVM = '../../../gas-cost-estimator-clients/build/revm-orignal/revm/crates/revm/Cargo.toml'
 
 
 class Program(object):
@@ -109,7 +110,7 @@ class Measurements(object):
         geth = "geth"
         evmone = "evmone"
         nethermind = "nethermind"
-        ethereumjs = 'ethereumjs'
+        ethereumjs = "ethereumjs"
         erigon = "erigon"
         revm = "revm"
 
@@ -373,9 +374,11 @@ class Measurements(object):
     def run_ethereumjs_benchmark(self, program, sample_size):
         ethereumjs_benchmark = [
             'node',
-            '-max-old-space-size=4000',  # So that garbage collector won't be executed until program eats 4GB of RAM
-            './instrumentation_measurement/ethereumjs-monorepo/packages/evm/benchmarks/benchmarkOpcodes.js']
-        args = [f'--sampleSize={sample_size}', program.bytecode]
+            '-max-old-space-size=4096',  # So that garbage collector won't be executed until program eats 4GB of RAM
+            DEFAULT_EXEC_ETHJS + "/benchmarks/run.js",
+            "benchmarks",
+            "bytecode:10"]
+        args = ['-b', program.bytecode]
         invocation = ethereumjs_benchmark + args
         result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
         assert result.returncode == 0
@@ -399,6 +402,7 @@ class Measurements(object):
             '--',
             '--noplot']
         invocation = revm_benchmark + args
+        print(' '.join(invocation))
         results = []
         for run_id in range(1, sample_size + 1):
             pro = subprocess.Popen(
@@ -408,8 +412,12 @@ class Measurements(object):
                 stdin=subprocess.PIPE,
                 universal_newlines=True,
             )
-            _, _ = pro.communicate(program.bytecode)
+            print("starting")
+            std, err = pro.communicate(program.bytecode)
+            print(std)
+            print(err)
             result_line = self._create_revm_result_line(run_id, exec_path)
+            print(result_line)
             results.append(result_line)
         return results
 

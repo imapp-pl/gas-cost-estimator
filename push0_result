@@ -1,0 +1,4 @@
+program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,mem_allocs_count,mem_allocs_bytes
+PUSH0_0,0,1,172123,7786,56,7842,40,9164
+PUSH0_1,0,1,0,8524,0,8524,0,0
+PUSH0_2,0,1,0,7856,0,7856,0,0

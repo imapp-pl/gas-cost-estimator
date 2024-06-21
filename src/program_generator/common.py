@@ -147,7 +147,14 @@ def _opcodes_dict_push_dup_swap(source, removeds, addeds, parameters):
 # 617fff - PUSH2 32KB-worth-of-bytes minus one byte
 # 53 - MSTORE8
 def initial_mstore_bytecode():
-  return "6000617fff53"
+  bytecode = ""
+  offset = 0
+  for _ in range(100):
+    hex_offset = hex(offset)[2:]
+    hex_offset = '0' * (4 - len(hex_offset)) + hex_offset
+    offset += 32
+    bytecode += f"61ffff61{hex_offset}52"
+  return bytecode
 
 # Returns a single CALL accompaniend with pushes, causing the RETURNDATA to be filled with some of our memory
 # 60006000 - PUSH1 the return data length and offset - we're not using this mechanism to return, just the RETURNDATAx OPCODEs
