@@ -42,14 +42,18 @@ remove_outliers <- function(df, col, for_validation) {
     boxplot_result = boxplot(df[, col] ~ df[, 'op_count'] + df[, 'env'] + df[, 'opcode'], plot=FALSE)
   }
   outliers = boxplot_result$out
-  names = boxplot_result$names[boxplot_result$group]
-  if (for_validation) {
-    all_row_identifiers = paste(df[, col], df[, 'program_id'], df[, 'env'], sep='.')
+  if (length(outliers) == 0) {
+    no_outliers <- df
   } else {
-    all_row_identifiers = paste(df[, col], df[, 'op_count'], df[, 'env'], df[, 'opcode'], sep='.')
+    names = boxplot_result$names[boxplot_result$group]
+    if (for_validation) {
+      all_row_identifiers = paste(df[, col], df[, 'program_id'], df[, 'env'], sep='.')
+    } else {
+      all_row_identifiers = paste(df[, col], df[, 'op_count'], df[, 'env'], df[, 'opcode'], sep='.')
+    }
+    outlier_row_identifiers = paste(outliers, names, sep='.')
+    no_outliers = df[-which(all_row_identifiers %in% outlier_row_identifiers), ]
   }
-  outlier_row_identifiers = paste(outliers, names, sep='.')
-  no_outliers = df[-which(all_row_identifiers %in% outlier_row_identifiers), ]
   return(no_outliers)
 }
 
