@@ -40,6 +40,10 @@ results = load_data_set_from_file(params$results)
 results = results[, c("program_id", "sample_id", "run_id", "total_time_ns")]
 # TODO geth short-circuits zero length programs, resulting in zero timing somehow. Drop these more elegantly, not based on measure_total_time_ns
 results = results[which(results$total_time_ns != 0), ]
+
+if (class(results[,"total_time_ns"]) == "character") {
+  stop("at least one  of 'total_time_ns' value cannot be parsed into numeric type")
+}
 ```
 
 ```{r}
@@ -85,11 +89,14 @@ compute_all <- function(opcode, env, plots, use_median) {
     f = mean
   }
   df_mean = aggregate(measure_total_time_ns ~ op_count * env, df, f)
-  
+  step_=max(df_mean$op_count)/(nrow(df_mean)-1)
+
   model_mean = lm(measure_total_time_ns ~ op_count, data=df_mean)
-  print(summary(model_mean))
-  slope = model_mean$coefficients[['op_count']]
-  stderr = summary(model_mean)$coefficients['op_count','Std. Error']
+  model_mean_summary = summary(model_mean)
+  print(model_mean_summary)
+  slope = model_mean_summary$coefficients['op_count','Estimate']
+  intercept = model_mean_summary$coefficients[1,'Estimate']
+  stderr = model_mean_summary$coefficients['op_count','Std. Error']
   
   if (plots == "scatter" | plots == "all") {
     par(mfrow=c(1,1))
@@ -98,7 +105,7 @@ compute_all <- function(opcode, env, plots, use_median) {
     rounded_p = round(summary(model_mean)$coefficients['op_count','Pr(>|t|)'], 3)
     rounded_stderr = round(stderr, 3)
     title(main=paste(env, opcode, rounded_slope, "p_value:", rounded_p, "StdErr:", rounded_stderr))
-    abline(model_mean, col="red")
+    abline(a=intercept-slope*step_, b=slope*step_, col="red")
   }
   if (plots == "diagnostics" | plots == "all") {
     par(mfrow=c(2,2))
@@ -139,6 +146,10 @@ for (opcode in all_opcodes) {
   estimate = compute_all(opcode=opcode, env=env, use_median=TRUE, plots='all')
   estimates[nrow(estimates) + 1, ] = c(opcode, estimate, env)
 }
+```
+
+```{r}
+estimates
 ```
 
 Export the results
