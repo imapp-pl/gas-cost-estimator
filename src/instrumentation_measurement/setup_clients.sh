@@ -1,10 +1,16 @@
 cd ../../..
+
+# if you want to  redo the setup, remove the gas-cost-estimator-clients directory
 # rm gas-cost-estimator-clients -rf
-mkdir gas-cost-estimator-clients
+# if you want to redo a specific client, only remove the corresponding directory
+
+mkdir gas-cost-estimator-clients -p
 cd gas-cost-estimator-clients
 
 # EvmOne
-git clone --recurse-submodules https://github.com/imapp-pl/evmone --depth 1
+if [ ! -d "evmone" ]; then
+    git clone --recurse-submodules https://github.com/imapp-pl/evmone --depth 1
+fi
 
 # Go Ethereum
 if [ ! -d "go-ethereum" ]; then
@@ -27,10 +33,13 @@ if [ ! -d "erigon" ]; then
 fi
 
 # EthereumJS
-if [ ! -d "nethermind" ]; then
-    git clone -b evm_gas_cost_stage_3 https://github.com/imapp-pl/ethereumjs-monorepo.git --depth 1
+if [ ! -d "ethereumjs-monorepo" ]; then
+    git clone -b benchmark-bytecode-execution https://github.com/imapp-pl/ethereumjs-monorepo.git --depth 1
     cd ethereumjs-monorepo
     npm i
+    cd packages/vm
+    npm run build:benchmarks
+    cd ../../..
 fi
 
 if [ ! -d "nethermind" ]; then
@@ -38,7 +47,12 @@ if [ ! -d "nethermind" ]; then
 fi
 
 if [ ! -d "revm" ]; then
-    git clone -b evm_gas_cost_stage_3 https://github.com/imapp-pl/revm.git --depth 1
+    git clone -b benchmark-bytecode-execution https://github.com/imapp-pl/revm.git --depth 1
+    cd revm
+    cargo build -p revme --profile release
+    mkdir -p ../build/revm
+    cp -f target/release/revme ../build/revm/
+    cd ..
 fi
 
 if [ ! -d "besu" ]; then
