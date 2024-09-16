@@ -20,6 +20,7 @@ DEFAULT_EXEC_ERIGON = '../../../gas-cost-estimator-clients/build/erigon/evm'
 DEFAULT_EXEC_REVM = '../../../gas-cost-estimator-clients/build/revm/revme'
 DEFAULT_EXEC_ETHERJS = '../../../gas-cost-estimator-clients/ethereumjs-monorepo/packages/vm/benchmarks/run.js'
 
+
 class Program(object):
     """
     POD object for a program
@@ -39,32 +40,10 @@ class Measurements(object):
 
     Prints measurement CSV in the following format:
     ```
-    | program_id | sample_id | run_id | instruction_id | measure_all_time_ns | measure_all_timer_time_ns |
-    ```
-    or
-    ```
-    | program_id | sample_id | run_id | measure_total_time_ns | measure_total_timer_time_ns |
-    ```
-    Depending on the `mode` parameter.
+    | program_id | sample_id | measured_time_ns | remaining measured values ... |
 
-    Expects the EVM measuring executable (e.g. our `src/instrumentation_measurement/geth/main.go`) to provide
-    a chunk of this CSV of the format (without header!):
-    | run_id | instruction_id | measure_all_time_ns | measure_all_timer_time_ns |
-    or
-    | run_id | measure_total_time_ns | measure_total_timer_time_ns |
-
-    There is also a special `mode` parameter value: `trace`, which produces a CSV in the following format:
-    ```
-    | program_id | sample_id | instruction_id | pc | op | stack_depth | arg_0 | arg_... |
     ```
     """
-
-    # def __init__(self):
-
-    #     # parser = argparse.ArgumentParser(description='Measure EVM bytecode')
-    #     # parser.add_argument('--mode', type=str, default='benchmark', help='Measurement mode. Allowed: total, all, trace, benchmark')
-
-    #     print(DIR_PATH)
 
     def _program_from_csv_row(self, row):
         program_id = row['program_id']
@@ -95,7 +74,6 @@ class Measurements(object):
         sample_size (integer): size of a sample to pass into the EVM measuring executable
         mode (string): Measurement mode. Allowed: total, all, trace, benchmark
         evm (string): which evm use. Default: geth. Allowed: geth, evmone
-        n_samples (integer): number of samples (individual starts of the EVM measuring executable) to do
         """
 
         if (input_file != ""):
@@ -129,7 +107,7 @@ class Measurements(object):
         if evm == geth or evm == erigon:
             header = "program_id,sample_id,total_time_ns,mem_allocs,mem_alloc_bytes"
         elif evm == nethermind:
-            header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,std_dev_time_ns,mem_allocs_count,mem_allocs_bytes"
+            header = "program_id,sample_id,total_time_ns,iterations_count,std_dev_time_ns,mem_allocs,mem_alloc_bytes"
         elif evm == ethereumjs:
             header = "program_id,sample_id,total_time_ns,iterations_count,margin_of_error"
         elif evm == revm:
@@ -366,16 +344,14 @@ class Measurements(object):
         assert result.returncode == 0
         # strip the final newline
 
-
         raw_result = [line for line in result.stdout.split('\n')[1:] if line]
-
-
 
         instrumenter_result = []
         line_id = 1
         for line in raw_result:
             line_values = line.split(',')
-            instrumenter_result.append(f'{line_id},{line_values[3]},{line_values[5]},{line_values[4]}')
+            instrumenter_result.append(
+                f'{line_id},{line_values[3]},{line_values[5]},{line_values[4]}')
             line_id += 1
         return instrumenter_result
 
@@ -434,64 +410,6 @@ class Measurements(object):
         # append program_id which are not known to the instrumenter tool
         to_append = "{},".format(program.id)
         return [to_append + row for row in instrumenter_result]
-
-    def sanitize_tracer_result(self, tracer_result):
-        specs = self.read_opcodes_specs()
-
-        result = []
-        for row in tracer_result:
-            row = row.split(',')
-            prefix = row[0:4]  # take first columns untouched
-            opcode = row[2]
-            stack_depth = int(row[3])
-            stack = row[4:]
-
-            args = None
-            match_result = re.search(r'^(DUP|PUSH|SWAP)([1-9][0-9]?)$', opcode)
-            if match_result is None:
-                # stack top is stack[stack_depth - 1] and stack bottom is stack[0],
-                # so to take some deeper arguments we have to do some mysterious maths
-                arity = specs[opcode]
-                args = stack[stack_depth - (arity - 1) - 1: stack_depth]
-            else:
-                (opcode, opcode_variant) = match_result.groups()
-                opcode_variant = int(opcode_variant)
-                if opcode == 'PUSH':
-                    args = []
-                elif opcode == 'DUP':
-                    args = [stack[stack_depth - (opcode_variant - 1) - 1]]
-                elif opcode == 'SWAP':
-                    args = [stack[stack_depth - opcode_variant - 1],
-                            stack[stack_depth - 1]]
-
-            # since it is more natural to read args left->right
-            # and stack is quite the opposite
-            # lets reverse the args
-            args.reverse()
-
-            # append with empty positions to conform to CSV format
-            for i in range(len(args), MAX_OPCODE_ARGS):
-                args.append('')
-
-            parsed_line = ','.join(prefix + args)
-            result.append(parsed_line)
-
-        return result
-
-    def read_opcodes_specs(self):
-        opcodes_file = os.path.join(
-            DIR_PATH, '..', 'program_generator', 'data', 'opcodes.csv')
-        with open(opcodes_file, newline='') as opcodes_args_file:
-            reader = csv.DictReader(
-                opcodes_args_file, delimiter=',', quotechar='"')
-            specs = dict()
-            for row in reader:
-                opcode = row['Mnemonic']
-                if re.search(r'^(SWAP|DUP|PUSH|INVALID).*$', opcode) is None:
-                    # "Removed from stack" ~ opcode arity
-                    specs[opcode] = int(row['Removed from stack'])
-            return specs
-
 
 def main():
     fire.Fire(Measurements, name='measure')
