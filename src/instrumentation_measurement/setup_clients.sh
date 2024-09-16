@@ -46,8 +46,8 @@ if [ ! -d "nethermind" ]; then
     mkdir -p build/nethermind
     git clone -b benchmark-bytecode-execution https://github.com/imapp-pl/nethermind.git --depth 1
     cd nethermind/src/Nethermind/
-    /usr/bin/dotnet build -c Release ./Benchmarks.sln -o out/
-    cp -f out/* ../../../build/nethermind/
+    dotnet build -c Release ./Benchmarks.sln -o out/
+    cp -fr out/* ../../../build/nethermind/
     cd ../../../
 fi
 
