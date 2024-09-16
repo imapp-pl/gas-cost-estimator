@@ -7,7 +7,20 @@ import constants
 """
 Common tools for program generation. To be organized if needed, for now just bag of functions.
 """
-    
+
+
+def generate_create_program(create_operation, op_count):
+  """
+  Generates a program for CREATE opcode
+  """
+  assert create_operation['Mnemonic'] == 'CREATE'
+  initialization_code_mem_store = '6d6460016001016000526005601cf3600052'
+  empty_pushes = '6000' * constants.MAX_INSTRUCTIONS
+  single_op_pushes = '600d60126000' * op_count
+  opcodes_with_pops = (create_operation['Value'][2:4] + '50') * op_count
+  pops = '50' * (constants.MAX_INSTRUCTIONS - op_count)
+  return initialization_code_mem_store + empty_pushes + single_op_pushes + opcodes_with_pops + pops
+
 
 def generate_single_marginal(single_op_pushes, operation, op_count):
   """
@@ -25,12 +38,11 @@ def generate_single_marginal(single_op_pushes, operation, op_count):
     opcode += operation['Parameter']
 
   # support up to 60 instructions
-  MAX_INSTRUCTIONS = 60
-  assert op_count <= MAX_INSTRUCTIONS
+  assert op_count <= constants.MAX_INSTRUCTIONS
   
-  total_pop_count = MAX_INSTRUCTIONS * nreturns
+  total_pop_count = constants.MAX_INSTRUCTIONS * nreturns
   # support up to 60 ternary instructions
-  push_count = MAX_INSTRUCTIONS * 3
+  push_count = constants.MAX_INSTRUCTIONS * 3
   # ...but before the pushes intended for `operation`, put "void" pushes to ensure all the pops can pop regardless of the remainder of the program
   empty_push_count = total_pop_count
 
@@ -56,7 +68,7 @@ def generate_single_marginal(single_op_pushes, operation, op_count):
     # JUMPs don't return anything, we don't POP it, so assertion
     assert nreturns == 0
 
-    empty_combos_count = MAX_INSTRUCTIONS - op_count
+    empty_combos_count = constants.MAX_INSTRUCTIONS - op_count
     for _ in range(0, op_count):
       bytecode += jump_opcode_combo(bytecode, opcode)
     for _ in range(0, empty_combos_count):
