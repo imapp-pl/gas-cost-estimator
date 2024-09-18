@@ -285,10 +285,9 @@ class Measurements(object):
         return [instrumenter_result]
 
     def run_evmone_default(self, mode, program, sample_size):
-        evmone_build_path = './instrumentation_measurement/evmone/build/'
+        evmone_build_path = './evmone/build/'
         bin = evmone_build_path + 'bin/evmc'
         vm = evmone_build_path + 'lib/libevmone.so'
-        evmone_build_path = './instrumentation_measurement/evmone/build/'
         evmone_main = [evmone_build_path + 'bin/evmc', 'run']
 
         # only measure-total is currently supported
