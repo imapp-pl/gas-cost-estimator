@@ -94,3 +94,5 @@ MEMORY_OPCODES = ['CALLDATALOAD', 'CALLDATACOPY', 'RETURNDATACOPY', 'MLOAD', 'MS
 
 # RETURNDATASIZE doesn't require us to preallocate or precall, we can treat it as an ordinary OPCODE
 RETURNDATA_OPCODES = ['RETURNDATACOPY']
+
+MAX_INSTRUCTIONS = 60
