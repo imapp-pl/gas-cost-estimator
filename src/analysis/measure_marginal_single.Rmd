@@ -1,0 +1,159 @@
+---
+title: "R Notebook: estimation of gas costs using the measure marginal method; for Gas Cost Estimator; for a single given env"
+output: html_document
+params:
+  env: ""
+  programs: ""
+  results: ""
+---
+
+```{r, setup, include=FALSE}
+knitr::opts_knit$set(root.dir = '/data')
+if (params$env == "") {
+  stop("'env' param is missing, the name of EVM client")
+}
+env = params$env
+
+if (params$programs == "") {
+  stop("'programs' param is missing, the file with test programs")
+}
+
+if (params$results == "") {
+  stop("'results' param is missing, the file with test results")
+}
+
+source('common.R')
+
+removed_outliers = TRUE
+```
+
+In this script, there is conducted the estimation for the `measure_marginal` approach for a single given env.
+
+The env = `r env`, the programs file =`r params$programs`, the resutls file = `r params$results`.
+
+```{r}
+# The example of programs file: pg_marginal_full5_c50_step1_shuffle.csv .
+# The example of results file: geth_pg_marginal_full5_c50_step1_shuffle_50_4.csv
+programs = read.csv(params$programs)
+results = load_data_set_from_file(params$results)
+# besu may have additional columns with gc stats
+results = results[, c("program_id", "sample_id", "run_id", "total_time_ns")]
+# TODO geth short-circuits zero length programs, resulting in zero timing somehow. Drop these more elegantly, not based on measure_total_time_ns
+results = results[which(results$total_time_ns != 0), ]
+
+if (class(results[,"total_time_ns"]) == "character") {
+  stop("at least one  of 'total_time_ns' value cannot be parsed into numeric type")
+}
+```
+
+```{r}
+measurements = sqldf(paste0("SELECT opcode, op_count, sample_id, run_id, total_time_ns as measure_total_time_ns, '", env, "' as env, results.program_id
+                     FROM results
+                     INNER JOIN
+                       programs ON(results.program_id = programs.program_id)"))
+measurements$opcode = factor(measurements$opcode, levels=unique(programs$opcode))
+# head(measurements)
+```
+
+Switch `removed_outliers` to `FALSE` to see the comparison.
+
+```{r fig.width=15,fig.height=8}
+if (!removed_outliers) {
+  boxplot(measurements[which(measurements$env == env), 'measure_total_time_ns'] ~ measurements[which(measurements$env == env), 'opcode'], las=2, outline=TRUE, log='y', main=paste(env, 'all'))
+}
+```
+
+```{r fig.width=15,fig.height=15}
+if (removed_outliers) {
+  measurements = remove_compare_outliers(measurements, 'measure_total_time_ns', c(env))
+}
+```
+
+```{r}
+# Performs the `measure_marginal` estimation procedure for a given slice of the data.
+# Prints the diagnostics and plots the models.
+compute_all <- function(opcode, env, plots, use_median) {
+  if (missing(plots)) {
+    plots = "scatter"
+  }
+  if (missing(use_median)) {
+    use_median = FALSE
+  }
+  print(c(opcode, env))
+  
+  df = measurements[which(measurements$opcode==opcode & measurements$env==env),]
+  
+  if (use_median) {
+    f = median
+  } else {
+    f = mean
+  }
+  df_mean = aggregate(measure_total_time_ns ~ op_count * env, df, f)
+  step_=max(df_mean$op_count)/(nrow(df_mean)-1)
+
+  model_mean = lm(measure_total_time_ns ~ op_count, data=df_mean)
+  model_mean_summary = summary(model_mean)
+  print(model_mean_summary)
+  slope = model_mean_summary$coefficients['op_count','Estimate']
+  intercept = model_mean_summary$coefficients[1,'Estimate']
+  stderr = model_mean_summary$coefficients['op_count','Std. Error']
+  
+  if (plots == "scatter" | plots == "all") {
+    par(mfrow=c(1,1))
+    boxplot(measure_total_time_ns ~ op_count, data=df, las=2, outline=removed_outliers)
+    rounded_slope = round(slope, 3)
+    rounded_p = round(summary(model_mean)$coefficients['op_count','Pr(>|t|)'], 3)
+    rounded_stderr = round(stderr, 3)
+    title(main=paste(env, opcode, rounded_slope, "p_value:", rounded_p, "StdErr:", rounded_stderr))
+    abline(a=intercept-slope*step_, b=slope*step_, col="red")
+  }
+  if (plots == "diagnostics" | plots == "all") {
+    par(mfrow=c(2,2))
+    plot(model_mean)
+  }
+  list("slope" = slope, "stderr" = stderr)
+}
+
+extract_opcodes <- function() {
+  unique(measurements$opcode)
+}
+```
+
+```{r}
+all_opcodes = extract_opcodes()
+
+# initialize the data frame to hold the results
+estimates = data.frame(matrix(ncol = 4, nrow = 0))
+colnames(estimates) <- c('op', 'estimate_marginal_ns', 'estimate_marginal_ns_stderr', 'env')
+```
+
+Every sample starts with a fresh evm instance. 
+We investigate whether the results may depend on the time from evm start - related to run_id.
+To avoid being overrun by the number of images, all op_count for a given run_id are are placed, 
+so values are not centered. 
+That should not be an issue.
+
+```{r}
+for (opcode in all_opcodes) {
+  boxplot(measure_total_time_ns~run_id,data=measurements[measurements$opcode == opcode,], main=opcode)
+}
+```
+
+Now we can investigate the linear regressions.
+
+```{r}
+for (opcode in all_opcodes) {
+  estimate = compute_all(opcode=opcode, env=env, use_median=TRUE, plots='all')
+  estimates[nrow(estimates) + 1, ] = c(opcode, estimate, env)
+}
+```
+
+```{r}
+estimates
+```
+
+Export the results
+
+```{r}
+write.csv(estimates, paste0("./", env, "_marginal_estimated_cost.csv"), quote=FALSE, row.names=FALSE)
+```

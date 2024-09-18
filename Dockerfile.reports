@@ -1,0 +1,16 @@
+FROM debian:bookworm-slim
+
+RUN apt update
+RUN apt install -y r-base r-base-dev pandoc curl libcurl4-openssl-dev libssl-dev
+RUN Rscript -e "install.packages('rmarkdown')"
+RUN Rscript -e "install.packages('sqldf')"
+RUN Rscript -e "install.packages('mixtools')"
+RUN Rscript -e "install.packages('zeallot')"
+
+COPY common.R /reports/common.R
+COPY measure_marginal_single.Rmd /reports/measure_marginal_single.Rmd
+
+VOLUME /data
+
+WORKDIR /data
+

@@ -12,9 +12,11 @@ MAX_OPCODE_ARGS = 7
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 
 CLOCKSOURCE_PATH = '/sys/devices/system/clocksource/clocksource0/current_clocksource'
+DEFAULT_EXEC_GETH = '../../../gas-cost-estimator-clients/build/geth/evm'
 DEFAULT_EXEC_NETHERMIND = '../../../gas-cost-estimator-clients/build/nethermind/Nethermind.Benchmark.Runner'
-DEFAULT_EXEC_ERIGON = '../../../gas-cost-estimator-clients/build/erigon/imapp_benchmark'
+DEFAULT_EXEC_ERIGON = '../../../gas-cost-estimator-clients/build/erigon/evm'
 DEFAULT_EXEC_REVM = '../../../gas-cost-estimator-clients/revm/crates/revm/Cargo.toml'
+
 
 class Program(object):
     """
@@ -119,10 +121,6 @@ class Measurements(object):
         measure_time = "time"
         benchmark_mode = "benchmark"
 
-        # if not self._check_clocksource():
-        #     print("clocksource should be tsc, found something different. See docker_timer.md somewhere in the docs")
-        #     return
-
         allowed_evms = {geth, evmone, nethermind, ethereumjs, erigon, revm}
         if evm not in allowed_evms:
             print("Wrong evm parameter. Allowed are: {}".format(','.join(allowed_evms)))
@@ -146,13 +144,13 @@ class Measurements(object):
             print(header)
         elif mode == benchmark_mode:
             if evm == geth:
-                header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,mem_allocs_count,mem_allocs_bytes"
+                header = "program_id,sample_id,run_id,total_time_ns,mem_allocs_count,mem_allocs_bytes"
             elif evm == nethermind:
                 header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,std_dev_time_ns,mem_allocs_count,mem_allocs_bytes"
             elif evm == ethereumjs:
                 header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,std_dev_time_ns"
             elif evm == erigon:
-                header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,mem_allocs_count,mem_allocs_bytes"
+                header = "program_id,sample_id,run_id,total_time_ns,mem_allocs_count,mem_allocs_bytes"
             elif evm == revm:
                 header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,std_dev_time_ns"
             elif evm == evmone:
@@ -171,9 +169,7 @@ class Measurements(object):
                 instrumenter_result = None
                 if evm == geth:
                     if mode == benchmark_mode:
-                        instrumenter_result = self.run_geth_benchmark(program, sample_size)
-                    else:
-                        instrumenter_result = self.run_geth(mode, program, sample_size)
+                        instrumenter_result = self.run_geth_benchmark(program, sample_size, exec_path)
                 elif evm == evmone:
                     instrumenter_result = self.run_evmone(mode, program, sample_size)
                 elif evm == nethermind:
@@ -186,8 +182,6 @@ class Measurements(object):
                 elif evm == erigon:
                     if mode == benchmark_mode:
                         instrumenter_result = self.run_erigon_benchmark(program, sample_size, exec_path)
-                    else:
-                        instrumenter_result = self.run_erigon(mode, program, sample_size)
                 elif evm == revm and mode == benchmark_mode:
                     instrumenter_result = self.run_revm_benchmark(program, sample_size, exec_path)
 
@@ -199,58 +193,51 @@ class Measurements(object):
                 csv_chunk = '\n'.join(result_row)
                 print(csv_chunk)
 
-    def _check_clocksource(self):
-        with open(CLOCKSOURCE_PATH) as clocksource:
-            return clocksource.readlines() == ['tsc\n']
+    def _parse_geth_benchmark_output(self, stdout, stderr):
+        text = stderr
 
-    def run_geth(self, mode, program, sampleSize):
-        if mode == 'perf':
-            return self.run_perf_geth(program)
+        execution_time_pattern = r"execution time:\s*([\d\.]+)(µs|ms)"
+        allocations_pattern = r"allocations:\s*([\d\.]+)"
+        allocated_bytes_pattern = r"allocated bytes:\s*([\d\.]+)"
+
+        execution_time_match = re.search(execution_time_pattern, text)
+        allocations = re.search(allocations_pattern, text)
+        allocated_bytes = re.search(allocated_bytes_pattern, text)
+
+        if execution_time_match:
+            execution_time = float(execution_time_match.group(1))
+            time_unit = execution_time_match.group(2)
+            if time_unit == 'µs':  # convert microseconds to nanoseconds
+                execution_time *= 1000
+            if time_unit == 'ms':  # convert milliseconds to nanoseconds
+                execution_time *= 1000000
         else:
-            return self.run_geth_default(mode, program, sampleSize)
+            execution_time = None
 
-    def run_perf_geth(self, mode, program, sample_size):
-        bin = './instrumentation_measurement/geth/main_minimal'
-        perf_geth_main = ['perf', 'stat', '-ddd', '-x', ',', bin]
-        args = ['--sampleSize={}'.format(sample_size)]
-        bytecode_arg = ['--bytecode', program.bytecode]
-        invocation = perf_geth_main + args + bytecode_arg
-        result = subprocess.run(invocation, capture_output=True, universal_newlines=True)
-        assert result.returncode == 0
-        # print('error', result.stderr)
-        instrumenter_result = ''
-        perf_stats = csv.reader(StringIO(result.stderr), delimiter=',')
-        for row in perf_stats:
-            event_name = row[2]
-        if (event_name in ['task-clock', 'context-switches', 'page-faults', 'instructions', 'branches', 'branch-misses', 'L1-dcache-loads', 'LLC-loads', 'LLC-load-misses', 'L1-icache-loads', 'L1-icache-load-misses', 'dTLB-loads', 'dTLB-load-misses', 'iTLB-loads', 'iTLB-load-misses']):
-            instrumenter_result += row[0] + ','
-        # strip the final comma
-        instrumenter_result = instrumenter_result[:-1]
+        allocations = allocations.group(1) if allocations else None
 
-        return [instrumenter_result]
+        allocated_bytes = allocated_bytes.group(1) if allocated_bytes else None
 
-    def run_geth_default(self, mode, program, sample_size):
-        golang_main = ['./instrumentation_measurement/bin/geth_main']
-        args = ['--mode', mode, '--printCSV', '--printEach=false', '--sampleSize={}'.format(sample_size)]
-        bytecode_arg = ['--bytecode', program.bytecode]
-        invocation = golang_main + args + bytecode_arg
-        result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
-        assert result.returncode == 0
-        # strip the final newline
-        instrumenter_result = result.stdout.split('\n')[:-1]
+        return "{},{},{}".format(int(execution_time), int(allocations), int(allocated_bytes))
 
-        return instrumenter_result
+    def run_geth_benchmark(self, program, sample_size, exec_path):
+        if exec_path == "":
+            exec_path = os.path.abspath(DIR_PATH +'/'+ DEFAULT_EXEC_GETH)
+        else:
+            exec_path = os.path.abspath(exec_path)
 
-    def run_geth_benchmark(self, program, sample_size):
-        geth_benchmark = ['../../bin/imapp_benchmark']
-        args = ['--sampleSize', '{}'.format(sample_size)]
-        bytecode_arg = ['--bytecode', program.bytecode]
-        invocation = geth_benchmark + args + bytecode_arg
-        result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
-        assert result.returncode == 0
-        # strip the final newline
-        instrumenter_result = result.stdout.split('\n')[:-1]
-        return instrumenter_result
+        args = ['--code', program.bytecode, '--bench', 'run']
+        invocation = [exec_path] + args
+
+        results = []
+        for run_id in range(1, sample_size + 1):
+            pro = subprocess.Popen(invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            stdout, stderr = pro.communicate()
+
+            instrumenter_result = self._parse_geth_benchmark_output(stdout, stderr)
+
+            results.append(str(run_id) + "," + instrumenter_result)
+        return results
 
     def run_nethermind(self, program, sample_size):
         geth_benchmark = [
@@ -367,39 +354,24 @@ class Measurements(object):
 
         return instrumenter_result
 
-    def run_erigon(self, mode, program, sample_size):
-        golang_main = ['./instrumentation_measurement/erigon/tests/imapp_measure/imapp_measure']
-        args = ['--mode', mode, '--printCSV', '--printEach=false', '--sampleSize={}'.format(sample_size)]
-        bytecode_arg = ['--bytecode', program.bytecode]
-        invocation = golang_main + args + bytecode_arg
-        result = subprocess.run(invocation, stdout=subprocess.PIPE, universal_newlines=True)
-        assert result.returncode == 0
-        # strip the final newline
-        instrumenter_result = result.stdout.split('\n')[:-1]
-
-        return instrumenter_result
-
     def run_erigon_benchmark(self, program, sample_size, exec_path):
         if exec_path == "":
             exec_path = os.path.abspath(DIR_PATH +'/'+ DEFAULT_EXEC_ERIGON)
         else:
             exec_path = os.path.abspath(exec_path)
 
-        args = ['--sampleSize', '{}'.format(sample_size)]
-        bytecode_arg = ['--bytecode', program.bytecode]
-        invocation = [exec_path] + args + bytecode_arg
-        pro = subprocess.Popen(invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-        stdout, stderr = pro.communicate()
-        if (stderr != ""):
-            print("Error in nethermind benchmark")
-            print(stderr)
-            return
-        
-        # print(stdout)
-        
-        instrumenter_result = stdout.split('\n')
-        instrumenter_result = instrumenter_result[:-1]
-        return instrumenter_result
+        args = ['--code', program.bytecode, '--bench', 'run']
+        invocation = [exec_path] + args
+
+        results = []
+        for run_id in range(1, sample_size + 1):
+            pro = subprocess.Popen(invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            stdout, stderr = pro.communicate()
+
+            instrumenter_result = self._parse_geth_benchmark_output(stdout, stderr)
+
+            results.append(str(run_id) + "," + instrumenter_result)
+        return results
 
     def run_ethereumjs_benchmark(self, program, sample_size):
         ethereumjs_benchmark = [
