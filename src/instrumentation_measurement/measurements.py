@@ -153,6 +153,9 @@ class Measurements(object):
                 header = "program_id,sample_id,run_id,total_time_ns,mem_allocs_count,mem_allocs_bytes"
             elif evm == revm:
                 header = "program_id,sample_id,run_id,iterations_count,engine_overhead_time_ns,execution_loop_time_ns,total_time_ns,std_dev_time_ns"
+            elif evm == evmone:
+                # TODO fill later
+                header = ""
             print(header)
         elif mode == measure_perf:
             header = "program_id,sample_id,task_clock,context_switches,page_faults,instructions,branches,branch_misses,L1_dcache_loads,LLC_loads,LLC_load_misses,L1_icache_loads,L1_icache_load_misses,dTLB_loads,dTLB_load_misses,iTLB_loads,iTLB_load_misses"
@@ -334,10 +337,9 @@ class Measurements(object):
         return [instrumenter_result]
 
     def run_evmone_default(self, mode, program, sample_size):
-        evmone_build_path = './instrumentation_measurement/evmone/build/'
+        evmone_build_path = './evmone/build/'
         bin = evmone_build_path + 'bin/evmc'
         vm = evmone_build_path + 'lib/libevmone.so'
-        evmone_build_path = './instrumentation_measurement/evmone/build/'
         evmone_main = [evmone_build_path + 'bin/evmc', 'run']
 
         # only measure-total is currently supported
