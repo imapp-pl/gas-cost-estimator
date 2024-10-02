@@ -1,13 +1,13 @@
 # Gas Cost Estimator
 _Stage 4 Report_
 
-> **_NOTE:_**  This document is work in progress. The * denotes incomplete parts.
+> **_NOTE:_**  This document is a work in progress. The * denotes incomplete parts.
 
 ## Abstract
-In this stage we use the findings from the previous stages and apply them to produce comprehensive analysis of the gas cost. The improved methodology incorporate standardized benchmarks, data analysis and report generation. The scope has been extended to all OPCODEs, precompiles and top 7 EVM implemnetations. The reproducibility of the results has been improved by providing a complete setup guide and tooling. Additionally the release contains precompiled binaries for even easier execution. The result of this stage is a proposal of a new Gas Cost Scheduled to be included in the next hard fork.
+In this stage, we use the findings from the previous stages and apply them to produce a comprehensive analysis of the gas cost. The improved methodology incorporates standardized benchmarks, data analysis and report generation. The scope has been extended to all OPCODEs, precompiles and top 7 EVM implementations. The reproducibility of the results has been improved by providing a complete setup guide and tooling. Additionally, the release contains precompiled binaries for even easier execution. The result of this stage is a proposal for a new Gas Cost Scheduled to be included in the next hard fork.
 
 ## Introduction and project scope
-This project is the continuation of the previous stages of the Gas Cost Estimator. Please visit https://github.com/imapp-pl/gas-cost-estimator to find more information. After publishing our report from the second and third stages of the Gas Cost Estimator project we received feedback from the community. The community expressed the need to see other implementations being included in the research as well as to have the tooling automated and the benchmarks standardized.
+This project continues the previous stages of the Gas Cost Estimator. Please visit https://github.com/imapp-pl/gas-cost-estimator to find more information. After publishing our report from the second and third stages of the Gas Cost Estimator project we received feedback from the community. The community expressed the need to see other implementations being included in the research as well as to have the tooling automated and the benchmarks standardized.
 
 ### EVM Implementaions
 The following EVM implementations have been included in the research:
@@ -21,7 +21,7 @@ The following EVM implementations have been included in the research:
 - [Besu *](https://github.com/imapp-pl/besu)
 
 ### Measured OPCODEs and precompiles
-In this stage we finally measure all* OPCODEs together with the precompiles.
+In this stage, we finally measure all* OPCODEs together with the precompiles.
 
 ### Tooling and automation *
 The reproducibility is the key to the research. We have provided a complete setup guide and tooling to make the execution of the benchmarks as easy as possible. There are two ways to perform the measurements in your environment. The first one is to use the provided scripts to build the EVM implementations and run the benchmarks. The second one is to use the provided release with precompiled binaries. The binaries are available for Linux x64, MacOS x64 and Windows.
@@ -31,10 +31,10 @@ The reproducibility is the key to the research. We have provided a complete setu
 ### Measurement approach
 Our approach is to test each EVM implementation in isolation. That means that any host objects, storage access and other infrastructure elements are either mocked, or a minimal implementation is used. This allows us to measure the execution time of the OPCODEs directly, without any additional overhead.
 
-For all EVM implementations, we have created a benchmarking code that executes the OPCODEs in a controlled environment. We used standard benchmarking libraries for each language and framework.
+We have created a benchmarking code for all EVM implementations that executes the OPCODEs in a controlled environment. We used standard benchmarking libraries for each language and framework.
 
 ### Factors impacting the results
-Research and experiments previous stages have shown the importance of removing uncontrollable and variable factors when estimating the cost of executing any given OPCODE. This includes:
+Research and experiments in previous stages have shown the importance of removing uncontrollable and variable factors when estimating the cost of executing any given OPCODE. This includes:
 - Caching on various levels, from processor to operating system to disk to EVM implementation
 - Processor and hardware architecture
 - Warm-up effect
@@ -42,7 +42,7 @@ Research and experiments previous stages have shown the importance of removing u
 - Operating System process priority and multithreading
 - Garbage Collector impact
 - Virtualization impact
-- Node synchronization and data model impact
+- Node synchronisation and data model impact
 
 The benchmark approach used for the measurement sufficiently mitigates the impact of these factors. The benchmarking code is designed to be as simple as possible, with minimal dependencies. The benchmarking code is executed in a controlled environment, with no other processes running. The benchmarking code is executed multiple times to ensure that the results are consistent.
 
@@ -65,10 +65,10 @@ Where `evm_name` is the name of the EVM implementation you want to measure.
 In this chapter, we describe the benchmarking approach for individual EVM implementations.
 
 ### EvmOne *
-EvmOne is a reference EVM implementation written in C++. We used Google Benchmark library for benchmarking.
+EvmOne is a reference EVM implementation written in C++. We used the Google Benchmark library for benchmarking.
 
 ### Go Ethereum
-Go Ethereum is the most popular EVM implementaion. It is written in Go. For our measurements we expanded the `cmd/evm` tool available in Geth. It uses Go's `testing` library for benchmarking. We used an in-memory database for a minimal impact with a minimal host.
+Go Ethereum is the most popular EVM implementation. It is written in Go. For our measurements, we expanded the `cmd/evm` tool available in Geth. It uses Go's `testing` library for benchmarking. We used an in-memory database for a minimal impact with a minimal host.
 
 ### Erigon
 Erigon is another EVM implementation written in Go. It has a similar `evm` tool as Go Ethereum that was harnessed for the benchmarks.
@@ -89,7 +89,7 @@ Revm is developed in Rust. The existing `revme` tool did not satisfy our require
 - setup and teardown methods for each benchmark that do not affect the measurement
 
 ### Besu *
-Besu is developed in Java. 
+Besu is developed in Java.
 
 ## Measurement Analysis
 
@@ -134,3 +134,4 @@ The full results of the measurements are available in the [stage4](src/stage4) d
 ### EVM Implementations Recommendations *
 
 ### Proposed gas cost schedule *
+
