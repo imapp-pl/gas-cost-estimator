@@ -5,6 +5,7 @@ params:
   env: ""
   programs: ""
   results: ""
+  details: ""
 ---
 
 ```{r, setup, include=FALSE}
@@ -22,6 +23,15 @@ if (params$results == "") {
   stop("'results' param is missing, the file with test results")
 }
 
+if (params$details == "") {
+  details = FALSE
+} else {
+  details = tolower(params$details) %in% c("1", "t", "true", "on")
+}
+if (!details) {
+  knitr::opts_chunk$set(include = FALSE)
+}
+
 source('common.R')
 
 removed_outliers = TRUE
@@ -36,6 +46,9 @@ The env = `r env`, the programs file =`r params$programs`, the resutls file = `r
 # The example of results file: geth_pg_marginal_full5_c50_step1_shuffle_50_4.csv
 programs = read.csv(params$programs)
 results = load_data_set_from_file(params$results)
+if(!("run_id" %in% colnames(results))) {
+  results$run_id <- 1
+}
 # besu may have additional columns with gc stats
 results = results[, c("program_id", "sample_id", "run_id", "total_time_ns")]
 # TODO geth short-circuits zero length programs, resulting in zero timing somehow. Drop these more elegantly, not based on measure_total_time_ns
@@ -57,13 +70,13 @@ measurements$opcode = factor(measurements$opcode, levels=unique(programs$opcode)
 
 Switch `removed_outliers` to `FALSE` to see the comparison.
 
-```{r fig.width=15,fig.height=8}
+```{r fig.width=15,fig.height=8, include = TRUE}
 if (!removed_outliers) {
   boxplot(measurements[which(measurements$env == env), 'measure_total_time_ns'] ~ measurements[which(measurements$env == env), 'opcode'], las=2, outline=TRUE, log='y', main=paste(env, 'all'))
 }
 ```
 
-```{r fig.width=15,fig.height=15}
+```{r fig.width=15,fig.height=15, include = TRUE}
 if (removed_outliers) {
   measurements = remove_compare_outliers(measurements, 'measure_total_time_ns', c(env))
 }
@@ -79,7 +92,9 @@ compute_all <- function(opcode, env, plots, use_median) {
   if (missing(use_median)) {
     use_median = FALSE
   }
-  print(c(opcode, env))
+  if (plots == "all") {
+    print(c(opcode, env))
+  }
   
   df = measurements[which(measurements$opcode==opcode & measurements$env==env),]
   
@@ -93,7 +108,9 @@ compute_all <- function(opcode, env, plots, use_median) {
 
   model_mean = lm(measure_total_time_ns ~ op_count, data=df_mean)
   model_mean_summary = summary(model_mean)
-  print(model_mean_summary)
+  if (plots == "diagnostics" | plots == "all") {
+    print(model_mean_summary)
+  }
   slope = model_mean_summary$coefficients['op_count','Estimate']
   intercept = model_mean_summary$coefficients[1,'Estimate']
   stderr = model_mean_summary$coefficients['op_count','Std. Error']
@@ -133,7 +150,7 @@ To avoid being overrun by the number of images, all op_count for a given run_id 
 so values are not centered. 
 That should not be an issue.
 
-```{r}
+```{r, include = details}
 for (opcode in all_opcodes) {
   boxplot(measure_total_time_ns~run_id,data=measurements[measurements$opcode == opcode,], main=opcode)
 }
@@ -141,18 +158,18 @@ for (opcode in all_opcodes) {
 
 Now we can investigate the linear regressions.
 
-```{r}
+```{r, include = TRUE}
 for (opcode in all_opcodes) {
-  estimate = compute_all(opcode=opcode, env=env, use_median=TRUE, plots='all')
+  estimate = compute_all(opcode=opcode, env=env, use_median=TRUE, plots=ifelse(details,'all','scatter'))
   estimates[nrow(estimates) + 1, ] = c(opcode, estimate, env)
 }
 ```
 
-```{r}
+```{r, include = TRUE}
 estimates
 ```
 
-Export the results
+The results are exported to `r paste0("./", env, "_marginal_estimated_cost.csv")`.
 
 ```{r}
 write.csv(estimates, paste0("./", env, "_marginal_estimated_cost.csv"), quote=FALSE, row.names=FALSE)
