@@ -4,7 +4,7 @@ _Stage 4 Report_
 > **_NOTE:_**  This document is a work in progress. The * denotes incomplete parts.
 
 ## Abstract
-In this stage, we use the findings from the previous stages and apply them to produce a comprehensive analysis of the gas cost. The improved methodology incorporates standardized benchmarks, data analysis and report generation. The scope has been extended to all OPCODEs, precompiles and top 7 EVM implementations. The reproducibility of the results has been improved by providing a complete setup guide and tooling. Additionally, the release contains precompiled binaries for even easier execution. The result of this stage is a proposal for a new Gas Cost Scheduled to be included in the next hard fork.
+In this stage, we use the findings from the previous stages and apply them to produce a comprehensive analysis of the gas cost. The improved methodology incorporates standardized benchmarks, data analysis and report generation. The scope has been extended to all OPCODEs, precompiles and 7 popular EVM implementations with different technological stacks and architecture. The reproducibility of the results has been improved by providing a complete setup guide and tooling. Additionally, the release contains precompiled binaries for even easier execution. The result of this stage is a new Gas Cost Scheduled to be proposed for the next hard fork.
 
 ## Introduction and project scope
 This project continues the previous stages of the Gas Cost Estimator. Please visit https://github.com/imapp-pl/gas-cost-estimator to find more information. After publishing our report from the second and third stages of the Gas Cost Estimator project we received feedback from the community. The community expressed the need to see other implementations being included in the research as well as to have the tooling automated and the benchmarks standardized.
@@ -29,7 +29,7 @@ The reproducibility is the key to the research. We have provided a complete setu
 ## Methodology
 
 ### Measurement approach
-Our approach is to test each EVM implementation in isolation. That means that any host objects, storage access and other infrastructure elements are either mocked, or a minimal implementation is used. This allows us to measure the execution time of the OPCODEs directly, without any additional overhead.
+Our approach is to test each EVM implementation in isolation. That means that any host objects, storage access and other infrastructure elements are either mocked, or a minimal implementation is used. Additionally, each measured transaction contains a bytecode to execute, which is a sequence of different instructions plus x time the OPCODE to measure. By varying the number of OPCODEs in the bytecode, we can estimate the cost of executing a single OPCODE. For that reason larger bytecode programs are executed and OPCODEs costs are estimated using statistic tools. The measurements are performed multiple times to ensure the results are consistent.
 
 We have created a benchmarking code for all EVM implementations that executes the OPCODEs in a controlled environment. We used standard benchmarking libraries for each language and framework.
 
