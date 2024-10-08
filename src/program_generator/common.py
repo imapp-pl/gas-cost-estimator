@@ -9,19 +9,6 @@ Common tools for program generation. To be organized if needed, for now just bag
 """
 
 
-def generate_create_program(create_operation, op_count):
-  """
-  Generates a program for CREATE opcode
-  """
-  assert create_operation['Mnemonic'] == 'CREATE'
-  initialization_code_mem_store = '6d6460016001016000526005601cf3600052'
-  empty_pushes = '6000' * constants.MAX_INSTRUCTIONS
-  single_op_pushes = '600d60126000' * op_count
-  opcodes_with_pops = (create_operation['Value'][2:4] + '50') * op_count
-  pops = '50' * (constants.MAX_INSTRUCTIONS - op_count)
-  return initialization_code_mem_store + empty_pushes + single_op_pushes + opcodes_with_pops + pops
-
-
 def generate_single_marginal(single_op_pushes, operation, op_count):
   """
   The number of pushes in single_op_pushes must be equal to arity.
