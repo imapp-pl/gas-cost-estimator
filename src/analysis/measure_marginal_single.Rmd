@@ -1,5 +1,5 @@
 ---
-title: "R Notebook: estimation of gas costs using the measure marginal method; for Gas Cost Estimator; for a single given env"
+title: "Gas Cost Estimator: estimation of gas costs using the measure marginal method"
 output: html_document
 params:
   env: ""
@@ -38,8 +38,13 @@ removed_outliers = TRUE
 ```
 
 In this script, there is conducted the estimation for the `measure_marginal` approach for a single given env.
+The programs is the set of bytecode programs with varying number of opcodes. 
+The measurements are time measurements of program runs or benchmarks.
+The estimation of each opcode is calculated as the regression against the number of a given opcode in the executed programs.
 
-The env = `r env`, the programs file =`r params$programs`, the resutls file = `r params$results`.
+Parametrization. The env = `r env`, the programs file =`r params$programs`, the results file = `r params$results`, the details = `r details`.
+
+`r if(details){"Data preparation. Reading data from the programs file and results file. Initial adjustments."}`
 
 ```{r}
 # The example of programs file: pg_marginal_full5_c50_step1_shuffle.csv .
@@ -66,17 +71,34 @@ measurements = sqldf(paste0("SELECT opcode, op_count, sample_id, run_id, total_t
                        programs ON(results.program_id = programs.program_id)"))
 measurements$opcode = factor(measurements$opcode, levels=unique(programs$opcode))
 # head(measurements)
+
+extract_opcodes <- function() {
+  unique(measurements$opcode)
+}
+
+all_opcodes = extract_opcodes()
 ```
 
+`r if(details){"Measurement point distribution. For bare eye assessment. Every point is a sinle measurement. For each opcode and op_count, the measurements should tend to be concentrated around a single value."}`
+
+```{r}
+for (opcode in all_opcodes) {
+  df = measurements[which(measurements$opcode==opcode & measurements$env==env),]
+  plot(measure_total_time_ns ~ op_count, data=df, las=2)
+  title(main=paste(env, opcode, "- measurement point distribution"))
+}
+```
+
+The comparision of result. Before and after removing outlying measurement.
 Switch `removed_outliers` to `FALSE` to see the comparison.
 
-```{r fig.width=15,fig.height=8, include = TRUE}
+```{r fig.width=15,fig.height=8, include = !removed_outliers}
 if (!removed_outliers) {
   boxplot(measurements[which(measurements$env == env), 'measure_total_time_ns'] ~ measurements[which(measurements$env == env), 'opcode'], las=2, outline=TRUE, log='y', main=paste(env, 'all'))
 }
 ```
 
-```{r fig.width=15,fig.height=15, include = TRUE}
+```{r fig.width=15,fig.height=15, include = removed_outliers}
 if (removed_outliers) {
   measurements = remove_compare_outliers(measurements, 'measure_total_time_ns', c(env))
 }
@@ -130,25 +152,19 @@ compute_all <- function(opcode, env, plots, use_median) {
   }
   list("slope" = slope, "stderr" = stderr)
 }
-
-extract_opcodes <- function() {
-  unique(measurements$opcode)
-}
 ```
 
 ```{r}
-all_opcodes = extract_opcodes()
-
 # initialize the data frame to hold the results
 estimates = data.frame(matrix(ncol = 4, nrow = 0))
 colnames(estimates) <- c('op', 'estimate_marginal_ns', 'estimate_marginal_ns_stderr', 'env')
 ```
 
-Every sample starts with a fresh evm instance. 
-We investigate whether the results may depend on the time from evm start - related to run_id.
-To avoid being overrun by the number of images, all op_count for a given run_id are are placed, 
-so values are not centered. 
-That should not be an issue.
+`r if(details){"Every sample starts with a fresh evm instance. "}`
+`r if(details){"We investigate whether the results may depend on the time from evm start - related to run_id."}`
+`r if(details){"To avoid being overrun by the number of images, all op_count for a given run_id are are placed, "}`
+`r if(details){"so values are not centered. "}`
+`r if(details){"That should not be an issue."}`
 
 ```{r, include = details}
 for (opcode in all_opcodes) {
@@ -164,6 +180,8 @@ for (opcode in all_opcodes) {
   estimates[nrow(estimates) + 1, ] = c(opcode, estimate, env)
 }
 ```
+
+The resulting estimates based on the regressions above.
 
 ```{r, include = TRUE}
 estimates
