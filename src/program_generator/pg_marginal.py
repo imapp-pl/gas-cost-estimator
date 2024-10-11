@@ -4,6 +4,7 @@ import fire
 import random
 import sys
 
+import constants
 from common import generate_single_marginal, prepare_opcodes, get_selection, arity
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -89,15 +90,82 @@ class ProgramGenerator(object):
     if shuffle_counts:
       random.shuffle(op_counts)
       
-    programs = [self._generate_single_program(operation, op_count) for operation in operations for op_count in op_counts]
+    programs = [self._generate_single_program(operation, op_count, max_op_count) for operation in operations for op_count in op_counts]
 
     return programs
 
-  def _generate_single_program(self, operation, op_count):
+  def _generate_single_program(self, operation, op_count, max_op_count):
+    assert op_count <= constants.MAX_INSTRUCTIONS
     # for compatibility with the generate_single_marginal function
+    if operation['Mnemonic'] == 'CREATE':
+      return Program(_generate_create_program(operation, op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] in ['EXTCODEHASH', 'EXTCODESIZE']:
+      return Program(_generate_extcode_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] == 'EXTCODECOPY':
+      return Program(_generate_extcodecopy_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] in ['CALL', 'STATICCALL', 'DELEGATECALL']:
+      return Program(_generate_call_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+  
     single_op_pushes = ["6003"] * arity(operation)
 
     return Program(generate_single_marginal(single_op_pushes, operation, op_count), operation['Mnemonic'], op_count)
+
+def _generate_create_program(create_operation, op_count):
+  """
+  Generates a program for CREATE opcode
+  """
+  assert create_operation['Mnemonic'] == 'CREATE'
+
+  account_code = '6d6460016001016000526005601cf3600052'
+  empty_pushes = '6000' * constants.MAX_INSTRUCTIONS
+  single_op_pushes = '600d60126000' * op_count
+  opcodes_with_pops = (create_operation['Value'][2:4] + '50') * op_count
+  pops = '50' * (constants.MAX_INSTRUCTIONS - op_count)
+  return account_code + empty_pushes + single_op_pushes + opcodes_with_pops + pops
+
+def _generate_extcode_program(create_operation, op_count, max_op_count):
+  """
+  Generates a program for EXTCODEHASH and EXTCODESIZE opcodes
+  """
+  assert create_operation['Mnemonic'] in ['EXTCODEHASH', 'EXTCODESIZE']
+
+  empty_pushes = '60ff' * constants.MAX_INSTRUCTIONS
+  account_code = '6c63ffffffff60005260046000f3600052600d60006000f0'
+  opcode_args = '80' * (max_op_count - 1) # duplicate the address on stack
+  opcodes_with_pops = (create_operation['Value'][2:4] + '50') * op_count
+  pops = '50' * (constants.MAX_INSTRUCTIONS + max_op_count - op_count)
+  return empty_pushes + account_code + opcode_args + opcodes_with_pops + pops
+
+def _generate_extcodecopy_program(create_operation, op_count, max_op_count):
+  """
+  Generates a program for EXTCODECOPY opcode
+  """
+  assert create_operation['Mnemonic'] == 'EXTCODECOPY'
+
+  empty_pushes = '60ff' * 5
+  account_deployment_code = '7f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6000527fff60005260206000f30000000000000000000000000000000000000000000000602052602960006000f0'
+  opcode_args = '60206000600083' * max_op_count
+  opcodes = create_operation['Value'][2:4] * op_count
+  pops = '50' * 5
+  return empty_pushes + account_deployment_code + opcode_args + opcodes + pops
+
+def _generate_call_program(create_operation, op_count, max_op_count):
+  """
+  Generates a program for CALL, STATICCALL, DELEGATECALL opcodes
+  """
+  assert create_operation['Mnemonic'] in ['CALL', 'STATICCALL', 'DELEGATECALL']
+
+  empty_pushes = '60ff' * 5
+  account_deployment_code = '7067600035600757fe5b60005260086018f36000526011600f6000f0'
+  opcode_args = ''
+  if create_operation['Mnemonic'] == 'CALL':
+    opcode_args = '600060006020600060008661ffff' * max_op_count
+  else:
+    opcode_args = '60006000602060008561ffff' * max_op_count
+
+  opcodes_with_pops = (create_operation['Value'][2:4] + '50') * op_count
+  pops = '50' * (max_op_count - op_count + 5)
+  return empty_pushes + account_deployment_code + '60ff' + opcode_args + opcodes_with_pops + pops
         
 def main():
   fire.Fire(ProgramGenerator, name='generate')
