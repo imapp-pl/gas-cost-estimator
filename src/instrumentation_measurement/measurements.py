@@ -19,6 +19,7 @@ DEFAULT_EXEC_NETHERMIND = '../../../gas-cost-estimator-clients/build/nethermind/
 DEFAULT_EXEC_ERIGON = '../../../gas-cost-estimator-clients/build/erigon/evm'
 DEFAULT_EXEC_REVM = '../../../gas-cost-estimator-clients/build/revm/revme'
 DEFAULT_EXEC_ETHERJS = '../../../gas-cost-estimator-clients/ethereumjs-monorepo/packages/vm/benchmarks/run.js'
+DEFAULT_EXEC_BESU = '../../../gas-cost-estimator-clients/build/revm/revme'
 
 
 class Program(object):
@@ -112,6 +113,8 @@ class Measurements(object):
             header = "program_id,sample_id,total_time_ns,iterations_count,margin_of_error"
         elif evm == revm:
             header = "program_id,sample_id,total_time_ns,iterations_count,std_dev_time_ns"
+        elif evm == besu:
+            header = "program_id,sample_id,total_time_ns"
         print(header)
 
         for program in self._programs:
@@ -404,6 +407,30 @@ class Measurements(object):
         shutil.rmtree(results_base_folder, True)
 
         return ','.join(str(col) for col in columns)
+
+    def run_besu_benchmark(self, program, sample_size, exec_path):
+        if exec_path == "":
+            exec_path = os.path.abspath(DIR_PATH + '/' + DEFAULT_EXEC_BESU)
+        else:
+            exec_path = os.path.abspath(exec_path)
+
+        args = [ '--code=' + program.bytecode, '--repeat=2' ]
+        invocation = [exec_path] + args
+
+        results = []
+        for run_id in range(1, sample_size + 1):
+            pro = subprocess.Popen(invocation, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, universal_newlines=True)
+            stdout, stderr = pro.communicate()
+
+            if (stderr != ""):
+                print("Error in besu benchmark")
+                print(stderr)
+                return
+
+            result = json.loads(stdout)
+            results.append(str(run_id) + "," + str(result["timens"]))
+        return results
 
     def csv_row_append_info(self, instrumenter_result, program):
         # append program_id which are not known to the instrumenter tool
