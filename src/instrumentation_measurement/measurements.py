@@ -19,7 +19,7 @@ DEFAULT_EXEC_NETHERMIND = '../../../gas-cost-estimator-clients/build/nethermind/
 DEFAULT_EXEC_ERIGON = '../../../gas-cost-estimator-clients/build/erigon/evm'
 DEFAULT_EXEC_REVM = '../../../gas-cost-estimator-clients/build/revm/revme'
 DEFAULT_EXEC_ETHERJS = '../../../gas-cost-estimator-clients/ethereumjs-monorepo/packages/vm/benchmarks/run.js'
-DEFAULT_EXEC_BESU = '../../../gas-cost-estimator-clients/build/revm/revme'
+DEFAULT_EXEC_BESU = '../../..//gas-cost-estimator-clients/besu-stage4/ethereum/evmtool/build/install/evmtool/bin/evmtool'
 
 
 class Program(object):
