@@ -43,7 +43,7 @@ If you plan to compile and run benchmarks on your own, you need the following to
 - Rust 1.80.0+
 - Node.js 18.0.0+
 - .NET 7.0+
-- Java 8.0.0+
+- Java 21.0.0+
 
 You can use [setup_tools.sh](src/instrumentation_measurement/setup_tools.sh) script to install the required tools on Linux.
 
