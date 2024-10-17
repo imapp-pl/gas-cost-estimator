@@ -1,15 +1,21 @@
 cd ../../..
 
-# if you want to  redo the setup, remove the gas-cost-estimator-clients directory
+# if you want to  redo the setup, delete the gas-cost-estimator-clients directory
 # rm gas-cost-estimator-clients -rf
-# if you want to redo a specific client, only remove the corresponding directory
+# if you want to redo a specific client, only delete the corresponding directory
 
 mkdir gas-cost-estimator-clients -p
 cd gas-cost-estimator-clients
 
 # EvmOne
 if [ ! -d "evmone" ]; then
-    git clone --recurse-submodules https://github.com/imapp-pl/evmone --depth 1
+    mkdir -p build/evmone
+    git clone --recurse-submodules -b benchmark-bytecode-execution https://github.com/JacekGlen/evmone.git --depth 1
+    cd evmone
+    cmake -S . -B build -DEVMONE_TESTING=ON -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo 
+    cmake --build build --parallel --config RelWithDebInfo --target evmone-bench 
+    cp -f build/bin/evmone-bench ../build/evmone/
+    cd ..
 fi
 
 # Go Ethereum
