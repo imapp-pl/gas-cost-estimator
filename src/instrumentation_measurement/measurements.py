@@ -19,7 +19,7 @@ DEFAULT_EXEC_NETHERMIND = '../../../gas-cost-estimator-clients/build/nethermind/
 DEFAULT_EXEC_ERIGON = '../../../gas-cost-estimator-clients/build/erigon/evm'
 DEFAULT_EXEC_REVM = '../../../gas-cost-estimator-clients/build/revm/revme'
 DEFAULT_EXEC_ETHERJS = '../../../gas-cost-estimator-clients/ethereumjs-monorepo/packages/vm/benchmarks/run.js'
-DEFAULT_EXEC_BESU = '../../../gas-cost-estimator-clients/besu/ethereum/evmtool/build/install/evmtool/bin/evmtool'
+DEFAULT_EXEC_BESU = '../../../gas-cost-estimator-clients/build/besu/evmtool/bin/evmtool'
 
 
 class Program(object):
@@ -114,7 +114,7 @@ class Measurements(object):
         elif evm == revm:
             header = "program_id,sample_id,total_time_ns,iterations_count,std_dev_time_ns"
         elif evm == besu:
-            header = "program_id,sample_id,total_time_ns"
+            header = "program_id,sample_id,total_time_ns,iterations_count,std_dev_time_ns"
         print(header)
 
         for program in self._programs:
@@ -429,7 +429,8 @@ class Measurements(object):
                 return
 
             result = json.loads(stdout)
-            results.append(str(run_id) + "," + str(result["timens"]))
+            results.append(
+                f'{run_id},{str(result["timens"])},{10*100},{str(result["std_dev_timens"])}')
         return results
 
     def csv_row_append_info(self, instrumenter_result, program):

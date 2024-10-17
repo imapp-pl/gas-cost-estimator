@@ -61,5 +61,10 @@ if [ ! -d "revm" ]; then
 fi
 
 if [ ! -d "besu" ]; then
-    git clone -b benchmarking https://github.com/imapp-pl/besu.git --depth 1
+    mkdir -p build/besu
+    git clone -b evmtoolAddSamplesOption https://github.com/lukasz-glen/besu.git --depth 1
+    cd besu
+    ./gradlew :ethereum:evmTool:installDist
+    cp -fr ethereum/evmtool/build/install/evmtool ../build/besu/
+    cd ..
 fi
