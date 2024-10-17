@@ -52,6 +52,29 @@ Compile benchmark program:
 cd nethermind_benchmark\src
 dotnet build -c Release .\Benchmarks.sln
 ```
+## Besu
+Requirements:
+- Java 21+
+
+In all operations, including measurements, make sure you have `JAVA_HOME` set properly, for instance
+```shell
+export JAVA_HOME=~/sources/jdk-22/
+```
+
+In order to build evm tools, it is enough to follow Besu docs. Here is the excerpt
+```shell
+git clone https://github.com/hyperledger/besu.git besu-stage4
+cd besu-stage4
+git checkout 24.9.1
+./gradlew :ethereum:evmTool:installDist
+```
+
+To modify warmup modify `--repeat` parameter in `measurements.py`.
+
+To run benchmarks with Garbage Collector turned off set `JAVA_OPTS` env variable
+```shell
+export JAVA_OPTS="-XX:+UnlockExperimentalVMOptions -XX:+UseEpsilonGC -XX:+AlwaysPreTouch -Xms1024m -Xmx1024m"
+```
 
 # Benchmark methodology
 
