@@ -39,6 +39,7 @@ if [ ! -d "ethereumjs-monorepo" ]; then
     npm i
     cd packages/vm
     npm run build:benchmarks
+    ncc build benchmarks/run.js -o ../../../build/ethereumjs/
     cd ../../..
 fi
 

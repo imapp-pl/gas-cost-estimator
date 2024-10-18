@@ -18,7 +18,7 @@ DEFAULT_EXEC_GETH = '../../../gas-cost-estimator-clients/build/geth/evm'
 DEFAULT_EXEC_NETHERMIND = '../../../gas-cost-estimator-clients/build/nethermind/Nethermind.Benchmark.Runner'
 DEFAULT_EXEC_ERIGON = '../../../gas-cost-estimator-clients/build/erigon/evm'
 DEFAULT_EXEC_REVM = '../../../gas-cost-estimator-clients/build/revm/revme'
-DEFAULT_EXEC_ETHERJS = '../../../gas-cost-estimator-clients/ethereumjs-monorepo/packages/vm/benchmarks/run.js'
+DEFAULT_EXEC_ETHERJS = '../../../gas-cost-estimator-clients/build/ethereumjs/index.js'
 DEFAULT_EXEC_BESU = '../../../gas-cost-estimator-clients/build/besu/evmtool/bin/evmtool'
 
 
@@ -109,11 +109,7 @@ class Measurements(object):
             header = "program_id,sample_id,total_time_ns,mem_allocs,mem_alloc_bytes"
         elif evm == nethermind:
             header = "program_id,sample_id,total_time_ns,iterations_count,std_dev_time_ns,mem_allocs,mem_alloc_bytes"
-        elif evm == ethereumjs:
-            header = "program_id,sample_id,total_time_ns,iterations_count,margin_of_error"
-        elif evm == revm:
-            header = "program_id,sample_id,total_time_ns,iterations_count,std_dev_time_ns"
-        elif evm == besu:
+        elif evm == ethereumjs or evm == revm or evm == besu:
             header = "program_id,sample_id,total_time_ns,iterations_count,std_dev_time_ns"
         print(header)
 
@@ -352,8 +348,14 @@ class Measurements(object):
         line_id = 1
         for line in raw_result:
             line_values = line.split(',')
+            
+            if line_values[4].startswith('±') and line_values[4].endswith('%'):
+                std_dev_ns = (float(line_values[4][1:-1]) * float(line_values[3])) / 100
+            else :
+                std_dev_ns = line_values[4]
+
             instrumenter_result.append(
-                f'{line_id},{line_values[3]},{line_values[5]},{line_values[4]}')
+                f'{line_id},{line_values[3]},{line_values[5]},{std_dev_ns}')
             line_id += 1
         return instrumenter_result
 
