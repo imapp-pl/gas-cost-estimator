@@ -11,7 +11,7 @@
       "program": "${file}",
       "console": "integratedTerminal",
       "justMyCode": true,
-      "args": ["measure", "--mode", "benchmark", "--input_file", "./src/stage3/test.csv", "--evm", "nethermind", "--sample_size", "2"]    },
+      "args": ["measure", "--input_file", "./src/stage3/test.csv", "--evm", "evmone", "--sample_size", "2"]    },
     {
       "name": "Python: Current File",
       "type": "python",

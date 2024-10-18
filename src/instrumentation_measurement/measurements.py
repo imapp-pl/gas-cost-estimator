@@ -13,7 +13,7 @@ from pathlib import Path
 MAX_OPCODE_ARGS = 7
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 
-CLOCKSOURCE_PATH = '/sys/devices/system/clocksource/clocksource0/current_clocksource'
+DEFAULT_EXEC_EVMONE = '../../../gas-cost-estimator-clients/build/evmone/evmone-bench'
 DEFAULT_EXEC_GETH = '../../../gas-cost-estimator-clients/build/geth/evm'
 DEFAULT_EXEC_NETHERMIND = '../../../gas-cost-estimator-clients/build/nethermind/Nethermind.Benchmark.Runner'
 DEFAULT_EXEC_ERIGON = '../../../gas-cost-estimator-clients/build/erigon/evm'
@@ -107,6 +107,8 @@ class Measurements(object):
 
         if evm == geth or evm == erigon:
             header = "program_id,sample_id,total_time_ns,mem_allocs,mem_alloc_bytes"
+        elif evm == evmone:
+            header = "program_id,sample_id,total_time_ns,iterations_count"
         elif evm == nethermind:
             header = "program_id,sample_id,total_time_ns,iterations_count,std_dev_time_ns,mem_allocs,mem_alloc_bytes"
         elif evm == ethereumjs or evm == revm or evm == besu:
@@ -119,7 +121,8 @@ class Measurements(object):
                 instrumenter_result = self.run_geth_benchmark(
                     program, sample_size, exec_path)
             elif evm == evmone:
-                instrumenter_result = self.run_evmone(program, sample_size)
+                instrumenter_result = self.run_evmone_benchmark(
+                    program, sample_size, exec_path)
             elif evm == nethermind:
                 instrumenter_result = self.run_nethermind_benchmark(
                     program, sample_size, exec_path)
@@ -216,91 +219,31 @@ class Measurements(object):
             results.append(str(run_id) + "," + instrumenter_result)
         return results
 
-    def run_evmone(self, mode, program, sampleSize):
-        if mode == 'perf':
-            return self.run_perf_evmone(program)
-        elif mode == 'time':
-            return self.run_time_evmone(program)
+    def run_evmone_benchmark(self, program, sample_size, exec_path):
+        if exec_path == "":
+            exec_path = os.path.abspath(DIR_PATH + '/' + DEFAULT_EXEC_EVMONE)
         else:
-            return self.run_evmone_default(mode, program, sampleSize)
+            exec_path = os.path.abspath(exec_path)
 
-    def run_perf_evmone(self, program):
-        evmone_build_path = './instrumentation_measurement/build/'
-        bin = evmone_build_path + 'bin/evmc'
-        vm = evmone_build_path + 'lib/libevmone.so'
-        perf_evmone_main = ['perf', 'stat', '-ddd', '-x', ',', bin, 'run']
-        #    perf_evmone_main = ['perf', 'stat', '--event', 'task-clock:D,instructions:D', '-x', ',', bin, 'run']
-        args = ['--vm', vm]
-        bytecode = program.bytecode
-        invocation = perf_evmone_main + args + [bytecode]
+        if program.bytecode.startswith('0x'):
+            bytecode = program.bytecode
+        else:
+            bytecode = '0x' + program.bytecode
 
-        result = subprocess.run(
-            invocation, capture_output=True, universal_newlines=True)
-        # print('error', result.stderr)
-        assert result.returncode == 0
-        instrumenter_result = ''
-        perf_stats = csv.reader(StringIO(result.stderr), delimiter=',')
-        for row in perf_stats:
-            event_name = row[2]
-        if (event_name in ['task-clock', 'context-switches', 'page-faults', 'instructions', 'branches', 'branch-misses', 'L1-dcache-loads', 'LLC-loads', 'LLC-load-misses', 'L1-icache-loads', 'L1-icache-load-misses', 'dTLB-loads', 'dTLB-load-misses', 'iTLB-loads', 'iTLB-load-misses']):
-            instrumenter_result += row[0] + ','
-        # strip the final comma
-        instrumenter_result = instrumenter_result[:-1]
+        args = [bytecode, '--benchmark_format=csv']
+        invocation = [exec_path] + args
 
-        return [instrumenter_result]
+        results = []
+        for run_id in range(1, sample_size + 1):
+            pro = subprocess.Popen(
+                invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            stdout, stderr = pro.communicate()
+            last_line = [line for line in stdout.split('\n') if line][-1]
+            result = last_line.split(',')
+            results.append(
+                f'{run_id},{float(result[2]) * 1000},{result[1]}')
 
-    def run_time_evmone(self, program):
-        evmone_build_path = './instrumentation_measurement/build/'
-        bin = evmone_build_path + 'bin/evmc'
-        vm = evmone_build_path + 'lib/libevmone.so'
-        perf_evmone_main = ['time', '-p', 'perf',
-                            'stat', '-ddd', '-x', ',', bin, 'run']
-        pure_evmone_main = ['time', '-p', bin, 'run']
-        args = ['--vm', vm]
-        bytecode = program.bytecode
-        perf_invocation = perf_evmone_main + args + [bytecode]
-        pure_invocation = pure_evmone_main + args + [bytecode]
-
-        instrumenter_result = ''
-        result = subprocess.run(
-            perf_invocation, capture_output=True, universal_newlines=True)
-        # print('error', result.stderr)
-        assert result.returncode == 0
-        perf_stats = result.stderr.split('\n')
-        len_perf_stats = len(perf_stats) - 1
-        instrumenter_result += perf_stats[len_perf_stats-3].split(' ')[1] + ',' + perf_stats[len_perf_stats-2].split(' ')[
-            1] + ',' + perf_stats[len_perf_stats-1].split(' ')[1]
-
-        instrumenter_result += ','
-        result = subprocess.run(
-            pure_invocation, capture_output=True, universal_newlines=True)
-        # print('error', result.stderr)
-        assert result.returncode == 0
-        pure_stats = result.stderr.split('\n')
-        len_pure_stats = len(pure_stats) - 1
-        instrumenter_result += pure_stats[len_pure_stats-3].split(' ')[1] + ',' + pure_stats[len_pure_stats-2].split(' ')[
-            1] + ',' + pure_stats[len_pure_stats-1].split(' ')[1]
-
-        return [instrumenter_result]
-
-    def run_evmone_default(self, mode, program, sample_size):
-        evmone_build_path = './evmone/build/'
-        bin = evmone_build_path + 'bin/evmc'
-        vm = evmone_build_path + 'lib/libevmone.so'
-        evmone_main = [evmone_build_path + 'bin/evmc', 'run']
-
-        # only measure-total is currently supported
-        assert mode == "total"
-        args = ['--vm', evmone_build_path + '/lib/libevmone.so,O=0',
-                '--sample-size', '{}'.format(sample_size)]
-        invocation = evmone_main + args + [program.bytecode]
-        result = subprocess.run(
-            invocation, stdout=subprocess.PIPE, universal_newlines=True)
-        assert result.returncode == 0
-        # strip additional output information added by evmone
-        instrumenter_result = result.stdout.split('\n')[3:-4]
-
-        return instrumenter_result
+        return results
 
     def run_erigon_benchmark(self, program, sample_size, exec_path):
         if exec_path == "":
@@ -439,6 +382,7 @@ class Measurements(object):
         # append program_id which are not known to the instrumenter tool
         to_append = "{},".format(program.id)
         return [to_append + row for row in instrumenter_result]
+
 
 def main():
     fire.Fire(Measurements, name='measure')
