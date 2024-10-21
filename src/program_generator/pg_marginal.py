@@ -105,7 +105,9 @@ class ProgramGenerator(object):
       return Program(_generate_extcodecopy_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] in ['CALL', 'STATICCALL', 'DELEGATECALL']:
       return Program(_generate_call_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
-  
+    if operation['Mnemonic'] in ['LOG0', 'LOG1', 'LOG2', 'LOG3', 'LOG4']:
+      return Program(_generate_log_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+
     single_op_pushes = ["6003"] * arity(operation)
 
     return Program(generate_single_marginal(single_op_pushes, operation, op_count), operation['Mnemonic'], op_count)
@@ -166,6 +168,27 @@ def _generate_call_program(create_operation, op_count, max_op_count):
   opcodes_with_pops = (create_operation['Value'][2:4] + '50') * op_count
   pops = '50' * (max_op_count - op_count + 5)
   return empty_pushes + account_deployment_code + '60ff' + opcode_args + opcodes_with_pops + pops
+
+def _generate_log_program(log_operation, op_count, max_op_count):
+  """
+  Generates a program for LOG* opcodes
+  """
+  assert log_operation['Mnemonic'] in ['LOG0', 'LOG1', 'LOG2', 'LOG3', 'LOG4']
+  
+  # fill out memory
+  memory_filler_push = '61ffff'
+  memory_address = 0
+  memory = ''
+  for i in range(100):
+    memory_address += 32
+    memory_address_hexed = hex(memory_address)[2:]
+    memory_address_hexed = '0' * (4 - len(memory_address_hexed)) + memory_address_hexed
+    memory += memory_filler_push + '61' + memory_address_hexed + '52'
+  
+  arguments = '60ff' * arity(log_operation) * max_op_count
+  logs = log_operation['Value'][2:4] * op_count
+
+  return memory + arguments + logs
         
 def main():
   fire.Fire(ProgramGenerator, name='generate')
