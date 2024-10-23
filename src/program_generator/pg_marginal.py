@@ -107,8 +107,8 @@ class ProgramGenerator(object):
       return Program(_generate_call_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] in ['LOG0', 'LOG1', 'LOG2', 'LOG3', 'LOG4']:
       return Program(_generate_log_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
-    if operation['Mnemonic'] in ['REVERT', 'RETURN']:
-      return Program(_generate_revert_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] in ['REVERT', 'RETURN', 'STOP']:
+      return Program(_generate_subcontext_exit_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
 
     single_op_pushes = ["6003"] * arity(operation)
 
@@ -192,17 +192,21 @@ def _generate_log_program(log_operation, op_count, max_op_count):
 
   return memory + arguments + logs
 
-def _generate_revert_program(operation, op_count, max_op_count):
+def _generate_subcontext_exit_program(operation, op_count, max_op_count):
   """
-  Generates a program for REVERT and RETURN opcodes
+  Generates a program for REVERT, RETURN and STOP opcodes
   """
-  assert operation['Mnemonic'] in ['REVERT', 'RETURN']
+  assert operation['Mnemonic'] in ['REVERT', 'RETURN', 'STOP']
 
-  op_deployment_code = '726960ff60005260026018f3600052600a6016' + operation['Value'][2:4] + '6000526013600d6000f0'
+  no_op_subcontext_code = '60ff60005260026018'
+  op_subcontext_code = no_op_subcontext_code + operation['Value'][2:4]
+  op_deployment_code = '7269' + op_subcontext_code + '600052600a6016f36000526013600d6000f0'
+  no_op_deployment_code = '7168' + no_op_subcontext_code + '60005260096017f36000526013600d6000f0'
+
   op_address_store = '60ff52'
-  no_op_deployment_code = '716960ff60005260026018f3600052600a60166000526012600e6000f0'
-  no_op_calls = '60006000602060008461fffff450' * (max_op_count - op_count)
   op_address_load = '60ff51'
+
+  no_op_calls = '60006000602060008461fffff450' * (max_op_count - op_count)
   op_calls = op_address_load + '60006000602060008461fffff450' * op_count
   
   return op_deployment_code + op_address_store + no_op_deployment_code + no_op_calls + op_address_load + op_calls
