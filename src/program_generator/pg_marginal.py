@@ -177,17 +177,10 @@ def _generate_log_program(log_operation, op_count, max_op_count):
   """
   assert log_operation['Mnemonic'] in ['LOG0', 'LOG1', 'LOG2', 'LOG3', 'LOG4']
   
-  # fill out memory
-  memory_filler_push = '61ffff'
-  memory_address = 0
-  memory = ''
-  for i in range(100):
-    memory_address += 32
-    memory_address_hexed = hex(memory_address)[2:]
-    memory_address_hexed = '0' * (4 - len(memory_address_hexed)) + memory_address_hexed
-    memory += memory_filler_push + '61' + memory_address_hexed + '52'
+  # fill first 32 bytes of memory
+  memory = '7f' + 'ff' * 32 + '6000' + '52'
   
-  arguments = '60ff' * arity(log_operation) * max_op_count
+  arguments = ('60ff' * (arity(log_operation) - 2) + '60206000') * max_op_count
   logs = log_operation['Value'][2:4] * op_count
 
   return memory + arguments + logs
