@@ -105,7 +105,11 @@ class ProgramGenerator(object):
       return Program(_generate_extcodecopy_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] in ['CALL', 'STATICCALL', 'DELEGATECALL']:
       return Program(_generate_call_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
-  
+    if operation['Mnemonic'] in ['LOG0', 'LOG1', 'LOG2', 'LOG3', 'LOG4']:
+      return Program(_generate_log_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] in ['REVERT', 'RETURN', 'STOP']:
+      return Program(_generate_subcontext_exit_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+
     single_op_pushes = ["6003"] * arity(operation)
 
     return Program(generate_single_marginal(single_op_pushes, operation, op_count), operation['Mnemonic'], op_count)
@@ -166,6 +170,39 @@ def _generate_call_program(create_operation, op_count, max_op_count):
   opcodes_with_pops = (create_operation['Value'][2:4] + '50') * op_count
   pops = '50' * (max_op_count - op_count + 5)
   return empty_pushes + account_deployment_code + '60ff' + opcode_args + opcodes_with_pops + pops
+
+def _generate_log_program(log_operation, op_count, max_op_count):
+  """
+  Generates a program for LOG* opcodes
+  """
+  assert log_operation['Mnemonic'] in ['LOG0', 'LOG1', 'LOG2', 'LOG3', 'LOG4']
+  
+  # fill first 32 bytes of memory
+  memory = '7f' + 'ff' * 32 + '6000' + '52'
+  
+  arguments = ('60ff' * (arity(log_operation) - 2) + '60206000') * max_op_count
+  logs = log_operation['Value'][2:4] * op_count
+
+  return memory + arguments + logs
+
+def _generate_subcontext_exit_program(operation, op_count, max_op_count):
+  """
+  Generates a program for REVERT, RETURN and STOP opcodes
+  """
+  assert operation['Mnemonic'] in ['REVERT', 'RETURN', 'STOP']
+
+  no_op_subcontext_code = '60ff60005260026018'
+  op_subcontext_code = no_op_subcontext_code + operation['Value'][2:4]
+  op_deployment_code = '7269' + op_subcontext_code + '600052600a6016f36000526013600d6000f0'
+  no_op_deployment_code = '7168' + no_op_subcontext_code + '60005260096017f36000526013600d6000f0'
+
+  op_address_store = '60ff52'
+  op_address_load = '60ff51'
+
+  no_op_calls = '60006000602060008461fffff450' * (max_op_count - op_count)
+  op_calls = op_address_load + '60006000602060008461fffff450' * op_count
+  
+  return op_deployment_code + op_address_store + no_op_deployment_code + no_op_calls + op_address_load + op_calls
         
 def main():
   fire.Fire(ProgramGenerator, name='generate')
