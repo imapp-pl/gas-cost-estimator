@@ -59,3 +59,28 @@ To run the benchmarks, use the provided Python script:
 python3 ./src/instrumentation_measurement/measurements.py measure --input_file ./src/stage4/pg_marginal_full5_c50_step5_shuffle.csv --evm evm_name --sample_size 10
 ```
 Where `evm_name` is the name of the EVM implementation you want to measure.
+
+## Docker - reports
+
+In order to build locally the docker image execute in the repository root
+
+```shell
+docker build ./src/analysis -f Dockerfile.reports -t imapp-pl/gas-cost-estimator/reports:4.0
+```
+
+Note that the context is `./src/analysis` in order to decrease the data size. 
+The image includes the report notebooks -- files. 
+But the bytecode programs and measurement resutls need to be provided.
+For now, use `/data` volume to pass input files and retrieve an output report.
+
+To render `measure_marginal` report provide your params and an output file and execute the command:
+
+```shell
+docker run -it -v /your/path/to/data:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e "rmarkdown::render('/reports/measure_marginal_single.Rmd', params = list(env = 'erigon', programs='pg_marginal_full5_c50_step1_shuffle.csv', results='erigon_pg_marginal_full5_c50_step1_shuffle_size_10.csv'), output_file = 'erigon_measure_marginal_single.html')"
+```
+
+To render `final_estimate` report provide your params and an output file and execute the command:
+
+```shell
+docker run -it -v /home/lukaszglen/sources/imapp5/stage4:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e "rmarkdown::render('/reports/final_estimation.Rmd', params = list(estimate_files='besu_marginal_estimated_cost.csv, erigon_marginal_estimated_cost.csv, ethereumjs_marginal_estimated_cost.csv, geth_marginal_estimated_cost.csv, nethermind_marginal_estimated_cost.csv, revm_marginal_estimated_cost.csv', current_gas_cost='current_gas_cost.csv'), output_file = 'final_estimation.html')"
+```
