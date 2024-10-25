@@ -193,9 +193,10 @@ def _generate_mcopy_program(mcopy_operation, op_count, max_op_count):
   """
   assert mcopy_operation['Mnemonic'] == 'MCOPY'
   
-  # fill first 32 bytes of memory
-  memory = '7f' + 'ff' * 32 + '6000' + '52'
-  arguments = '602060006021' * max_op_count
+  # fill 32nd byte of memory
+  memory = '60ff600052'
+  # copy 32nd byte of memory to the 1st byte so there is no memory expansion on MCOPY
+  arguments = '6001601f6000' * max_op_count
 
   return memory + arguments + mcopy_operation['Value'][2:4] * op_count
 
