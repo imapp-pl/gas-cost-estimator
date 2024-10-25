@@ -109,6 +109,8 @@ class ProgramGenerator(object):
       return Program(_generate_log_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] in ['REVERT', 'RETURN', 'STOP']:
       return Program(_generate_subcontext_exit_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] == 'MCOPY':
+      return Program(_generate_mcopy_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
 
     single_op_pushes = ["6003"] * arity(operation)
 
@@ -184,6 +186,19 @@ def _generate_log_program(log_operation, op_count, max_op_count):
   logs = log_operation['Value'][2:4] * op_count
 
   return memory + arguments + logs
+
+def _generate_mcopy_program(mcopy_operation, op_count, max_op_count):
+  """
+  Generates a program for MCOPY opcode
+  """
+  assert mcopy_operation['Mnemonic'] == 'MCOPY'
+  
+  # fill 32nd byte of memory
+  memory = '60ff600052'
+  # copy 32nd byte of memory to the 1st byte so there is no memory expansion on MCOPY
+  arguments = '6001601f6000' * max_op_count
+
+  return memory + arguments + mcopy_operation['Value'][2:4] * op_count
 
 def _generate_subcontext_exit_program(operation, op_count, max_op_count):
   """
