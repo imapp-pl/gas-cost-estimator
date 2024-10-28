@@ -25,7 +25,7 @@ Value,Mnemonic,Gas Used,Subset,Removed from stack,Added to stack,Notes,Formula N
 0x1b,SHL,3,verylow,2,1,Left shift operation,
 0x1c,SHR,3,verylow,2,1,Logical right shift operation,
 0x1d,SAR,3,verylow,2,1,Arithmetic (signed) right shift operation,
-0x20,SHA3,30 + 6 * (size of input in words),,2,1,Compute Keccak-256 hash.,30 is the paid for the operation plus 6 paid for each word (rounded up) for the input data.
+0x20,KECCAK256,30 + 6 * (size of input in words),,2,1,Compute Keccak-256 hash.,30 is the paid for the operation plus 6 paid for each word (rounded up) for the input data.
 0x30,ADDRESS,2,base,0,1,Get address of currently executing account.,
 0x31,BALANCE,400,,1,1,Get balance of the given account.,
 0x32,ORIGIN,2,base,0,1,Get execution origination address.,

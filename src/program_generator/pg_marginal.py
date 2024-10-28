@@ -111,6 +111,8 @@ class ProgramGenerator(object):
       return Program(_generate_subcontext_exit_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] == 'MCOPY':
       return Program(_generate_mcopy_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] == 'KECCAK256':
+      return Program(_generate_keccak256_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
 
     single_op_pushes = ["6003"] * arity(operation)
 
@@ -199,6 +201,21 @@ def _generate_mcopy_program(mcopy_operation, op_count, max_op_count):
   arguments = '6001601f6000' * max_op_count
 
   return memory + arguments + mcopy_operation['Value'][2:4] * op_count
+
+def _generate_keccak256_program(mcopy_operation, op_count, max_op_count):
+  """
+  Generates a program for KECCAK256 opcode
+  """
+  assert mcopy_operation['Mnemonic'] == 'KECCAK256'
+  
+  # fill first 32 bytes
+  memory = '7f' + 'ff' * 32 + '5f52'
+  empty_pushes = '5f' * max_op_count
+  arguments = '60206000' * max_op_count
+  keccaks_with_pops = (mcopy_operation['Value'][2:4] + '50') * op_count
+  pop_leftover = '50' * (max_op_count - op_count)
+
+  return memory + empty_pushes + arguments + keccaks_with_pops + pop_leftover
 
 def _generate_subcontext_exit_program(operation, op_count, max_op_count):
   """
