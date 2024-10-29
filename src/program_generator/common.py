@@ -101,7 +101,7 @@ def jump_opcode_combo(current_bytecode, opcode):
 def prepare_opcodes(opcodes_file):
   with open(opcodes_file) as csvfile:
     reader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
-    opcodes = {i['Value']: i for i in reader}
+    opcodes = [i for i in reader]
 
   return _fill_opcodes_push_dup_swap(opcodes)
 
@@ -118,29 +118,27 @@ def _fill_opcodes_push_dup_swap(opcodes):
   dups = constants.EVM_DUPS
   swaps = constants.EVM_SWAPS
 
-  pushes = _opcodes_dict_push_dup_swap(pushes, [0] * len(pushes), [1] * len(pushes), ['03' * variant for variant in range(1,33)])
-  opcodes = {**opcodes, **pushes}
+  pushes = _opcodes_list_push_dup_swap(pushes, [0] * len(pushes), [1] * len(pushes), ['03' * variant for variant in range(1,33)])
   # For dups and swaps the removeds/addeds aren't precise. "removed" is how much is required to be on stack
   # so it must be pushed there once. "added" is how much is really added "extra"
-  dups = _opcodes_dict_push_dup_swap(dups, range(1, len(dups)), [1] * len(dups), [None] * len(dups))
-  opcodes = {**opcodes, **dups}
-  swaps = _opcodes_dict_push_dup_swap(swaps, range(2, len(swaps)+1), [0] * len(swaps), [None] * len(swaps))
-  opcodes = {**opcodes, **swaps}
-  return opcodes
+  dups = _opcodes_list_push_dup_swap(dups, range(1, len(dups)), [1] * len(dups), [None] * len(dups))
+  swaps = _opcodes_list_push_dup_swap(swaps, range(2, len(swaps)+1), [0] * len(swaps), [None] * len(swaps))
 
-def _opcodes_dict_push_dup_swap(source, removeds, addeds, parameters):
+  return opcodes + pushes + dups + swaps
+
+def _opcodes_list_push_dup_swap(source, removeds, addeds, parameters):
   source_list = source.split()
   opcodes = source_list[::2]
   names = source_list[1::2]
-  new_part = {
-    opcode: {
+  new_part = [
+    {
       'Value': opcode,
       'Mnemonic': name,
       'Removed from stack': removed,
       'Added to stack': added,
       'Parameter': parameter
     } for opcode, name, removed, added, parameter in zip(opcodes, names, removeds, addeds, parameters)
-  }
+  ]
 
   return new_part
 
