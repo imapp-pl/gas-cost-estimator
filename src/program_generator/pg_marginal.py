@@ -215,7 +215,7 @@ def _generate_subcontext_exit_program(operation, op_count, max_op_count):
   op_address_load = '60ff51'
 
   no_op_calls = '60006000600060008461fffff450' * (max_op_count - op_count)
-  op_calls = op_address_load + '60006000600060008461fffff450' * op_count
+  op_calls = '60006000600060008461fffff450' * op_count
   
   return op_deployment_code + op_address_store + no_op_deployment_code + no_op_calls + op_address_load + op_calls
         
