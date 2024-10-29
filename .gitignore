@@ -9,3 +9,5 @@ __pycache__
 /src/instrumentation_measurement/bin/geth_main
 
 clients
+
+.idea
