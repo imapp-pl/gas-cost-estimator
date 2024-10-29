@@ -38,7 +38,7 @@ class ProgramGenerator(object):
     opcodes = prepare_opcodes(os.path.join(dir_path, 'data', 'opcodes.csv'))
     selection = get_selection(os.path.join(dir_path, 'data', selectionFile))
 
-    self._operations = [opcodes[op] for op in selection]
+    self._operations = [op for op in opcodes if op['Value'] in selection]
 
   def generate(self, fullCsv=False, opcode=None, maxOpCount=50, shuffleCounts=False, stepOpCount=5):
     """
@@ -111,6 +111,16 @@ class ProgramGenerator(object):
       return Program(_generate_subcontext_exit_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] == 'MCOPY':
       return Program(_generate_mcopy_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] == 'TLOAD':
+      return Program(_generate_tload_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] == 'TLOAD_EXT':
+      return Program(_generate_tload_ext_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] == 'TSTORE':
+      return Program(_generate_tstore_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] == 'TSTORE0':
+      return Program(_generate_tstore0_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] == 'TSTORE_EXT':
+      return Program(_generate_tstore_ext_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
 
     single_op_pushes = ["6003"] * arity(operation)
 
@@ -199,6 +209,83 @@ def _generate_mcopy_program(mcopy_operation, op_count, max_op_count):
   arguments = '6001601f6000' * max_op_count
 
   return memory + arguments + mcopy_operation['Value'][2:4] * op_count
+
+def _generate_tload_program(tload_operation, op_count, max_op_count):
+  """
+  Generates a program for TLOAD opcode
+  """
+  assert tload_operation['Mnemonic'] == 'TLOAD'
+
+  # tstore single value
+  prepare = '60ff60ff5d'
+
+  arguments = '60ff' * max_op_count
+
+  return prepare + arguments + (tload_operation['Value'][2:4] + '50') * op_count + '50' * (max_op_count - op_count)
+
+def _generate_tload_ext_program(tload_operation, op_count, max_op_count):
+  """
+  Generates a program for TLOAD opcode, with an external contract
+  """
+  assert tload_operation['Mnemonic'] == 'TLOAD_EXT'
+
+  no_op_subcontext_code = '60ff'
+  op_subcontext_code = no_op_subcontext_code + tload_operation['Value'][2:4]
+  no_op_deployment_code = '6f60ff60ff5d61' + no_op_subcontext_code + '6000526002601ef3600052601060106000f0'
+  op_deployment_code =    '7060ff60ff5d62' + op_subcontext_code +    '6000526003601df36000526011600f6000f0'
+
+  op_address_store = '60ff52'
+  op_address_load = '60ff51'
+
+  no_op_calls = '600060006000600060008561fffff150' * (max_op_count - op_count)
+  op_calls =    '600060006000600060008561fffff150' * op_count
+
+  return op_deployment_code + op_address_store + no_op_deployment_code + no_op_calls + op_address_load + op_calls
+
+def _generate_tstore_program(tstore_operation, op_count, max_op_count):
+  """
+  Generates a program for TSTORE opcode
+  """
+  assert tstore_operation['Mnemonic'] == 'TSTORE'
+
+  # values start with 16 so hex format naturally occupies two positions
+  arguments = ''
+  for v in range(max_op_count):
+    arguments += '60' + hex(v + 16)[2:] + '6001'
+
+  return arguments + tstore_operation['Value'][2:4] * op_count
+
+def _generate_tstore0_program(tstore_operation, op_count, max_op_count):
+  """
+  Generates a program for TSTORE opcode but always store in a new slot
+  """
+  assert tstore_operation['Mnemonic'] == 'TSTORE0'
+
+  # values start with 16 so hex format naturally occupies two positions
+  arguments = ''
+  for v in range(max_op_count):
+    arguments += '60' + hex(v + 16)[2:] + '60' + hex(v + 16)[2:]
+
+  return arguments + tstore_operation['Value'][2:4] * op_count
+
+def _generate_tstore_ext_program(tstore_operation, op_count, max_op_count):
+  """
+  Generates a program for TSTORE opcode, with an external contract
+  """
+  assert tstore_operation['Mnemonic'] == 'TSTORE_EXT'
+
+  no_op_subcontext_code = '60ff5c60010160ff'
+  op_subcontext_code = no_op_subcontext_code + tstore_operation['Value'][2:4]
+  no_op_deployment_code = '7067' + no_op_subcontext_code + '60005260086018f36000526011600f6000f0'
+  op_deployment_code =    '7168' + op_subcontext_code +    '60005260096017f36000526012600e6000f0'
+
+  op_address_store = '60ff52'
+  op_address_load = '60ff51'
+
+  no_op_calls = '600060006000600060008561fffff150' * (max_op_count - op_count)
+  op_calls =    '600060006000600060008561fffff150' * op_count
+
+  return op_deployment_code + op_address_store + no_op_deployment_code + no_op_calls + op_address_load + op_calls
 
 def _generate_subcontext_exit_program(operation, op_count, max_op_count):
   """
