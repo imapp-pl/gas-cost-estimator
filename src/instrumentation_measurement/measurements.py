@@ -83,6 +83,9 @@ class Measurements(object):
             with open(input_file_full_path) as csvfile:
                 reader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
                 for row in reader:
+                    # skip if row starts from #
+                    if row['program_id'].startswith('#'):
+                        continue
                     self._programs.append(self._program_from_csv_row(row))
         else:
             reader = csv.DictReader(sys.stdin, delimiter=',', quotechar='"')
