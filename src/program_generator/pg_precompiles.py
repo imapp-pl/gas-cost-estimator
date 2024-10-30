@@ -157,8 +157,8 @@ def _generate_ecpairing_programs(op_counts, max_op_count):
         '7f268683f9b1be0bde4508e2e25e51f6b44da3546e87524337d506fd03c4ff7ce0606052'
         '7f1851abe58ef4e08916bec8034ca62c04cd08340ab6cc525e6170634092622165608052'
         '7f1b71422869c92e49465200ca19033a8aa425f955be3d8329c4475503e45c00e160a052'
-        '60ff6101805260206101806100c06000600863fffffffffa50'
-    )    
+        '60ff60c052602060c060c06000600863ffffffff'
+    )
     programs += _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
 
     nominal_gas_cost = '113000'
