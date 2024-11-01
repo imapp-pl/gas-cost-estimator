@@ -72,7 +72,7 @@ def generate_single_marginal(single_op_pushes, operation, op_count):
       bytecode += ''.join(pops)
 
   # JUMPDEST is the only opcode that does not interact with the stack, so we prepend PUSH0 to not have empty bytecode programs
-  if operation['Mnemonic'] == "JUMPDEST":
+  if operation['Mnemonic'] in ["JUMPDEST", "STOP", "INVALID"]:
       bytecode = '5f' + bytecode 
   final_unreachable_placeholder = 'unreachable' if operation['Mnemonic'] == 'CODECOPY' else ''
   bytecode += final_unreachable_placeholder
