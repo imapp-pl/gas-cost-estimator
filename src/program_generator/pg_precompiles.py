@@ -105,7 +105,12 @@ def _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, se
 def _generate_ecrecover_programs(op_counts, max_op_count):
     precompile = 'ECRECOVER'
     nominal_gas_cost = '3000'
-    setup_code = '7f456e9aea5e197a1f1af7a3e85a3212fa4049a3ba34c2289b4c860fc0b0c64ef3600052601c6020527f9242685bf161793cc25603c231bc2f568eb630ea16aa137d2664ac80388256086040527f4f8ae3bd7535248d0bd448298cc2e2071e56992d0774dc340c368ae950852ada60605260ff6080526020608060806000600163ffffffff'
+    setup_code = (
+        '7f456e9aea5e197a1f1af7a3e85a3212fa4049a3ba34c2289b4c860fc0b0c64ef'
+        '3600052601c6020527f9242685bf161793cc25603c231bc2f568eb630ea16aa137d2664ac8038825608'
+        '6040527f4f8ae3bd7535248d0bd448298cc2e2071e56992d0774dc340c368ae950852ada60605260ff6'
+        '080526020608060806000600163ffffffff'
+    )
     return _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
 
 def _generate_sha2_256_programs(op_counts, max_op_count):
