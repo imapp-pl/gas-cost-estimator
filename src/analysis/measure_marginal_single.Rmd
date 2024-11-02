@@ -5,6 +5,7 @@ params:
   env: ""
   programs: ""
   results: ""
+  output_estimated_cost: ""
   details: ""
 ---
 
@@ -189,6 +190,6 @@ estimates
 
 The results are exported to `r paste0("./", env, "_marginal_estimated_cost.csv")`.
 
-```{r}
-write.csv(estimates, paste0("./", env, "_marginal_estimated_cost.csv"), quote=FALSE, row.names=FALSE)
+```{r, incude = (params$output_estimated_cost != "")}
+write.csv(estimates, params$output_estimated_cost, quote=FALSE, row.names=FALSE)
 ```
