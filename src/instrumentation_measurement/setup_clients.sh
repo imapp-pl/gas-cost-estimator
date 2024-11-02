@@ -10,7 +10,7 @@ cd gas-cost-estimator-clients
 # EvmOne
 if [ ! -d "evmone" ]; then
     mkdir -p build/evmone
-    git clone --recurse-submodules -b benchmark-bytecode-execution https://github.com/JacekGlen/evmone.git --depth 1
+    git clone --recurse-submodules -b benchmark-bytecode-execution2 https://github.com/JacekGlen/evmone.git --depth 1
     cd evmone
     cmake -S . -B build -DEVMONE_TESTING=ON -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo 
     cmake --build build --parallel --config RelWithDebInfo --target evmone-bench 
