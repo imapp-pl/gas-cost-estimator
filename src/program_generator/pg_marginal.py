@@ -80,7 +80,7 @@ class ProgramGenerator(object):
   def _do_generate(self, opcode, max_op_count, shuffle_counts, step_op_count):
     """
     """
-    operations = [operation for operation in self._operations if operation['Value'] != '0xfe']
+    operations = self._operations
     if opcode:
       operations = [operation for operation in operations if operation['Mnemonic'] == opcode]
     else:
@@ -107,7 +107,7 @@ class ProgramGenerator(object):
       return Program(_generate_call_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] in ['LOG0', 'LOG1', 'LOG2', 'LOG3', 'LOG4']:
       return Program(_generate_log_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
-    if operation['Mnemonic'] in ['REVERT', 'RETURN', 'STOP']:
+    if operation['Mnemonic'] in ['REVERT', 'RETURN']:
       return Program(_generate_subcontext_exit_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] == 'MCOPY':
       return Program(_generate_mcopy_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
@@ -308,7 +308,7 @@ def _generate_subcontext_exit_program(operation, op_count, max_op_count):
   """
   Generates a program for REVERT, RETURN and STOP opcodes
   """
-  assert operation['Mnemonic'] in ['REVERT', 'RETURN', 'STOP']
+  assert operation['Mnemonic'] in ['REVERT', 'RETURN']
 
   no_op_subcontext_code = '60ff60005260026018'
   op_subcontext_code = no_op_subcontext_code + operation['Value'][2:4]

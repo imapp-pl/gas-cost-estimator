@@ -105,14 +105,17 @@ class Measurements(object):
                 ','.join(allowed_evms)))
             return
 
+        header = ""
         if evm == geth or evm == erigon:
             header = "program_id,sample_id,total_time_ns,mem_allocs,mem_alloc_bytes"
         elif evm == evmone:
             header = "program_id,sample_id,total_time_ns,iterations_count"
         elif evm == nethermind:
             header = "program_id,sample_id,total_time_ns,iterations_count,std_dev_time_ns,mem_allocs,mem_alloc_bytes"
-        elif evm == ethereumjs or evm == revm or evm == besu:
+        elif evm == ethereumjs or evm == revm:
             header = "program_id,sample_id,total_time_ns,iterations_count,std_dev_time_ns"
+        elif evm == besu:
+            header = "program_id,sample_id,total_time_ns,iterations_count,std_dev_time_ns,gasUsed,pass"
         print(header)
 
         for program in self._programs:
@@ -139,6 +142,8 @@ class Measurements(object):
                 instrumenter_result = self.run_besu_benchmark(
                     program, sample_size, exec_path)
 
+            if instrumenter_result is None:
+                return
             result_row = self.csv_row_append_info(instrumenter_result, program)
 
             csv_chunk = '\n'.join(result_row)
@@ -359,7 +364,7 @@ class Measurements(object):
         else:
             exec_path = os.path.abspath(exec_path)
 
-        args = [ '--code=' + program.bytecode, '--repeat=10', '--samples=100' ]
+        args = [ '--code=' + program.bytecode, '--repeat=1000', '--samples=1000' ]
         invocation = [exec_path] + args
 
         results = []
@@ -373,9 +378,19 @@ class Measurements(object):
                 print(stderr)
                 return
 
-            result = json.loads(stdout)
+            stdout_lines = stdout.splitlines()
+            # besu warnings, do not break execution but go to stderr
+            for i in range(0, len(stdout_lines) - 2):
+                print(stdout_lines[i], file=sys.stderr)
+
+            try:
+                result = json.loads(stdout_lines[-1])
+            except:
+                print("Error parsing the result:", stdout_lines[-1])
+                return
+
             results.append(
-                f'{run_id},{str(result["timens"])},{10*100},{str(result["std_dev_timens"])}')
+                f'{run_id},{str(result["timens"])},{10*100},{str(result["std_dev_timens"])},{result["gasUsed"]},{result["pass"]}')
         return results
 
     def csv_row_append_info(self, instrumenter_result, program):
