@@ -173,17 +173,24 @@ def _generate_call_program(create_operation, op_count, max_op_count):
   """
   assert create_operation['Mnemonic'] in ['CALL', 'STATICCALL', 'DELEGATECALL']
 
-  empty_pushes = '60ff' * 5
-  account_deployment_code = '7067600035600757fe5b60005260086018f36000526011600f6000f0'
-  opcode_args = ''
-  if create_operation['Mnemonic'] == 'CALL':
-    opcode_args = '600060006020600060008661ffff' * max_op_count
-  else:
-    opcode_args = '60006000602060008561ffff' * max_op_count
+  single_call = ''
+  noop = '' # contains the same series of opcodes as those invoked by single_call
+  if create_operation['Mnemonic'] == 'CALL': #
+    single_call = '86868686868686f150'
+    noop = '8686868686868660015860060157fe5b50'
+  elif create_operation['Mnemonic'] == 'STATICCALL':
+    single_call = '858585858585fa50'
+    noop = '85858585858560015860060157fe5b50'
+  elif create_operation['Mnemonic'] == 'DELEGATECALL': #
+    single_call = '858585858585f450'
+    noop = '85858585858560015860060157fe5b50'
 
-  opcodes_with_pops = (create_operation['Value'][2:4] + '50') * op_count
-  pops = '50' * (max_op_count - op_count + 5)
-  return empty_pushes + account_deployment_code + '60ff' + opcode_args + opcodes_with_pops + pops
+  dummy_pushes = '60ff' * 5
+  account_deployment_code = '716860015860060157fe5b60005260096017f36000526012600e6000f05f5f60205f5f8561ffff'
+  calls = single_call * op_count
+  noops = noop * (max_op_count - op_count)
+  dummy_pops = '50' * 5
+  return dummy_pushes + account_deployment_code + calls + noops + dummy_pops
 
 def _generate_log_program(log_operation, op_count, max_op_count):
   """
