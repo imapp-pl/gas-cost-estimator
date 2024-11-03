@@ -25,7 +25,7 @@ Value,Mnemonic,Gas Used,Subset,Removed from stack,Added to stack,Notes,Formula N
 0x1b,SHL,3,verylow,2,1,Left shift operation,
 0x1c,SHR,3,verylow,2,1,Logical right shift operation,
 0x1d,SAR,3,verylow,2,1,Arithmetic (signed) right shift operation,
-0x20,SHA3,30 + 6 * (size of input in words),,2,1,Compute Keccak-256 hash.,30 is the paid for the operation plus 6 paid for each word (rounded up) for the input data.
+0x20,KECCAK256,30 + 6 * (size of input in words),,2,1,Compute Keccak-256 hash.,30 is the paid for the operation plus 6 paid for each word (rounded up) for the input data.
 0x30,ADDRESS,2,base,0,1,Get address of currently executing account.,
 0x31,BALANCE,400,,1,1,Get balance of the given account.,
 0x32,ORIGIN,2,base,0,1,Get execution origination address.,
@@ -62,6 +62,11 @@ Value,Mnemonic,Gas Used,Subset,Removed from stack,Added to stack,Notes,Formula N
 0x59,MSIZE,2,base,0,1,Get the size of active memory in bytes.,
 0x5a,GAS,2,base,0,1,"Get the amount of available gas, including the corresponding reduction for the cost of this instruction.",
 0x5b,JUMPDEST,1,,0,0,Mark a valid destination for jumps,
+0x5c,TLOAD,100,,1,1,Load word from transient storage.,
+0x5c,TLOAD_EXT,100,,1,1,Load word from transient storage. In an external contract.,
+0x5d,TSTORE,100,,2,0,Save word to transient storage.,
+0x5d,TSTORE0,100,,2,0,Save word to transient storage. To always empty slot.,
+0x5d,TSTORE_EXT,100,,2,0,Save word to transient storage. In an external contract.,
 0x5e,MCOPY,3 + words_copied * memory_expanstion_cost,,3,1,Copy memory areas,
 0x5f,PUSH0,2,verylow,0,1,Place 0 on stack.,
 0x60 -- 0x7f,PUSH*,3,verylow,0,1,Place * byte item on stack. 0 < * <= 32,
@@ -79,5 +84,5 @@ Value,Mnemonic,Gas Used,Subset,Removed from stack,Added to stack,Notes,Formula N
 0xf4,DELEGATECALL,Complex -- see yellow paper  Appendix H,,6,1,"Message-call into this account with an alternative account’s code, but persisting the current values for sender and value.",
 0xfa,STATICCALL,100,,6,1,Static message-call into an account,
 0xfd,REVERT,,,2,0,End execution, revert state changes, return data mem[p…(p+s)),
-0xfe,INVALID,NA,,NA,NA,Designated invalid instruction.,
+0xfe,INVALID,0,zero,0,0,Designated invalid instruction.,
 0xff,SELFDESTRUCT,5000 + ((create_new_account) ? 25000 : 0),,1,0,Halt execution and register account for later deletion,5000 for the operation plus 25000 if a new account is also created. A refund of 24000 gas is also added to the refund counter for self-destructing the account.
