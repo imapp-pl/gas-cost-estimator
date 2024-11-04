@@ -164,7 +164,7 @@ def _generate_ecpairing_programs(op_counts, max_op_count):
         '7f1b71422869c92e49465200ca19033a8aa425f955be3d8329c4475503e45c00e160a052'
         '60ff60c052602060c060c06000600863ffffffff'
     )
-    programs += _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
+    programs += _generate_programs(op_counts, max_op_count, precompile + '79', nominal_gas_cost, setup_code)
 
     nominal_gas_cost = '113000'
     setup_code = (
@@ -182,7 +182,7 @@ def _generate_ecpairing_programs(op_counts, max_op_count):
         '7f23a8eb0b0996252cb548a4487da97b02422ebc0e834613f954de6c7e0afdc1fc61016052'
         '60ff6101805260206101806101806000600863ffffffff'
     )
-    programs += _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
+    programs += _generate_programs(op_counts, max_op_count, precompile + '113', nominal_gas_cost, setup_code)
 
     nominal_gas_cost = '181000'
     setup_code = (
@@ -212,7 +212,7 @@ def _generate_ecpairing_programs(op_counts, max_op_count):
         '7f17873a5d7834d0c1d7d9bab5f9934d7ac218834aa916d459d8ceafc280d59efb6102e052'
         '60ff6103005260206103006103006000600863ffffffff'
     )    
-    programs += _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
+    programs += _generate_programs(op_counts, max_op_count, precompile + '181', nominal_gas_cost, setup_code)
 
     nominal_gas_cost = '317000'
     setup_code = (
@@ -266,7 +266,7 @@ def _generate_ecpairing_programs(op_counts, max_op_count):
         '7f03d1fee23fa99c63fb8a760fe4794af4221f7bb7ceb194c7df2c63859c8b03296105e052'
         '60ff6106005260206106006106006000600863ffffffff'
     )
-    programs += _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
+    programs += _generate_programs(op_counts, max_op_count, precompile + '317', nominal_gas_cost, setup_code)
 
     return programs
 
