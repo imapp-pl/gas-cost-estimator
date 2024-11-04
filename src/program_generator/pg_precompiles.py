@@ -54,7 +54,7 @@ class ProgramGenerator(object):
 
             opcodes = [program.precompile for program in programs]
             op_counts = [program.op_count for program in programs]
-            program_ids = [program.precompile + '_' + program.nominal_gas_cost +
+            program_ids = [program.precompile + program.nominal_gas_cost +
                            '_' + str(program.op_count) for program in programs]
             bytecodes = [program.bytecode for program in programs]
 
@@ -70,7 +70,6 @@ class ProgramGenerator(object):
 
     def _do_generate(self, max_op_count, step_op_count):
         op_counts = list(range(0, max_op_count + 1, step_op_count))
-
         programs: list[Program] = \
             _generate_ecrecover_programs(op_counts, max_op_count) + \
             _generate_sha2_256_programs(op_counts, max_op_count) + \
@@ -82,7 +81,6 @@ class ProgramGenerator(object):
             _generate_ecpairing_programs(op_counts, max_op_count) + \
             _generate_blake2f_programs(op_counts, max_op_count) + \
             _generate_pointeval_programs(op_counts, max_op_count)
-
         return programs
 
 
@@ -102,52 +100,53 @@ def _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, se
         programs.append(Program(bytecode, precompile, op_count, nominal_gas_cost))
     return programs
 
+
 def _generate_ecrecover_programs(op_counts, max_op_count):
     precompile = 'ECRECOVER'
-    nominal_gas_cost = '3000'
     setup_code = (
         '7f456e9aea5e197a1f1af7a3e85a3212fa4049a3ba34c2289b4c860fc0b0c64ef'
         '3600052601c6020527f9242685bf161793cc25603c231bc2f568eb630ea16aa137d2664ac8038825608'
         '6040527f4f8ae3bd7535248d0bd448298cc2e2071e56992d0774dc340c368ae950852ada60605260ff6'
         '080526020608060806000600163ffffffff'
     )
-    return _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
+    return _generate_programs(op_counts, max_op_count, precompile, '', setup_code)
+
 
 def _generate_sha2_256_programs(op_counts, max_op_count):
     precompile = 'SHA2-256'
-    nominal_gas_cost = '72'
     setup_code = '60ff60005260ff6020526020602060206000600263ffffffff'
-    return _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
+    return _generate_programs(op_counts, max_op_count, precompile, '', setup_code)
+
 
 def _generate_ripemd_160_programs(op_counts, max_op_count):
     precompile = 'RIPEMD-160'
-    nominal_gas_cost = '720'
     setup_code = '60ff60005260ff6020526020602060206000600363ffffffff'
-    return _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
+    return _generate_programs(op_counts, max_op_count, precompile, '', setup_code)
+
 
 def _generate_identity_programs(op_counts, max_op_count):
     precompile = 'IDENTITY'
-    nominal_gas_cost = '18'
     setup_code = '60ff60005260fa6020526020602060206000600463ffffffff'
-    return _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
+    return _generate_programs(op_counts, max_op_count, precompile, '', setup_code)
+
 
 def _generate_modexp_programs(op_counts, max_op_count):
     precompile = 'MODEXP'
-    nominal_gas_cost = '200'
     setup_code = '6004600052600160205260046040527fabcdef1108abcdef22000000000000000000000000000000000000000000000060605260ff6080526004609c60806000600563ffffffff'
-    return _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
+    return _generate_programs(op_counts, max_op_count, precompile, '', setup_code)
+
 
 def _generate_ecadd_programs(op_counts, max_op_count):
     precompile = 'ECADD'
-    nominal_gas_cost = '150'
     setup_code = '600160005260026020526001604052600260605260ff60805260ff60a0526040608060806000600663ffffffff'
-    return _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
+    return _generate_programs(op_counts, max_op_count, precompile, '', setup_code)
+
 
 def _generate_ecmul_programs(op_counts, max_op_count):
     precompile = 'ECMUL'
-    nominal_gas_cost = '6000'
     setup_code = '60016000526002602052600260405260ff60605260ff6080526040606060606000600763ffffffff'
-    return _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
+    return _generate_programs(op_counts, max_op_count, precompile, '', setup_code)
+
 
 def _generate_ecpairing_programs(op_counts, max_op_count):
     precompile = 'ECPAIRING'
@@ -164,7 +163,7 @@ def _generate_ecpairing_programs(op_counts, max_op_count):
         '7f1b71422869c92e49465200ca19033a8aa425f955be3d8329c4475503e45c00e160a052'
         '60ff60c052602060c060c06000600863ffffffff'
     )
-    programs += _generate_programs(op_counts, max_op_count, precompile + '79', nominal_gas_cost, setup_code)
+    programs += _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
 
     nominal_gas_cost = '113000'
     setup_code = (
@@ -182,7 +181,7 @@ def _generate_ecpairing_programs(op_counts, max_op_count):
         '7f23a8eb0b0996252cb548a4487da97b02422ebc0e834613f954de6c7e0afdc1fc61016052'
         '60ff6101805260206101806101806000600863ffffffff'
     )
-    programs += _generate_programs(op_counts, max_op_count, precompile + '113', nominal_gas_cost, setup_code)
+    programs += _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
 
     nominal_gas_cost = '181000'
     setup_code = (
@@ -211,8 +210,8 @@ def _generate_ecpairing_programs(op_counts, max_op_count):
         '7f240c9c5a6993d344744d77bbb855960b6704e91846cf362444bff1ccaf45a7c26102c052'
         '7f17873a5d7834d0c1d7d9bab5f9934d7ac218834aa916d459d8ceafc280d59efb6102e052'
         '60ff6103005260206103006103006000600863ffffffff'
-    )    
-    programs += _generate_programs(op_counts, max_op_count, precompile + '181', nominal_gas_cost, setup_code)
+    )
+    programs += _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
 
     nominal_gas_cost = '317000'
     setup_code = (
@@ -266,23 +265,23 @@ def _generate_ecpairing_programs(op_counts, max_op_count):
         '7f03d1fee23fa99c63fb8a760fe4794af4221f7bb7ceb194c7df2c63859c8b03296105e052'
         '60ff6106005260206106006106006000600863ffffffff'
     )
-    programs += _generate_programs(op_counts, max_op_count, precompile + '317', nominal_gas_cost, setup_code)
+    programs += _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
 
     return programs
 
+
 def _generate_blake2f_programs(op_counts, max_op_count):
     precompile = 'BLAKE2F'
-    nominal_gas_cost = '12'
     setup_code = \
         '630000000c6003537f48c9bdf267e6096a3ba7ca8485ae67bb2bf894fe72f36e3cf1361d5f3af5' + \
         '4fa56004527fd182e6ad7f520e511f6c3e2b8c68059b6bbd41fbabd9831f79217e1319cde05b60' + \
         '24527f616263000000000000000000000000000000000000000000000000000000000060445260' + \
         '0360c453600160d45360ff60e05260ff61010052604060e060d56000600963ffffffff'
-    return _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
+    return _generate_programs(op_counts, max_op_count, precompile, '', setup_code)
+
 
 def _generate_pointeval_programs(op_counts, max_op_count):
     precompile = 'POINTEVAL'
-    nominal_gas_cost = '50000'
     setup_code = \
         '7f013c03613f6fc558fb7e61e75602241ed9a2f04e36d8670aadd286e71b5ca9cc610' + \
         '000527f42000000000000000000000000000000000000000000000000000000000000' + \
@@ -292,7 +291,7 @@ def _generate_pointeval_programs(op_counts, max_op_count):
         '121ee972ebc472d02610080527f944a74f5c6243e14052e105124b70bf65faf85ad3a' + \
         '494325e269fad097842cba6100a05260ff6100c05260ff6100e052604060c060c0600' + \
         '0600a63ffffffff'
-    return _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
+    return _generate_programs(op_counts, max_op_count, precompile, '', setup_code)
 
 def main():
     fire.Fire(ProgramGenerator, name='generate')
