@@ -52,7 +52,7 @@ class ProgramGenerator(object):
         if fullCsv:
             writer = csv.writer(sys.stdout, delimiter=',', quotechar='"')
 
-            opcodes = [program.precompile for program in programs]
+            opcodes = [program.precompile + program.nominal_gas_cost for program in programs]
             op_counts = [program.op_count for program in programs]
             program_ids = [program.precompile + program.nominal_gas_cost +
                            '_' + str(program.op_count) for program in programs]
