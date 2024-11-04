@@ -58,7 +58,7 @@ if (nrow(estimated_cost) == 0) {
 all_opcodes = unique(estimated_cost$op)
 all_envs = unique(estimated_cost$env)
 
-current_gas_cost = read.csv("current_gas_cost.csv")
+current_gas_cost = read.csv(params$current_gas_cost)
 ```
 
 ```{r, include=FALSE}
@@ -86,7 +86,7 @@ q = c("SELECT ")
 for (env in all_envs) {
   df = estimated_cost[which(estimated_cost$env==env),]
   eligible_opcodes = df[,'op'] # TODO limit opcodes for scale
-  reference_df = current_gas_cost[which(current_gas_cost$eligible == 1),]
+  reference_df = current_gas_cost[which(current_gas_cost$groups == 0),]
   scale = calculate_scale(df, reference_df)
   q <- append(q, paste0(env, ".estimate_marginal_ns/", scale, " as ", env, "_gas,"))
   q <- append(q, paste0(env, ".estimate_marginal_ns_stderr/", scale, " as ", env, "_gas_stderr,"))
@@ -95,35 +95,59 @@ q <- append(q, " current_gas_cost.opcode, current_gas_cost.constant_current_gas 
 for (env in all_envs) {
   q <- append(q, paste0(" INNER JOIN estimated_cost as ", env, " ON ", env, ".op = current_gas_cost.opcode AND ", env, ".env = '", env, "'"))
 }
+q <- append(q, " WHERE current_gas_cost.groups >= 0")
+q
 
 gas_schedule_comparison <- sqldf(paste(q, collapse = ""))
 
 all_envs_cols <- paste0(all_envs, "_gas")
 
-maximum_gas_cost = max(gas_schedule_comparison[, all_envs_cols])
+max_groups = max(current_gas_cost[, "groups"])
 ```
 
 Plot the scaled gas cost schedules.
 
-```{r fig.width=30, fig.height=20}
-plot(gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(0,maximum_gas_cost * 1.1), xlab="", ylab="", las=2)
-axis(1, at=1:nrow(gas_schedule_comparison), labels=gas_schedule_comparison$opcode, las=2)
-for (i in 1:length(all_envs)) {
-  points(gas_schedule_comparison[, paste0(all_envs[i], "_gas")], col=env_colors[i], bg=env_colors[i], xaxt='n', pch=21)
+```{r fig.width=20, fig.height=15}
+for (g in 0:max_groups) {
+  groups_opcode <- current_gas_cost[which(current_gas_cost$groups == g), "opcode"]
+  if (length(groups_opcode) == 0) {
+    next
+  }
+  grups_gas_schedule_comparison <- gas_schedule_comparison[which(gas_schedule_comparison$opcode %in% groups_opcode), ]
+  if (nrow(grups_gas_schedule_comparison) == 0) {
+    next
+  }
+  maximum_gas_cost = max(grups_gas_schedule_comparison[, c(all_envs_cols, "constant_current_gas")])
+  plot(grups_gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(0,maximum_gas_cost * 1.2), xlab="", ylab="", las=2)
+  axis(1, at=1:nrow(grups_gas_schedule_comparison), labels=grups_gas_schedule_comparison$opcode, las=2)
+  for (i in 1:length(all_envs)) {
+    points(grups_gas_schedule_comparison[, paste0(all_envs[i], "_gas")], col=env_colors[i], bg=env_colors[i], xaxt='n', pch=21)
+  }
+  title(main="The scaled gas costs")
+  legend(1, maximum_gas_cost * 1.2, c(all_envs, "Current gas cost schedule"), fill=c(env_colors[1:length(all_envs)], 'grey'), cex=2)
 }
-title(main="The scaled gas costs")
-legend(0, maximum_gas_cost, c(all_envs, "Current gas cost schedule"), fill=c(env_colors[1:length(all_envs)], 'grey'), cex=2)
 ```
 
 And individual plots of scaled gas schedules for EVMs.
 
-```{r fig.width=30, fig.height=20}
+```{r fig.width=20, fig.height=15}
 for (i in 1:length(all_envs)) {
-  plot(gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(0,maximum_gas_cost * 1.1), xlab="", ylab="")
-  axis(1, at=1:nrow(gas_schedule_comparison), labels=gas_schedule_comparison$opcode, las=2)
-  points(gas_schedule_comparison[, paste0(all_envs[i], "_gas")], col=env_colors[i], bg=env_colors[i], xaxt='n', pch=21)
-  legend(0, maximum_gas_cost, c(all_envs[i], "Current gas cost schedule"), fill=c(env_colors[i], 'grey'), cex=2)
-  title(main=paste0("The scaled gas cost - ", all_envs[i]))
+  for (g in 0:max_groups) {
+    groups_opcode <- current_gas_cost[which(current_gas_cost$groups == g), "opcode"]
+    if (length(groups_opcode) == 0) {
+      next
+    }
+    grups_gas_schedule_comparison <- gas_schedule_comparison[which(gas_schedule_comparison$opcode %in% groups_opcode), c(paste0(all_envs[i], "_gas"), "opcode", "constant_current_gas")]
+    if (nrow(grups_gas_schedule_comparison) == 0) {
+      next
+    }
+    maximum_gas_cost = max(grups_gas_schedule_comparison[, c(paste0(all_envs[i], "_gas"), "constant_current_gas")])
+    plot(grups_gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(0,maximum_gas_cost * 1.2), xlab="", ylab="")
+    axis(1, at=1:nrow(grups_gas_schedule_comparison), labels=grups_gas_schedule_comparison$opcode, las=2)
+    points(grups_gas_schedule_comparison[, paste0(all_envs[i], "_gas")], col=env_colors[i], bg=env_colors[i], xaxt='n', pch=21)
+    legend(1, maximum_gas_cost * 1.2, c(all_envs[i], "Current gas cost schedule"), fill=c(env_colors[i], 'grey'), cex=2)
+    title(main=paste0("The scaled gas cost - ", all_envs[i]))
+  }
 }
 ```
 
@@ -153,14 +177,24 @@ gas_schedule_comparison$alternative_gas_rel_diff <- abs((gas_schedule_comparison
 gas_schedule_comparison[, c('opcode', 'constant_current_gas', 'alternative_gas', 'alternative_gas_stderr', 'alternative_gas_rel_diff', 'alternative_gas_rel_stderr')]
 ```
 
-```{r fig.width=30, fig.height=10}
-maximum_gas_cost = max(gas_schedule_comparison[, c('constant_current_gas', 'alternative_gas')])
-
-plot(gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(0,maximum_gas_cost * 1.1), xlab="", ylab="")
-axis(1, at=1:nrow(gas_schedule_comparison), labels=gas_schedule_comparison$opcode, las=2)
-points(gas_schedule_comparison$alternative_gas, col='orange', bg='orange', xaxt='n', pch=21)
-title(main="The alternative gas cost schedule")
-legend(0, maximum_gas_cost, c("Alternative gas cost schedule", "Current gas cost schedule"), fill=c('orange', 'grey'), cex=2)
+```{r fig.width=20, fig.height=10}
+for (g in 0:max_groups) {
+  groups_opcode <- current_gas_cost[which(current_gas_cost$groups == g), "opcode"]
+  if (length(groups_opcode) == 0) {
+    next
+  }
+  grups_gas_schedule_comparison <- gas_schedule_comparison[which(gas_schedule_comparison$opcode %in% groups_opcode), c("opcode", "constant_current_gas", "alternative_gas")]
+  if (nrow(grups_gas_schedule_comparison) == 0) {
+    next
+  }
+  maximum_gas_cost = max(grups_gas_schedule_comparison[, c("constant_current_gas", "alternative_gas")])
+  
+  plot(grups_gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(0,maximum_gas_cost * 1.1), xlab="", ylab="")
+  axis(1, at=1:nrow(grups_gas_schedule_comparison), labels=grups_gas_schedule_comparison$opcode, las=2)
+  points(grups_gas_schedule_comparison$alternative_gas, col='orange', bg='orange', xaxt='n', pch=21)
+  title(main="The alternative gas cost schedule")
+  legend(0, maximum_gas_cost, c("Alternative gas cost schedule", "Current gas cost schedule"), fill=c('orange', 'grey'), cex=2)
+}
 ```
 
 ```{r fig.width=30, fig.height=15, include=FALSE}

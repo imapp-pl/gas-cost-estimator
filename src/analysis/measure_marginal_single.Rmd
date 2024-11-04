@@ -188,8 +188,10 @@ The resulting estimates based on the regressions above.
 estimates
 ```
 
-The results are exported to `r paste0("./", env, "_marginal_estimated_cost.csv")`.
+The results are exported to `r params$output_estimated_cost`.
 
-```{r, incude = (params$output_estimated_cost != "")}
-write.csv(estimates, params$output_estimated_cost, quote=FALSE, row.names=FALSE)
+```{r, incude = FALSE}
+if (params$output_estimated_cost != "") {
+  write.csv(estimates, params$output_estimated_cost, quote=FALSE, row.names=FALSE)
+}
 ```
