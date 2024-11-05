@@ -30,6 +30,9 @@ def generate_single_marginal(single_op_pushes, operation, op_count):
   total_pop_count = constants.MAX_INSTRUCTIONS * nreturns
   # support up to 60 ternary instructions
   push_count = constants.MAX_INSTRUCTIONS * 3
+  # unless those are LOG* operations which consume more values from the stack
+  if operation['Mnemonic'] in ['LOG2', 'LOG3', 'LOG4']:
+    push_count = constants.MAX_INSTRUCTIONS * 6
   # ...but before the pushes intended for `operation`, put "void" pushes to ensure all the pops can pop regardless of the remainder of the program
   empty_push_count = total_pop_count
 
