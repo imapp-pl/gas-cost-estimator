@@ -43,7 +43,11 @@ The programs is the set of bytecode programs with varying number of opcodes.
 The measurements are time measurements of program runs or benchmarks.
 The estimation of each opcode is calculated as the regression against the number of a given opcode in the executed programs.
 
-Parametrization. The env = `r env`, the programs file =`r params$programs`, the results file = `r params$results`, the details = `r details`.
+Parametrization. The evm client name env=`r env`, 
+the file with programs programs=`r params$programs`, 
+the file with measurements results=`r params$results`,  
+the output csv file with estimated cost output\_estimated\_cost=`r params$output_estimated_cost`,
+should the details be included in the report details=`r details`.
 
 `r if(details){"Data preparation. Reading data from the programs file and results file. Initial adjustments."}`
 
