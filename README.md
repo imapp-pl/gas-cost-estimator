@@ -76,11 +76,11 @@ For now, use `/data` volume to pass input files and retrieve an output report.
 To render `measure_marginal` report provide your params and an output file and execute the command:
 
 ```shell
-docker run -it -v /your/path/to/data:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e "rmarkdown::render('/reports/measure_marginal_single.Rmd', params = list(env = 'erigon', programs='pg_marginal_full5_c50_step1_shuffle.csv', results='erigon_pg_marginal_full5_c50_step1_shuffle_size_10.csv'), output_file = 'erigon_measure_marginal_single.html')"
+docker run -it -v /your/path/to/data:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e "rmarkdown::render('/reports/measure_marginal_single.Rmd', params = list(env = 'erigon', programs='pg_marginal_full5_c50_step1_shuffle.csv', results='erigon_pg_marginal_full5_c50_step1_shuffle_size_10.csv', output_estimated_cost='erigon_marginal_estimated_cost.csv'), output_file = '/data/erigon_measure_marginal_single.html')"
 ```
 
 To render `final_estimate` report provide your params and an output file and execute the command:
 
 ```shell
-docker run -it -v /home/lukaszglen/sources/imapp5/stage4:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e "rmarkdown::render('/reports/final_estimation.Rmd', params = list(estimate_files='besu_marginal_estimated_cost.csv, erigon_marginal_estimated_cost.csv, ethereumjs_marginal_estimated_cost.csv, geth_marginal_estimated_cost.csv, nethermind_marginal_estimated_cost.csv, revm_marginal_estimated_cost.csv', current_gas_cost='current_gas_cost.csv'), output_file = 'final_estimation.html')"
+docker run -it -v /your/path/to/data:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e "rmarkdown::render('/reports/final_estimation.Rmd', params = list(estimate_files='besu_marginal_estimated_cost.csv, erigon_marginal_estimated_cost.csv, ethereumjs_marginal_estimated_cost.csv, geth_marginal_estimated_cost.csv, nethermind_marginal_estimated_cost.csv, revm_marginal_estimated_cost.csv', current_gas_cost='current_gas_cost.csv'), output_file = '/data/final_estimation.html')"
 ```
