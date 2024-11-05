@@ -36,7 +36,7 @@ class ProgramGenerator(object):
     def __init__(self, seed=0):
         random.seed(a=seed, version=2)
 
-    def generate(self, fullCsv=False, maxOpCount=50, stepOpCount=5):
+    def generate(self, fullCsv=True, maxOpCount=50, stepOpCount=5):
         """
         Main entrypoint of the CLI tool. Should dispatch to the desired generation routine and print
         programs to STDOUT

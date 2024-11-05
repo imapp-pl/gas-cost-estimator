@@ -53,7 +53,7 @@ class ProgramGenerator(object):
 
     self._operations = [opcodes[op] for op in selection]
 
-  def generate(self, fullCsv=False, count=1, opcode=None, opCount=10):
+  def generate(self, fullCsv=True, count=1, opcode=None, opCount=10):
     """
     Main entrypoint of the CLI tool. Should dispatch to the desired generation routine and print
     programs to STDOUT

@@ -40,7 +40,7 @@ class ProgramGenerator(object):
 
     self._operations = [op for op in opcodes if op['Value'] in selection]
 
-  def generate(self, fullCsv=False, opcode=None, maxOpCount=50, shuffleCounts=False, stepOpCount=5):
+  def generate(self, fullCsv=True, opcode=None, maxOpCount=50, shuffleCounts=False, stepOpCount=5):
     """
     Main entrypoint of the CLI tool. Should dispatch to the desired generation routine and print
     programs to STDOUT

@@ -104,7 +104,7 @@ class ProgramGenerator(object):
     else:
       return op
 
-  def generate(self, fullCsv=False, count=1, opsLimit=None, bytecodeLimit=None, dominant=None, push=32, cleanStack=False, randomizePush=False, randomizeOpsLimit=False):
+  def generate(self, fullCsv=True, count=1, opsLimit=None, bytecodeLimit=None, dominant=None, push=32, cleanStack=False, randomizePush=False, randomizeOpsLimit=False):
     """
     Main entrypoint of the CLI tool. Should dispatch to the desired generation routine and print
     programs to STDOUT. If no limits given then by default opsLimit=100
