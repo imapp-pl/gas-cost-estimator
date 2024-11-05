@@ -4,18 +4,27 @@ output: html_document
 params:
   estimate_files: ""
   current_gas_cost: ""
+  metric: "l1"
+  details: ""
 ---
 
 ```{r, setup, include=FALSE}
-#  params$estimate_files = "besu_marginal_estimated_cost.csv, erigon_marginal_estimated_cost.csv, ethereumjs_marginal_estimated_cost.csv, geth_marginal_estimated_cost.csv, nethermind_marginal_estimated_cost.csv, revm_marginal_estimated_cost.csv"
-#  params$current_gas_cost = "current_gas_cost.csv"
-
 if (params$estimate_files == "") {
   stop("'estimate_files' param is missing, the comma separated list of estimate files")
 }
 
 if (params$current_gas_cost == "") {
   stop("'current_gas_cost' param is missing, the file with current gas cost schedule")
+}
+
+if (!(params$metric %in% c("l1", "l2"))) {
+  stop("unsupported metric")
+}
+
+if (params$details == "") {
+  details = FALSE
+} else {
+  details = tolower(params$details) %in% c("1", "t", "true", "on")
 }
 
 library(sqldf)
@@ -36,7 +45,13 @@ revm_color = rgb(0.2,0.7,0.8,0.3)
 env_colors = c(geth_color, evmone_color, besu_color, nethermind_color, ethereumjs_color, erigon_color, revm_color)
 ```
 
-In this script we conduct the comparison procedure of the obtained estimates.
+In this script we conduct the comparison procedure of the obtained estim
+
+Parametrization. 
+The comma separeted list of csv files with precomputed estimated costs for evm clients estimate_files=`r params$estimate_files`,
+the file with the reference gas cost table and groups configuration current_gas_cost=`r params$current_gas_cost`,
+used metric code metric=`r params$metric`,
+should the details be included in the report details=`r details`.
 
 ```{r, include=FALSE}
 all_estimate_files = strsplit(params$estimate_files, split="\\s*,\\s*")[[1]]
@@ -44,7 +59,6 @@ all_estimate_files = strsplit(params$estimate_files, split="\\s*,\\s*")[[1]]
 if (length(all_estimate_files) == 0) {
   stop("No estimated cost file found.")
 }
-# TODO parametrization
 # TODO details
 estimated_cost = data.frame(op=character(0),estimate_marginal_ns=numeric(0),estimate_marginal_stderr=numeric(0),env=character(0))
 for (i in 1:length(all_estimate_files)) {
@@ -62,7 +76,33 @@ current_gas_cost = read.csv(params$current_gas_cost)
 ```
 
 ```{r, include=FALSE}
-# df - must contain all opcodes from  reference_df
+# reference_df - subset of current_gas_cost
+calculate_l1_scale <- function(df, reference_df) {
+  q = "SELECT estimate_marginal_ns/constant_current_gas FROM reference_df LEFT JOIN df ON df.op = reference_df.opcode"
+  values <- sqldf(q)
+  m <- median(values[,1], na.rm=TRUE)
+  if (is.na(m)) {
+    stop("cannot calculate median")
+  }
+  m
+}
+
+calculate_l1_row_mean <- function(df) {
+  out_df = data.frame(matrix(nrow = nrow(df), ncol = 0))
+  out_df$mean <- apply(df, 1, median, na.rm=TRUE)
+
+  mf <- function(row_) {
+    m <- median(row_, na.rm = TRUE)
+    if (is.na(m)) {
+      NA
+    } else {
+      mean(sapply(row_,  function(x) ifelse(is.na(x), NA, abs(x - m)) ), na.rm=TRUE)
+    }
+  }
+  out_df$stderr <- apply(df, 1, mf)
+  out_df
+}
+
 # reference_df - subset of current_gas_cost
 calculate_l2_scale <- function(df, reference_df) {
   q = "SELECT avg(estimate_marginal_ns/constant_current_gas) FROM reference_df INNER JOIN df ON df.op = reference_df.opcode"
@@ -77,9 +117,17 @@ calculate_l2_row_mean <- function(df) {
   out_df
 }
 
-calculate_scale = calculate_l2_scale
-calculate_row_mean = calculate_l2_row_mean
+if (params$metric == "l1") {
+  calculate_scale = calculate_l1_scale
+  calculate_row_mean = calculate_l1_row_mean
+} else if (params$metric == "l2") {
+  calculate_scale = calculate_l2_scale
+  calculate_row_mean = calculate_l2_row_mean
+} else {
+  stop("unsupported metric")
+}
 ```
+
 
 ```{r, include=FALSE}
 q = c("SELECT ")
@@ -93,21 +141,20 @@ for (env in all_envs) {
 }
 q <- append(q, " current_gas_cost.opcode, current_gas_cost.constant_current_gas FROM current_gas_cost")
 for (env in all_envs) {
-  q <- append(q, paste0(" INNER JOIN estimated_cost as ", env, " ON ", env, ".op = current_gas_cost.opcode AND ", env, ".env = '", env, "'"))
+  q <- append(q, paste0(" LEFT JOIN estimated_cost as ", env, " ON ", env, ".op = current_gas_cost.opcode AND ", env, ".env = '", env, "'"))
 }
 q <- append(q, " WHERE current_gas_cost.groups >= 0")
-q
-
-gas_schedule_comparison <- sqldf(paste(q, collapse = ""))
 
 all_envs_cols <- paste0(all_envs, "_gas")
-
 max_groups = max(current_gas_cost[, "groups"])
+
+gas_schedule_comparison <- sqldf(paste(q, collapse = ""))
+gas_schedule_comparison <- gas_schedule_comparison[rowSums(!is.na(gas_schedule_comparison[, all_envs_cols])) > 0, ] # remove all NA rows
 ```
 
 Plot the scaled gas cost schedules.
 
-```{r fig.width=20, fig.height=15}
+```{r fig.width=15, fig.height=10}
 for (g in 0:max_groups) {
   groups_opcode <- current_gas_cost[which(current_gas_cost$groups == g), "opcode"]
   if (length(groups_opcode) == 0) {
@@ -117,20 +164,20 @@ for (g in 0:max_groups) {
   if (nrow(grups_gas_schedule_comparison) == 0) {
     next
   }
-  maximum_gas_cost = max(grups_gas_schedule_comparison[, c(all_envs_cols, "constant_current_gas")])
+  maximum_gas_cost = max(grups_gas_schedule_comparison[, c(all_envs_cols, "constant_current_gas")], na.rm=TRUE)
   plot(grups_gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(0,maximum_gas_cost * 1.2), xlab="", ylab="", las=2)
   axis(1, at=1:nrow(grups_gas_schedule_comparison), labels=grups_gas_schedule_comparison$opcode, las=2)
   for (i in 1:length(all_envs)) {
     points(grups_gas_schedule_comparison[, paste0(all_envs[i], "_gas")], col=env_colors[i], bg=env_colors[i], xaxt='n', pch=21)
   }
   title(main="The scaled gas costs")
-  legend(1, maximum_gas_cost * 1.2, c(all_envs, "Current gas cost schedule"), fill=c(env_colors[1:length(all_envs)], 'grey'), cex=2)
+  legend(1, maximum_gas_cost * 1.2, c(all_envs, "Current gas cost schedule"), fill=c(env_colors[1:length(all_envs)], 'grey'), cex=1)
 }
 ```
 
-And individual plots of scaled gas schedules for EVMs.
+`r if(details){"And individual plots of scaled gas schedules for EVMs."}`
 
-```{r fig.width=20, fig.height=15}
+```{r fig.width=15, fig.height=10, include=details}
 for (i in 1:length(all_envs)) {
   for (g in 0:max_groups) {
     groups_opcode <- current_gas_cost[which(current_gas_cost$groups == g), "opcode"]
@@ -141,11 +188,11 @@ for (i in 1:length(all_envs)) {
     if (nrow(grups_gas_schedule_comparison) == 0) {
       next
     }
-    maximum_gas_cost = max(grups_gas_schedule_comparison[, c(paste0(all_envs[i], "_gas"), "constant_current_gas")])
+    maximum_gas_cost = max(grups_gas_schedule_comparison[, c(paste0(all_envs[i], "_gas"), "constant_current_gas")], na.rm=TRUE)
     plot(grups_gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(0,maximum_gas_cost * 1.2), xlab="", ylab="")
     axis(1, at=1:nrow(grups_gas_schedule_comparison), labels=grups_gas_schedule_comparison$opcode, las=2)
     points(grups_gas_schedule_comparison[, paste0(all_envs[i], "_gas")], col=env_colors[i], bg=env_colors[i], xaxt='n', pch=21)
-    legend(1, maximum_gas_cost * 1.2, c(all_envs[i], "Current gas cost schedule"), fill=c(env_colors[i], 'grey'), cex=2)
+    legend(1, maximum_gas_cost * 1.2, c(all_envs[i], "Current gas cost schedule"), fill=c(env_colors[i], 'grey'), cex=1)
     title(main=paste0("The scaled gas cost - ", all_envs[i]))
   }
 }
@@ -177,7 +224,7 @@ gas_schedule_comparison$alternative_gas_rel_diff <- abs((gas_schedule_comparison
 gas_schedule_comparison[, c('opcode', 'constant_current_gas', 'alternative_gas', 'alternative_gas_stderr', 'alternative_gas_rel_diff', 'alternative_gas_rel_stderr')]
 ```
 
-```{r fig.width=20, fig.height=10}
+```{r fig.width=15, fig.height=10}
 for (g in 0:max_groups) {
   groups_opcode <- current_gas_cost[which(current_gas_cost$groups == g), "opcode"]
   if (length(groups_opcode) == 0) {
@@ -187,13 +234,13 @@ for (g in 0:max_groups) {
   if (nrow(grups_gas_schedule_comparison) == 0) {
     next
   }
-  maximum_gas_cost = max(grups_gas_schedule_comparison[, c("constant_current_gas", "alternative_gas")])
+  maximum_gas_cost = max(grups_gas_schedule_comparison[, c("constant_current_gas", "alternative_gas")], na.rm=TRUE)
   
-  plot(grups_gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(0,maximum_gas_cost * 1.1), xlab="", ylab="")
+  plot(grups_gas_schedule_comparison$constant_current_gas, col='grey', xaxt='n', ylim=c(0,maximum_gas_cost * 1.2), xlab="", ylab="")
   axis(1, at=1:nrow(grups_gas_schedule_comparison), labels=grups_gas_schedule_comparison$opcode, las=2)
   points(grups_gas_schedule_comparison$alternative_gas, col='orange', bg='orange', xaxt='n', pch=21)
   title(main="The alternative gas cost schedule")
-  legend(0, maximum_gas_cost, c("Alternative gas cost schedule", "Current gas cost schedule"), fill=c('orange', 'grey'), cex=2)
+  legend(1, maximum_gas_cost * 1.2, c("Alternative gas cost schedule", "Current gas cost schedule"), fill=c('orange', 'grey'), cex=1)
 }
 ```
 
