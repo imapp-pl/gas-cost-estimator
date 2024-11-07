@@ -109,8 +109,14 @@ class ProgramGenerator(object):
       return Program(_generate_log_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] in ['REVERT', 'RETURN']:
       return Program(_generate_subcontext_exit_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] == 'MSTORE':
+      return Program(_generate_mstore_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] == 'MSTORE_COLD':
+      return Program(_generate_mstore_cold_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] == 'MCOPY':
       return Program(_generate_mcopy_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] == 'MCOPY_COLD':
+      return Program(_generate_mcopy_cold_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] == 'KECCAK256':
       return Program(_generate_keccak256_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] == 'TLOAD':
@@ -206,18 +212,49 @@ def _generate_log_program(log_operation, op_count, max_op_count):
 
   return memory + arguments + logs
 
+def _generate_mstore_program(mcopy_operation, op_count, max_op_count):
+  """
+  Generates a program for MSTORE opcode
+  """
+  assert mcopy_operation['Mnemonic'] == 'MSTORE'
+  
+  init = '60ff5f52'
+  ops = '60ff5f52' * op_count
+  noops = '60ff5f' * (max_op_count - op_count)
+  return init + ops + noops
+
+def _generate_mstore_cold_program(mcopy_operation, op_count, max_op_count):
+  """
+  Generates a program for MSTORE opcode using cold memory (memory expansion every time)
+  """
+  assert mcopy_operation['Mnemonic'] == 'MSTORE_COLD'
+
+  init = '60ff5f525f'
+  ops = '60200160ff8152' * op_count
+  noops = '60200160ff81' * (max_op_count - op_count)
+  return init + ops + noops
+
 def _generate_mcopy_program(mcopy_operation, op_count, max_op_count):
   """
   Generates a program for MCOPY opcode
   """
   assert mcopy_operation['Mnemonic'] == 'MCOPY'
   
-  # fill 32nd byte of memory
-  memory = '60ff600052'
-  # copy 32nd byte of memory to the 1st byte so there is no memory expansion on MCOPY
-  arguments = '6001601f6000' * max_op_count
+  init = '60ff5f5260fe602052'
+  ops = '60205f60205e' * op_count
+  noops = '60205f6020' * (max_op_count - op_count)
+  return init + ops + noops
 
-  return memory + arguments + mcopy_operation['Value'][2:4] * op_count
+def _generate_mcopy_cold_program(mcopy_operation, op_count, max_op_count):
+  """
+  Generates a program for MCOPY opcode using cold memory (memory expansion every time)
+  """
+  assert mcopy_operation['Mnemonic'] == 'MCOPY_COLD'
+    
+  init = '60ff5f525f'
+  ops = '60200160205f825e' * op_count
+  noops = '60200160205f82' * (max_op_count - op_count)
+  return init + ops + noops
 
 def _generate_keccak256_program(mcopy_operation, op_count, max_op_count):
   """
