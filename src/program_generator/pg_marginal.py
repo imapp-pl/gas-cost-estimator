@@ -140,9 +140,9 @@ def _generate_create_program(create_operation, op_count):
   """
   assert create_operation['Mnemonic'] == 'CREATE'
 
-  account_code = '6d6460016001016000526005601cf3600052'
+  account_code = '6d6460016001016000526005601bf3600052'
   empty_pushes = '6000' * constants.MAX_INSTRUCTIONS
-  single_op_pushes = '600d60126000' * op_count
+  single_op_pushes = '600e60126000' * op_count
   opcodes_with_pops = (create_operation['Value'][2:4] + '50') * op_count
   pops = '50' * (constants.MAX_INSTRUCTIONS - op_count)
   return account_code + empty_pushes + single_op_pushes + opcodes_with_pops + pops
