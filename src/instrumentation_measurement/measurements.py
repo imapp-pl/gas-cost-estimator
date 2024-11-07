@@ -300,13 +300,13 @@ class Measurements(object):
         for line in raw_result:
             line_values = line.split(',')
             
-            if line_values[4].startswith('±') and line_values[4].endswith('%'):
-                std_dev_ns = (float(line_values[4][1:-1]) * float(line_values[3])) / 100
+            if line_values[2].startswith('±') and line_values[2].endswith('%'):
+                std_dev_ns = (float(line_values[2][1:-1]) * float(line_values[1])) / 100
             else :
-                std_dev_ns = line_values[4]
+                std_dev_ns = line_values[2]
 
             instrumenter_result.append(
-                f'{line_id},{line_values[3]},{line_values[5]},{std_dev_ns}')
+                f'{line_id},{line_values[1]},{line_values[3]},{std_dev_ns}')
             line_id += 1
         return instrumenter_result
 
