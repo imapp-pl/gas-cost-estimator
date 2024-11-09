@@ -97,6 +97,8 @@ class ProgramGenerator(object):
   def _generate_single_program(self, operation, op_count, max_op_count):
     assert op_count <= constants.MAX_INSTRUCTIONS
     # for compatibility with the generate_single_marginal function
+    if operation['Mnemonic'] == 'BALANCE':
+      return Program(_generate_balance_program(operation, op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] == 'CREATE':
       return Program(_generate_create_program(operation, op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] in ['EXTCODEHASH', 'EXTCODESIZE']:
@@ -146,6 +148,18 @@ def _generate_create_program(create_operation, op_count):
   opcodes_with_pops = (create_operation['Value'][2:4] + '50') * op_count
   pops = '50' * (constants.MAX_INSTRUCTIONS - op_count)
   return account_code + empty_pushes + single_op_pushes + opcodes_with_pops + pops
+
+def _generate_balance_program(balance_operation, op_count):
+  """
+  Generates a program for BALANCE opcode
+  """
+  assert balance_operation['Mnemonic'] == 'BALANCE'
+
+  account_deployment_code = '600060006000f0'
+  dups = '80' * constants.MAX_INSTRUCTIONS
+  opcodes_with_pops = (balance_operation['Value'][2:4] + '50') * op_count
+  pops = '50' * (constants.MAX_INSTRUCTIONS - op_count)
+  return account_deployment_code + dups + opcodes_with_pops + pops
 
 def _generate_extcode_program(create_operation, op_count, max_op_count):
   """
