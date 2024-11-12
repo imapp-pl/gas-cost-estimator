@@ -2,13 +2,19 @@
 title: "Gas Cost Estimator: estimation of impact of arguments on gas costs"
 output: html_document
 params:
-  env: "erigon"
+  env: ""
   programs: ""
   results: ""
   marginal_estimated_cost: ""
+  output_estimated_cost: ""
 ---
 
 ```{r, setup, include=FALSE}
+library(sqldf)
+library(nlme)
+library(mixtools)
+library(zeallot) # for multi-assignment %<-%
+
 knitr::opts_knit$set(root.dir = '/data')
 
 if (params$env == "") {
@@ -31,13 +37,33 @@ marginal_estimated_cost_empty = params$marginal_estimated_cost == ""
 
 In this script we conduct the estimation for the `measure_arguments` approach.
 
-ENV=`r params$env`. 
-PROGRAMS=`r params$programs`. 
-RESULTS=`r params$results`. 
+EVM client ENV=`r params$env`. 
 
-Expected a result file `r paste(env, "_", program_set_codename, "_", measurement_codename, ".csv", sep="")`.  TODO
+The file with programs PROGRAMS=`r params$programs`. 
+
+The file with measurement results RESULTS=`r params$results`. 
+
+The optional comma separated list of estimated costs obtained in the marginal procedure MARGINAL_ESTIMATED_COST-`r params$marginal_estimated_cost`.
+
+The optional file to output estimated costs and results OUTPUT_ESTIMATED_COST-`r params$marginal_estimated_cost`.
 
 ```{r, include=FALSE}
+load_data_set_from_file <- function(filepath) {
+  result = read.csv(filepath)
+  result$env = env
+  if (!('measure_total_time_ns' %in% colnames(result))) {
+    if ('total_time_ns' %in% colnames(result)) {
+      result$measure_total_time_ns = result$total_time_ns
+    }
+  }
+  if (!('measure_total_timer_time_ns' %in% colnames(result))) {
+    if ('engine_overhead_time_ns' %in% colnames(result)) {
+      result$measure_total_timer_time_ns = result$engine_overhead_time_ns
+    }
+  }
+  return(result)
+}
+
 programs = read.csv(params$programs)
 results = load_data_set_from_file(params$results)
 
@@ -85,7 +111,7 @@ if(!marginal_estimated_cost_empty){
 ```
 
 ```{r, include=FALSE}
-remove_outliers <- function(df, col) {
+remove_outliers <- function(df, col) { # TODO per op_count?
   boxplot_result = boxplot(df[, col] ~ df[, 'op_count'] + df[, 'opcode'], plot=FALSE)
   outliers = boxplot_result$out
   if (length(outliers) == 0) {
@@ -160,7 +186,7 @@ for(i in 1:nrow(opcode_arity_df)) {
 }
 ```
 
-## Models
+# Models
 
 Notes:
 1. Outliers need to be removed if detected
@@ -232,16 +258,22 @@ first_pass$has_impacting <- first_pass$has_impacting_arg0 | first_pass$has_impac
 first_pass[which(first_pass$has_impacting), ]
 ```
 
-## Verification against marginal estimations
+# Verification against marginal estimations
 
 In this section we compare opcodes cost obtained in the arguments course with previous estimations obtained in the marginal procedure.
 
 `r if(marginal_estimated_cost_empty){"No marginal estimated cost files given."}`
 
-```{r, include = [!marginal_estimated_cost_empty]}
+```{r, include = !marginal_estimated_cost_empty}
 q <- "SELECT first_pass.opcode, first_pass.estimate_marginal_ns AS 'estimate_marginal_ns inner', marginal_estimated_cost.estimate_marginal_ns AS 'estimate_marginal_ns outer' FROM first_pass LEFT JOIN marginal_estimated_cost ON first_pass.opcode = marginal_estimated_cost.op"
 compare_marginal <- sqldf(q)
 compare_marginal$'rel diff' <- (compare_marginal$'estimate_marginal_ns inner' / compare_marginal$'estimate_marginal_ns outer') - 1
 compare_marginal
+```
+
+```{r, incude = FALSE}
+if (params$output_estimated_cost != "") {
+  write.csv(first_pass, params$output_estimated_cost, quote=FALSE, row.names=FALSE)
+}
 ```
 
