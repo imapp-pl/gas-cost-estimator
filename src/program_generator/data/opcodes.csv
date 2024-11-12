@@ -53,6 +53,7 @@ Value,Mnemonic,Gas Used,Subset,Removed from stack,Added to stack,Notes,Formula N
 0x50,POP,2,base,1,0,Remove item from stack.,
 0x51,MLOAD,3,verylow,1,1,Load word from memory.,
 0x52,MSTORE,3,verylow,2,0,Save word to memory,
+0x52,MSTORE_COLD,3 + memory_expanstion_cost,verylow,2,0,Save word to memory (cold),
 0x53,MSTORE8,3,verylow,2,0,Save byte to memory.,
 0x54,SLOAD,200,,1,1,Load word from storage,
 0x55,SSTORE,((value != 0) && (storage_location == 0)) ? 20000 : 5000,,1,1,Save word to storage.,20000 is paid when storage value is set to non-zero from zero. 5000 is paid when the storage value's zeroness remains unchanged or is set to zero.
@@ -67,7 +68,8 @@ Value,Mnemonic,Gas Used,Subset,Removed from stack,Added to stack,Notes,Formula N
 0x5d,TSTORE,100,,2,0,Save word to transient storage.,
 0x5d,TSTORE0,100,,2,0,Save word to transient storage. To always empty slot.,
 0x5d,TSTORE_EXT,100,,2,0,Save word to transient storage. In an external contract.,
-0x5e,MCOPY,3 + words_copied * memory_expanstion_cost,,3,1,Copy memory areas,
+0x5e,MCOPY,3,,3,1,Copy memory areas,
+0x5e,MCOPY_COLD,3 + words_copied * memory_expanstion_cost,,3,1,Copy memory areas to new memory,
 0x5f,PUSH0,2,verylow,0,1,Place 0 on stack.,
 0x60 -- 0x7f,PUSH*,3,verylow,0,1,Place * byte item on stack. 0 < * <= 32,
 0x80 -- 0x8f,DUP*,3,verylow,*,* + 1,Duplicate *th stack item. 0 < * <= 16,

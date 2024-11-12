@@ -45,15 +45,15 @@ class ProgramGenerator(object):
 
   """
 
-  def __init__(self, selectionFile='selection.csv', seed=0):
+  def __init__(self, selectionFile='selection_arguments.csv', seed=0):
     random.seed(a=seed, version=2)
 
     opcodes = prepare_opcodes(os.path.join(dir_path, 'data', 'opcodes.csv'))
     selection = get_selection(os.path.join(dir_path, 'data', selectionFile))
 
-    self._operations = [opcodes[op] for op in selection]
+    self._operations = [op for op in opcodes if op['Value'] in selection]
 
-  def generate(self, fullCsv=False, count=1, opcode=None, opCount=10):
+  def generate(self, fullCsv=True, count=1, opcode=None, opCount=10):
     """
     Main entrypoint of the CLI tool. Should dispatch to the desired generation routine and print
     programs to STDOUT
