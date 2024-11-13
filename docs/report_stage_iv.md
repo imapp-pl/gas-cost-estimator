@@ -126,7 +126,6 @@ Included OPCODEs: `ADD`, `MUL`, `SUB`, `DIV`, `SDIV`, `MOD`, `SMOD`, `ADDMOD`, `
 Most opcodes are implemented similarly across all EVM implementations and their cost matches the nominal gas value. The few exceptions are:
 - `EXP`: The dynamic cost element is clearly lower than the nominal 50 per exponent byte.
 - `MULMOD`: Is not the same complexity as `ADDMOD` and its cost should reflect that.
-- `MUL`: This is not much different from `ADD` and its cost should reflect that.
 - `SHL`, `SHR`, `SAR`: The cost of these opcodes is higher than the nominal 3 gas.
 
 > Client Implementation notes:
@@ -136,7 +135,7 @@ Most opcodes are implemented similarly across all EVM implementations and their 
 #### Stack Operations
 Included OPCODEs: `POP`, `PUSH*`, `DUP*`, `SWAP*`
 
-The cost of stack operations is fairly consistent and matches the nominal gas value.
+The cost of stack operations is fairly consistent and is slightly below the nominal gas value.
 
 > Client Implementation notes:
 > Both Besu and EthereumJS should review their `PUSH*` implementations. The cost rises linearly with the number of bytes pushed, which defies intuition and is different to other implementations.
@@ -164,7 +163,7 @@ Included OPCODEs: `ADDRESS`, `ORIGIN`, `CALLER`, `CODESIZE`, `CODECOPY`, `GASPRI
 
 The cost of these opcodes usually matches the nominal gas value, with some notable exceptions:
 - `ADDRESS` and `CALLER`: The cost is higher than the nominal.
-- `EXTCODESIZE`, `EXTCODECOPY`, `EXTCODEHASH`: The cost of accessing worm addresses is much lower than the nominal.
+- `EXTCODESIZE`, `EXTCODECOPY`, `EXTCODEHASH`: The cost of accessing warm addresses is much lower than the nominal.
 
 > Client Implementation notes:
 > The `ADDRESS` and `CALLER` opcodes might not be the most used ones, but still, it is worth investigating the implementation. The teams behind Geth, Erigon, EthereumJS, Besu and EvmOne should investigate if there is room for optimization.
@@ -188,10 +187,15 @@ Overall, the cost of jumps is lower than the nominal. We should consider lowerin
 #### Transient Storage
 Included OPCODEs: `TLOAD`, `TSTORE`
 
-The measurements show that the cost of transient storage is lower than the nominal. Nonetheless, we should consider leaving the cost as is due to the security implications.
+The measurements show that the cost of transient storage is lower than the nominal. When updating the cost we should consider the security implications - too low cost may be a vector for attacks.
 
 > Client Implementation notes:
 > The Geth team should investigate the cost of transient storage.
+
+#### Creates
+Included OPCODEs: `CREATE`, `CREATE2`
+
+The main factors in the cost of creating a contract are the network storage cost. Thus it is difficult to measure the computational cost of these opcodes. The cost of `CREATE` and `CREATE2` should remain at the current level.
 
 #### Other
 Included OPCODEs: `SELFBALANCE`, `KECCAK256`
