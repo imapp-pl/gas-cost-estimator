@@ -124,11 +124,6 @@ class ProgramGenerator(object):
     # the arguments are popped from the stack
     single_op_pushes.reverse()
 
-    print(opcode + " parameters")
-    # print(args)
-    print(single_op_pushes)
-    print(arg_sizes)
-
     # the program triplet will be for the following number of measured OPCODEs
     op_counts = [0, op_count, op_count * 2]
 
