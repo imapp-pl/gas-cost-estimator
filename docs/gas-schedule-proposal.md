@@ -4,7 +4,7 @@
 
 ## Overview
 
-Based on the current [reasearch](report_stage_iv.md) we propose a new gas cost schedule for the Ethereum Virtual Machine (EVM). The current gas schedule is based on the original [yellow paper](https://ethereum.github.io/yellowpaper/paper.pdf) and has not been updated since the launch of the Ethereum mainnet. The current gas schedule has a number of issues that have been identified in the research. The proposed gas schedules aim to address these issues and provide a more accurate representation of the computational cost of EVM operations.
+Based on the current [reasearch](report_stage_iv.md) we propose a new gas cost schedule for the Ethereum Virtual Machine (EVM). The current gas schedule is based on the original [yellow paper](https://ethereum.github.io/yellowpaper/paper.pdf) and has seldom been updated since the launch of the Ethereum mainnet. The current gas schedule has a number of issues that have been identified in the research. The proposed gas schedules aim to address these issues and provide a more accurate representation of the computational cost of EVM operations.
 
 While the measurements in the Stage IV report are based on solid reasearch, the proposed gas cost schedule is more subjective. This is why we propose two different gas schedules: a conservative one and a radical one. Each having pros and cons. 
 
@@ -50,14 +50,17 @@ The opcodes that are proposed to be changed are those that have been identified 
 
 
 ## Radical Gas Schedule Proposal
-The idea behind the radical gas schedule proposal is a complete overhaul of the current gas schedule. Rather then just changing the most mispriced opcodes, we propose to change all opcodes to better reflect the computational cost of the operations.
+The idea behind the radical gas schedule proposal is a complete overhaul of the current gas schedule. Rather than just changing the most mispriced opcodes, we propose to change all opcodes to better reflect the computational cost of the operations.
 
-Let's run through the consequences of the radical gas schedule proposal. The cheapest operations are priced at 1 gas and we gradually increase the gas cost for more complex operations. As a result most arithmetic and basic opcodes will be much cheaper, i.e. valued at 1 rather than 3 or 5. Then all other operations will be adjusted accordingly, usually by lowering the gas cost. 
+Let's run through the consequences of the radical gas schedule proposal. The cheapest operations are priced at 1 gas and we gradually increase the gas cost for more complex operations. As a result most arithmetic and basic opcodes will be much cheaper, i.e. valued at 1 rather than 3 or 5. Then all other operations will be adjusted accordingly, usually by lowering the gas cost. This matches some of the [sentiments](https://x.com/VitalikButerin/status/1849338545498210652) in the community.
+
+> Client Implementation notes:
+> In most implementations gas cost is hardcoded. Such radical changes to the gas schedule would require a configurable gas schedule in EVM clients. This would allow clients to easily switch between different gas schedules, but also different chains.
 
 In this scenario the storage cost remains at the same level as this refects the network cost of storing data. Thus the radical gas schedule proposal expands the gap between the cost of storage and computation. This is a good thing as it makes it more expensive to store data than to compute it. Also the memory expansion cost remains the same to increase the security of the network.
 
 Pros:
-- The gas cost reflects the true computational cost of the operations
+- The gas cost reflects the computational cost of the operations
 - The larger gap between the cost of storage and computation promotes more efficient use of the network
 - Configurable gas schedules are easier update in the future
 - Configurable gas schedules can better match L2 chain requirements
@@ -122,70 +125,9 @@ Cons:
 |  | MSIZE | 2 | 1 |
 |  | GAS | 2 | 1 |
 |  | JUMPDEST | 1 | 1 |
-|  | PUSH1 | 3 | 1 |
-|  | PUSH2 | 3 | 1 |
-|  | PUSH3 | 3 | 1 |
-|  | PUSH4 | 3 | 1 |
-|  | PUSH5 | 3 | 1 |
-|  | PUSH6 | 3 | 1 |
-|  | PUSH7 | 3 | 1 |
-|  | PUSH8 | 3 | 1 |
-|  | PUSH9 | 3 | 1 |
-|  | PUSH10 | 3 | 1 |
-|  | PUSH11 | 3 | 1 |
-|  | PUSH12 | 3 | 1 |
-|  | PUSH13 | 3 | 1 |
-|  | PUSH14 | 3 | 1 |
-|  | PUSH15 | 3 | 1 |
-|  | PUSH16 | 3 | 1 |
-|  | PUSH17 | 3 | 1 |
-|  | PUSH18 | 3 | 1 |
-|  | PUSH19 | 3 | 1 |
-|  | PUSH20 | 3 | 1 |
-|  | PUSH21 | 3 | 1 |
-|  | PUSH22 | 3 | 1 |
-|  | PUSH23 | 3 | 1 |
-|  | PUSH24 | 3 | 1 |
-|  | PUSH25 | 3 | 1 |
-|  | PUSH26 | 3 | 1 |
-|  | PUSH27 | 3 | 1 |
-|  | PUSH28 | 3 | 1 |
-|  | PUSH29 | 3 | 1 |
-|  | PUSH30 | 3 | 1 |
-|  | PUSH31 | 3 | 1 |
-|  | PUSH32 | 3 | 1 |
-|  | DUP1 | 3 | 1 |
-|  | DUP2 | 3 | 1 |
-|  | DUP3 | 3 | 1 |
-|  | DUP4 | 3 | 1 |
-|  | DUP5 | 3 | 1 |
-|  | DUP6 | 3 | 1 |
-|  | DUP7 | 3 | 1 |
-|  | DUP8 | 3 | 1 |
-|  | DUP9 | 3 | 1 |
-|  | DUP10 | 3 | 1 |
-|  | DUP11 | 3 | 1 |
-|  | DUP12 | 3 | 1 |
-|  | DUP13 | 3 | 1 |
-|  | DUP14 | 3 | 1 |
-|  | DUP15 | 3 | 1 |
-|  | DUP16 | 3 | 1 |
-|  | SWAP1 | 3 | 1 |
-|  | SWAP2 | 3 | 1 |
-|  | SWAP3 | 3 | 1 |
-|  | SWAP4 | 3 | 1 |
-|  | SWAP5 | 3 | 1 |
-|  | SWAP6 | 3 | 1 |
-|  | SWAP7 | 3 | 1 |
-|  | SWAP8 | 3 | 1 |
-|  | SWAP9 | 3 | 1 |
-|  | SWAP10 | 3 | 1 |
-|  | SWAP11 | 3 | 1 |
-|  | SWAP12 | 3 | 1 |
-|  | SWAP13 | 3 | 1 |
-|  | SWAP14 | 3 | 1 |
-|  | SWAP15 | 3 | 1 |
-|  | SWAP16 | 3 | 1 |
+|  | PUSHx | 3 | 1 |
+|  | DUPx | 3 | 1 |
+|  | SWAPx | 3 | 1 |
 |  | MCOPY | 6 | 2 |
 |  | MCOPY_COLD | 6 | 3 |
 |  | PUSH0 | 2 | 1 |
