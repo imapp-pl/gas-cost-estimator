@@ -2,11 +2,23 @@
 
 The project aims to provide a tool for measuring, analysing and comparing gas costs of EVM operations across different implementations. The reproducibility is the key to the research. We have provided a complete setup guide and tooling to make the execution of the benchmarks as easy as possible.
 
-The result of the analysis is a new gas cost schedule.
+The result of the analysis is a proposal for the new gas cost schedule.
+
+## Overview
+
+> Our results are still being verified and improved. In the meantime please check out the latest [research report](docs/report_stage_iv.md), [gas schedule proposal document](docs/gas-schedule-proposal.md) and all the [raw results](src/stage4/results/).
+
+**Figure: All Clients arithmetic OPCODEs comparison**
+
+<img src="docs/report_stage_iv_assets/all_clients_arithmetic.png" width="700"/>&nbsp;
+
+**Figure: All Clients stack OPCODEs comparison**
+
+<img src="docs/report_stage_iv_assets/all_clients_stack.png" width="700"/>&nbsp;
+
 
 ## Research progress
 
-Check the latest [research report](docs/report_stage_iv.md) and [gas schedule proposal document](docs/gas-schedule-proposal.md).
 
 The project is divided into stages. The progress of each stage is described in the corresponding document:
  - [Stage I](docs/report_stage_i.md) - Initial research and methodology proposal
