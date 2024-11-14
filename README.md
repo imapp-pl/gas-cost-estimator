@@ -6,12 +6,16 @@ The result of the analysis is a new gas cost schedule.
 
 ## Research progress
 
+Check the latest [research report](docs/report_stage_iv.md) and [gas schedule proposal document](docs/gas-schedule-proposal.md).
+
 The project is divided into stages. The progress of each stage is described in the corresponding document:
  - [Stage I](docs/report_stage_i.md) - Initial research and methodology proposal
  - [Stage II](docs/report_stage_ii.md) - Benchmarking and data collection
  - [Stage III](docs/report_stage_iii.md) - Data analysis and report generation
  - [Stage IV](docs/report_stage_iv.md) - Comprehensive analysis of the gas cost and reproducibility (work in progress)
  - Stage V - Improved tooling and report generation (planned)
+
+
 
 ## Introduction and project scope
 
