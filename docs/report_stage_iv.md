@@ -93,30 +93,22 @@ Besu is developed in Java.
 
 ## Measurement Analysis
 
-The full list of bytecode instructions used for the measurements is available in the [pg_marginal_full5_c50_step5_shuffle.csv](src/stage4/pg_marginal_full5_c50_step5_shuffle.csv) file.
+The full list of bytecode instructions used for the measurements is available in the following files:
+- [arithmetic and others](../src/stage4/pg_marginal_full_step5.csv)
+- [memory](../src/stage4/pg_marginal_mem.csv)
+- [create](../src/stage4/pg_marginal_create.csv)
+- [transient](../src/stage4/pg_marginal_t.csv)
+- [precompiles](../src/stage4/pg_precompiles_full_step5.csv)
 
-The full results of the measurements are available in the [stage4](src/stage4) directory.
+The full results of the measurements are available in the [stage4](../src/stage4/results/) directory.
 
-**Figure: Go Ethereum all OPCODEs**
+**Figure: All Clients arithmetic OPCODEs comparison**
 
-<img src="./report_stage_iv_assets/geth_marginal_all.png" width="700"/>&nbsp;
+<img src="./report_stage_iv_assets/all_clients_arithmetic.png" width="700"/>&nbsp;
 
-**Figure: Erigon all OPCODEs**
+**Figure: All Clients stack OPCODEs comparison**
 
-<img src="./report_stage_iv_assets/erigon_marginal_all.png" width="700"/>&nbsp;
-
-**Figure: EthereumJS all OPCODEs**
-
-<img src="./report_stage_iv_assets/ethereumjs_marginal_all.png" width="700"/>&nbsp;
-
-**Figure: Nethermind all OPCODEs**
-
-<img src="./report_stage_iv_assets/nethermind_marginal_all.png" width="700"/>&nbsp;
-
-**Figure: Revm all OPCODEs**
-
-<img src="./report_stage_iv_assets/revm_marginal_all.png" width="700"/>&nbsp;
-
+<img src="./report_stage_iv_assets/all_clients_stack.png" width="700"/>&nbsp;
 
 ### OPCODEs Details
 
