@@ -1,13 +1,20 @@
 ---
-title: "R Notebook: estimation of gas costs using the measure marginal method; for Gas Cost Estimator; for a single given env"
+title: "Gas Cost Estimator: estimation of impact of arguments on gas costs"
 output: html_document
 params:
   env: ""
   programs: ""
   results: ""
+  marginal_estimated_cost: ""
+  output_estimated_cost: ""
 ---
 
 ```{r, setup, include=FALSE}
+library(sqldf)
+library(nlme)
+library(mixtools)
+library(zeallot) # for multi-assignment %<-%
+
 knitr::opts_knit$set(root.dir = '/data')
 
 if (params$env == "") {
@@ -20,130 +27,264 @@ if (params$programs == "") {
 }
 
 if (params$results == "") {
-  stop("'results' param is missing, the file with test results")
+  stop("'results' param is missing, the file with measurements results")
 }
-
-source('common.R')
 
 removed_outliers = TRUE
+marginal_estimated_cost_empty = params$marginal_estimated_cost == ""
 ```
 
-In this script, there is conducted the estimation for the `measure_marginal` approach for a single given env.
 
-The env = `r env`, the programs file =`r params$programs`, the resutls file = `r params$results`.
+In this script we conduct the estimation for the `measure_arguments` approach.
 
-```{r}
-# The example of programs file: pg_marginal_full5_c50_step1_shuffle.csv .
-# The example of results file: geth_pg_marginal_full5_c50_step1_shuffle_50_4.csv
+EVM client ENV=`r params$env`. 
+
+The file with programs PROGRAMS=`r params$programs`. 
+
+The file with measurement results RESULTS=`r params$results`. 
+
+The optional comma separated list of estimated costs obtained in the marginal procedure MARGINAL_ESTIMATED_COST-`r params$marginal_estimated_cost`.
+
+The optional file to output estimated costs and results OUTPUT_ESTIMATED_COST-`r params$marginal_estimated_cost`.
+
+```{r, include=FALSE}
+load_data_set_from_file <- function(filepath) {
+  result = read.csv(filepath)
+  result$env = env
+  if (!('measure_total_time_ns' %in% colnames(result))) {
+    if ('total_time_ns' %in% colnames(result)) {
+      result$measure_total_time_ns = result$total_time_ns
+    }
+  }
+  if (!('measure_total_timer_time_ns' %in% colnames(result))) {
+    if ('engine_overhead_time_ns' %in% colnames(result)) {
+      result$measure_total_timer_time_ns = result$engine_overhead_time_ns
+    }
+  }
+  return(result)
+}
+
 programs = read.csv(params$programs)
 results = load_data_set_from_file(params$results)
-# besu may have additional columns with gc stats
-results = results[, c("program_id", "sample_id", "run_id", "measure_total_time_ns", "measure_total_timer_time_ns", "env")]
-# TODO geth short-circuits zero length programs, resulting in zero timing somehow. Drop these more elegantly, not based on measure_total_time_ns
-results = results[which(results$measure_total_time_ns != 0), ]
+if(!("run_id" %in% colnames(results))) {
+  results$run_id <- 1
+}
+
+if (!('measure_total_time_ns' %in% colnames(results))) {
+  if ('total_time_ns' %in% colnames(results)) {
+    results$measure_total_time_ns = results$total_time_ns
+  }
+}
+if (!('measure_total_timer_time_ns' %in% colnames(results))) {
+  if ('engine_overhead_time_ns' %in% colnames(results)) {
+    results$measure_total_timer_time_ns = results$engine_overhead_time_ns
+  }
+}
+
+programs$arity <- rowSums(data.frame(!is.na(programs$arg0), !is.na(programs$arg1), !is.na(programs$arg2)))
 ```
 
-```{r}
-measurements = sqldf("SELECT opcode, op_count, sample_id, run_id, measure_total_time_ns, env, results.program_id
+```{r, include=FALSE }
+measurements = sqldf("SELECT opcode, op_count, arg0, arg1, arg2, sample_id, run_id, measure_total_time_ns, results.program_id
                      FROM results
                      INNER JOIN
-                       programs ON(results.program_id = programs.program_id)")
-measurements$opcode = factor(measurements$opcode, levels=unique(programs$opcode))
-# head(measurements)
+                       programs ON(results.program_id = programs.program_id)
+                     ")
+measurements$env <- env
+# measurements$opcode = factor(measurements$opcode, levels=unique(programs$opcode))
 ```
 
-Switch `removed_outliers` to `FALSE` to see the comparison.
+```{r, include=FALSE}
+marginal_estimated_cost = data.frame(op=character(0),estimate_marginal_ns=numeric(0),estimate_marginal_ns_stderr=numeric(0),env=character(0))
 
-```{r fig.width=15,fig.height=8}
-if (!removed_outliers) {
-  boxplot(measurements[which(measurements$env == env), 'measure_total_time_ns'] ~ measurements[which(measurements$env == env), 'opcode'], las=2, outline=TRUE, log='y', main=paste(env, 'all'))
+if(!marginal_estimated_cost_empty){
+  all_estimated_cost_files = strsplit(params$marginal_estimated_cost, split="\\s*,\\s*")[[1]]
+  print(all_estimated_cost_files)
+  for (i in 1:length(all_estimated_cost_files)) {
+    add_estimated_cost = read.csv(all_estimated_cost_files[i])
+    marginal_estimated_cost = rbind(marginal_estimated_cost, add_estimated_cost[, c("op", "estimate_marginal_ns", "estimate_marginal_ns_stderr", "env")])
+  }
+  if (nrow(marginal_estimated_cost) == 0) {
+    stop("No marginal estimated cost data found.")
+  }
+  if (nrow(marginal_estimated_cost[which(marginal_estimated_cost$env != env), ]) > 0) {
+    stop("Invalid EVM in marginal estimated cost files.")
+  }
 }
 ```
 
-```{r fig.width=15,fig.height=15}
-if (removed_outliers) {
-  measurements = remove_compare_outliers(measurements, 'measure_total_time_ns', c(env))
-}
-```
-
-```{r}
-# Performs the `measure_marginal` estimation procedure for a given slice of the data.
-# Prints the diagnostics and plots the models.
-compute_all <- function(opcode, env, plots, use_median) {
-  if (missing(plots)) {
-    plots = "scatter"
-  }
-  if (missing(use_median)) {
-    use_median = FALSE
-  }
-  print(c(opcode, env))
-  
-  df = measurements[which(measurements$opcode==opcode & measurements$env==env),]
-  
-  if (use_median) {
-    f = median
+```{r, include=FALSE}
+remove_outliers <- function(df, col) { # TODO per op_count?
+  boxplot_result = boxplot(df[, col] ~ df[, 'op_count'] + df[, 'opcode'], plot=FALSE)
+  outliers = boxplot_result$out
+  if (length(outliers) == 0) {
+    no_outliers <- df
   } else {
-    f = mean
+    names = boxplot_result$names[boxplot_result$group]
+    all_row_identifiers = paste(df[, col], df[, 'op_count'], df[, 'opcode'], sep='.')
+    outlier_row_identifiers = paste(outliers, names, sep='.')
+    no_outliers = df[-which(all_row_identifiers %in% outlier_row_identifiers), ]
   }
-  df_mean = aggregate(measure_total_time_ns ~ op_count * env, df, f)
+  return(no_outliers)
+}
+```
+
+```{r fig.width=15, fig.height=10}
+if ( !removed_outliers) {
+  boxplot(measure_total_time_ns ~ opcode, data=measurements, las=2, outline=TRUE, log='y', main=paste(env, 'all'))
+}
+```
+
+```{r fig.width=15, fig.height=18}
+if (removed_outliers) {
+  par(mfrow=c(2, 1))
   
-  model_mean = lm(measure_total_time_ns ~ op_count, data=df_mean)
-  print(summary(model_mean))
-  slope = model_mean$coefficients[['op_count']]
-  stderr = summary(model_mean)$coefficients['op_count','Std. Error']
+  # before
+  boxplot(measure_total_time_ns ~ opcode, data=measurements, las=2, outline=TRUE, log='y', main=paste(env, 'all'))
+
+  measurements = remove_outliers(measurements, 'measure_total_time_ns')
   
-  if (plots == "scatter" | plots == "all") {
-    par(mfrow=c(1,1))
-    boxplot(measure_total_time_ns ~ op_count, data=df, las=2, outline=removed_outliers)
-    rounded_slope = round(slope, 3)
-    rounded_p = round(summary(model_mean)$coefficients['op_count','Pr(>|t|)'], 3)
-    rounded_stderr = round(stderr, 3)
-    title(main=paste(env, opcode, rounded_slope, "p_value:", rounded_p, "StdErr:", rounded_stderr))
-    abline(model_mean, col="red")
+  # after
+  boxplot(measure_total_time_ns ~ opcode, data=measurements, las=2, outline=TRUE, log='y', main=paste(env, 'no_outliers'))
+}
+```
+
+TODO remove_outliers_2 ?
+
+# Detailed view
+
+This is massive and detailed overview on the impact of arguments. 
+Because of the number of charts, only `op count = 30` is eligible. Feel free to change it, but that should not be anyhow more informative.
+The visualizations do not guarantee that all dependencies are clearly seen. 
+Especially for binary and ternary opcodes where impacts of arg0, arg1 and arg2 are mixed.
+But if a dependency is graphically noticeable that you should expect also statistical dependency.
+
+```{r, include=FALSE}
+opcode_arity_df <- aggregate(arity ~ opcode, programs, max)
+
+# just check is all programs for a given opcode are the same
+opcode_arity_compare <- merge(x = programs[, c("opcode", "arity")], y = opcode_arity_df, by = "opcode")
+if (nrow(opcode_arity_compare[which(opcode_arity_compare$arity.x != opcode_arity_compare$arity.y), ]) > 0) {
+  stop("programs arity is inconsistent")
+}
+```
+
+```{r fig.width=15}
+for(i in 1:nrow(opcode_arity_df)) {
+  opcode_arity <- opcode_arity_df[i,]
+  opcode <- opcode_arity[["opcode"]]
+  arity <- opcode_arity[["arity"]]
+  if (arity >= 1) {
+    plot(measure_total_time_ns ~ arg0, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 30), ], pch=5, col='blue')
+    title(main = paste(env, opcode, 'arg0', 'opcount 30'))
   }
-  if (plots == "diagnostics" | plots == "all") {
-    par(mfrow=c(2,2))
-    plot(model_mean)
+  if (arity >= 2) {
+    plot(measure_total_time_ns ~ arg1, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 30), ], pch=5, col='blue')
+    title(main = paste(env, opcode, 'arg1', 'opcount 30'))
   }
-  list("slope" = slope, "stderr" = stderr)
-}
-
-extract_opcodes <- function() {
-  unique(measurements$opcode)
-}
-```
-
-```{r}
-all_opcodes = extract_opcodes()
-
-# initialize the data frame to hold the results
-estimates = data.frame(matrix(ncol = 4, nrow = 0))
-colnames(estimates) <- c('op', 'estimate_marginal_ns', 'estimate_marginal_ns_stderr', 'env')
-```
-
-Every sample starts with a fresh evm instance. 
-We investigate whether the results may depend on the time from evm start - related to run_id.
-To avoid being overrun by the number of images, all op_count for a given run_id are are placed, 
-so values are not centered. 
-That should not be an issue.
-
-```{r}
-for (opcode in all_opcodes) {
-  boxplot(measure_total_time_ns~run_id,data=measurements[measurements$opcode == opcode,], main=opcode)
+  if (arity >= 3) {
+    plot(measure_total_time_ns ~ arg2, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 30), ], pch=5, col='blue')
+    title(main = paste(env, opcode, 'arg2', 'opcount 30'))
+  }
 }
 ```
 
-Now we can investigate the linear regressions.
+# Models
+
+Notes:
+1. Outliers need to be removed if detected
+2. The `argX:op_count` interactions measure the impact on the OPCODE
+3. The `argX` are just auxiliary variables added to exclude the effect of cheaper/more expensive PUSHes. We only want to extract the effect of the argument on the measured OPCODE repeated `op_count` times.
+
+This is the so-called "first-pass" at the estimation procedure, where we estimated all possible argument impact variables
+for all OPCODEs.
+We gather all the results in the `first_pass` table, inspect this to see where the arguments turned out to be significantly impacting the computation cost.
+
+```{r, include=FALSE}
+# Every `arg` coefficient represents the impact of the argument's byte size growing by 1.
+# We treat as impactful the arguments where p-value is effectively zero. The previous approach was:
+# Treat as impactful the arguments, where:
+# 1. The estimate is significant with confidence 0.001
+# 2. The increase of arg's byte size by 1 will increase the cost by more than 1%
+# but it turned out to be much less stable in practice.
+# p_value_thresh = 1e-30
+p_value_thresh = 0.001
+# impact_ratio = 0.00
+impact_ratio = 0.01
+
+ifNA <- function(x, v) {
+  ifelse(is.na(x), v, x)
+}
+
+first_pass = data.frame(opcode=character(0),estimate_marginal_ns=numeric(0),
+                        arg0_ns_raw=numeric(0), arg1_ns_raw=numeric(0), arg2_ns_raw=numeric(0),
+                        arg0_ns_p=numeric(0), arg1_ns_p=numeric(0), arg2_ns_p=numeric(0))
+
+for(i in 1:nrow(opcode_arity_df)) {
+  opcode_arity <- opcode_arity_df[i,]
+  opcode <- opcode_arity[["opcode"]]
+  arity <- opcode_arity[["arity"]]
+  args_ns_raw = c(NA, NA, NA)
+  args_ns_p = c(NA, NA, NA)
+  if (arity == 1) {
+    model = lm(measure_total_time_ns ~ op_count + arg0 + arg0:op_count, data=measurements[which(measurements$opcode==opcode), ])
+  }
+  if (arity == 2) {
+    model = lm(measure_total_time_ns ~ op_count + arg0 + arg1 + arg0:op_count + arg1:op_count, data=measurements[which(measurements$opcode==opcode), ])
+  }
+  if (arity == 3) {
+    model = lm(measure_total_time_ns ~ op_count + arg0 + arg1 + arg2 + arg0:op_count + arg1:op_count + arg2:op_count, data=measurements[which(measurements$opcode==opcode), ])
+  }
+  all_coefficients = summary(model)$coefficients
+  arg_coefficients = all_coefficients[!(row.names(all_coefficients) %in% c("op_count", "(Intercept)", "arg0", "arg1", "arg2")), , drop = FALSE]
+  pure_op_count_coeff = all_coefficients["op_count", 1]
+  
+  # it may be that lm drops a coefficient if its arguments are constant,
+  # this is a way to exclude an arg from examination
+  arg_coefficients_names = row.names(arg_coefficients)
+  if ("op_count:arg0" %in% arg_coefficients_names) {
+    args_ns_raw[1] = arg_coefficients["op_count:arg0", 1]
+    args_ns_p[1] = arg_coefficients["op_count:arg0", 4]
+  }
+  if ("op_count:arg1" %in% arg_coefficients_names) {
+    args_ns_raw[2] = arg_coefficients["op_count:arg1", 1]
+    args_ns_p[2] = arg_coefficients["op_count:arg1", 4]
+  }
+  if ("op_count:arg2" %in% arg_coefficients_names) {
+    args_ns_raw[3] = arg_coefficients["op_count:arg2", 1]
+    args_ns_p[3] = arg_coefficients["op_count:arg2", 4]
+  }
+  
+  first_pass[nrow(first_pass) + 1, ] = list(opcode, pure_op_count_coeff, args_ns_raw[1], args_ns_raw[2], args_ns_raw[3], args_ns_p[1], args_ns_p[2], args_ns_p[3])
+}
+
+first_pass$has_impacting_arg0 <- !is.na(first_pass$arg0_ns_raw) & !is.na(first_pass$arg0_ns_p) & first_pass$arg0_ns_p < p_value_thresh & abs(ifNA(first_pass$arg0_ns_raw, 0)) > first_pass$estimate_marginal_ns * impact_ratio
+first_pass$has_impacting_arg1 <- !is.na(first_pass$arg1_ns_raw) & !is.na(first_pass$arg1_ns_p) & first_pass$arg1_ns_p < p_value_thresh & abs(ifNA(first_pass$arg1_ns_raw, 0)) > first_pass$estimate_marginal_ns * impact_ratio
+first_pass$has_impacting_arg2 <- !is.na(first_pass$arg2_ns_raw) & !is.na(first_pass$arg2_ns_p) & first_pass$arg2_ns_p < p_value_thresh & abs(ifNA(first_pass$arg2_ns_raw, 0)) > first_pass$estimate_marginal_ns * impact_ratio
+
+first_pass$has_impacting <- first_pass$has_impacting_arg0 | first_pass$has_impacting_arg1 | first_pass$has_impacting_arg2
+```
 
 ```{r}
-for (opcode in all_opcodes) {
-  estimate = compute_all(opcode=opcode, env=env, use_median=TRUE, plots='all')
-  estimates[nrow(estimates) + 1, ] = c(opcode, estimate, env)
+first_pass[which(first_pass$has_impacting), ]
+```
+
+# Verification against marginal estimations
+
+In this section we compare opcodes cost obtained in the arguments course with previous estimations obtained in the marginal procedure.
+
+`r if(marginal_estimated_cost_empty){"No marginal estimated cost files given."}`
+
+```{r, include = !marginal_estimated_cost_empty}
+q <- "SELECT first_pass.opcode, first_pass.estimate_marginal_ns AS 'estimate_marginal_ns inner', marginal_estimated_cost.estimate_marginal_ns AS 'estimate_marginal_ns outer' FROM first_pass LEFT JOIN marginal_estimated_cost ON first_pass.opcode = marginal_estimated_cost.op"
+compare_marginal <- sqldf(q)
+compare_marginal$'rel diff' <- (compare_marginal$'estimate_marginal_ns inner' / compare_marginal$'estimate_marginal_ns outer') - 1
+compare_marginal
+```
+
+```{r, incude = FALSE}
+if (params$output_estimated_cost != "") {
+  write.csv(first_pass, params$output_estimated_cost, quote=FALSE, row.names=FALSE)
 }
 ```
 
-Export the results
-
-```{r}
-write.csv(estimates, paste0("./", env, "_marginal_estimated_cost.csv"), quote=FALSE, row.names=FALSE)
-```
