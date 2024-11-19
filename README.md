@@ -82,7 +82,7 @@ docker run -it -v /your/path/to/data:/data --rm imapp-pl/gas-cost-estimator/repo
 To render `measure_arguments` report provide your params and an output file and execute the command:
 
 ```shell
-docker run -it -v /home/lukaszglen/sources/imapp5/stage4:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e "rmarkdown::render('/reports/measure_arguments_single.Rmd', params = list(env = 'erigon', programs='pg_arguments_full5_c200_opc15x2.csv', results='erigon_pg_arguments_full5_c200_opc15x2_.csv', marginal_estimated_cost='erigon_marginal_estimated_cost.csv', output_estimated_cost='erigon_arguments_estimated_cost.csv'), output_file = '/data/erigon_measure_arguments_single.html')"
+docker run -it -v /your/path/to/data:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e "rmarkdown::render('/reports/measure_arguments_single.Rmd', params = list(env = 'erigon', programs='pg_arguments_full5_c200_opc15x2.csv', results='erigon_pg_arguments_full5_c200_opc15x2_.csv', marginal_estimated_cost='erigon_marginal_estimated_cost.csv', output_estimated_cost='erigon_arguments_estimated_cost.csv'), output_file = '/data/erigon_measure_arguments_single.html')"
 ```
 
 To render `final_estimate` report provide your params and an output file and execute the command:
