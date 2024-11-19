@@ -16,3 +16,9 @@ sudo nvm install 20
 node -v
 npm -v
 sudo npm i -g @vercel/ncc 
+
+# install cmake
+sudo apt-get install cmake
+
+# install java
+sudo apt-get install openjdk-21-jdk
