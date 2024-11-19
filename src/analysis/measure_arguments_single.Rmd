@@ -66,6 +66,9 @@ load_data_set_from_file <- function(filepath) {
 
 programs = read.csv(params$programs)
 results = load_data_set_from_file(params$results)
+if(!("run_id" %in% colnames(results))) {
+  results$run_id <- 1
+}
 
 if (!('measure_total_time_ns' %in% colnames(results))) {
   if ('total_time_ns' %in% colnames(results)) {
@@ -197,7 +200,7 @@ This is the so-called "first-pass" at the estimation procedure, where we estimat
 for all OPCODEs.
 We gather all the results in the `first_pass` table, inspect this to see where the arguments turned out to be significantly impacting the computation cost.
 
-```{r, include=TRUE}
+```{r, include=FALSE}
 # Every `arg` coefficient represents the impact of the argument's byte size growing by 1.
 # We treat as impactful the arguments where p-value is effectively zero. The previous approach was:
 # Treat as impactful the arguments, where:
@@ -232,18 +235,26 @@ for(i in 1:nrow(opcode_arity_df)) {
   if (arity == 3) {
     model = lm(measure_total_time_ns ~ op_count + arg0 + arg1 + arg2 + arg0:op_count + arg1:op_count + arg2:op_count, data=measurements[which(measurements$opcode==opcode), ])
   }
-  # print(summary(model))
   all_coefficients = summary(model)$coefficients
-  arg_coefficients = all_coefficients[!(row.names(all_coefficients) %in% c("op_count", "(Intercept)", "arg0", "arg1", "arg2")),]
+  arg_coefficients = all_coefficients[!(row.names(all_coefficients) %in% c("op_count", "(Intercept)", "arg0", "arg1", "arg2")), , drop = FALSE]
   pure_op_count_coeff = all_coefficients["op_count", 1]
-  if (arity == 1) {
-    args_ns_raw[1] = arg_coefficients[[1]]
-    args_ns_p[1] = arg_coefficients[[4]]
+  
+  # it may be that lm drops a coefficient if its arguments are constant,
+  # this is a way to exclude an arg from examination
+  arg_coefficients_names = row.names(arg_coefficients)
+  if ("op_count:arg0" %in% arg_coefficients_names) {
+    args_ns_raw[1] = arg_coefficients["op_count:arg0", 1]
+    args_ns_p[1] = arg_coefficients["op_count:arg0", 4]
   }
-  if (arity == 2 || arity == 2) {
-    args_ns_raw[1:arity] = arg_coefficients[1:arity, 1]
-    args_ns_p[1:arity] = arg_coefficients[1:arity, 4]
+  if ("op_count:arg1" %in% arg_coefficients_names) {
+    args_ns_raw[2] = arg_coefficients["op_count:arg1", 1]
+    args_ns_p[2] = arg_coefficients["op_count:arg1", 4]
   }
+  if ("op_count:arg2" %in% arg_coefficients_names) {
+    args_ns_raw[3] = arg_coefficients["op_count:arg2", 1]
+    args_ns_p[3] = arg_coefficients["op_count:arg2", 4]
+  }
+  
   first_pass[nrow(first_pass) + 1, ] = list(opcode, pure_op_count_coeff, args_ns_raw[1], args_ns_raw[2], args_ns_raw[3], args_ns_p[1], args_ns_p[2], args_ns_p[3])
 }
 

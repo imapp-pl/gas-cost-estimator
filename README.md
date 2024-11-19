@@ -2,9 +2,23 @@
 
 The project aims to provide a tool for measuring, analysing and comparing gas costs of EVM operations across different implementations. The reproducibility is the key to the research. We have provided a complete setup guide and tooling to make the execution of the benchmarks as easy as possible.
 
-The result of the analysis is a new gas cost schedule.
+The result of the analysis is a proposal for the new gas cost schedule.
+
+## Overview
+
+> Our results are still being verified and improved. In the meantime please check out the latest [research report](docs/report_stage_iv.md), [gas schedule proposal document](docs/gas-schedule-proposal.md) and all the [raw results](src/stage4/results/).
+
+**Figure: All Clients arithmetic OPCODEs comparison**
+
+<img src="docs/report_stage_iv_assets/all_clients_arithmetic.png" width="700"/>&nbsp;
+
+**Figure: All Clients stack OPCODEs comparison**
+
+<img src="docs/report_stage_iv_assets/all_clients_stack.png" width="700"/>&nbsp;
+
 
 ## Research progress
+
 
 The project is divided into stages. The progress of each stage is described in the corresponding document:
  - [Stage I](docs/report_stage_i.md) - Initial research and methodology proposal
@@ -12,6 +26,8 @@ The project is divided into stages. The progress of each stage is described in t
  - [Stage III](docs/report_stage_iii.md) - Data analysis and report generation
  - [Stage IV](docs/report_stage_iv.md) - Comprehensive analysis of the gas cost and reproducibility (work in progress)
  - Stage V - Improved tooling and report generation (planned)
+
+
 
 ## Introduction and project scope
 
@@ -82,7 +98,7 @@ docker run -it -v /your/path/to/data:/data --rm imapp-pl/gas-cost-estimator/repo
 To render `measure_arguments` report provide your params and an output file and execute the command:
 
 ```shell
-docker run -it -v /home/lukaszglen/sources/imapp5/stage4:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e "rmarkdown::render('/reports/measure_arguments_single.Rmd', params = list(env = 'erigon', programs='pg_arguments_full5_c200_opc15x2.csv', results='erigon_pg_arguments_full5_c200_opc15x2_.csv', marginal_estimated_cost='erigon_marginal_estimated_cost.csv', output_estimated_cost='erigon_arguments_estimated_cost.csv'), output_file = '/data/erigon_measure_arguments_single.html')"
+docker run -it -v /your/path/to/data:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e "rmarkdown::render('/reports/measure_arguments_single.Rmd', params = list(env = 'erigon', programs='pg_arguments_full5_c200_opc15x2.csv', results='erigon_pg_arguments_full5_c200_opc15x2_.csv', marginal_estimated_cost='erigon_marginal_estimated_cost.csv', output_estimated_cost='erigon_arguments_estimated_cost.csv'), output_file = '/data/erigon_measure_arguments_single.html')"
 ```
 
 To render `final_estimate` report provide your params and an output file and execute the command:
