@@ -16,7 +16,7 @@ library(nlme)
 library(mixtools)
 library(zeallot) # for multi-assignment %<-%
 
-knitr::opts_knit$set(root.dir = '')
+knitr::opts_knit$set(root.dir = '/data')
 
 if (params$env == "") {
   stop("'env' param is missing, the name of EVM client")
