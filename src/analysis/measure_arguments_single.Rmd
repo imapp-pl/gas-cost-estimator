@@ -2,10 +2,10 @@
 title: "Gas Cost Estimator: estimation of impact of arguments on gas costs"
 output: html_document
 params:
-  env: "besu"
-  programs: "pg_arguments_short_short.csv"
-  results: "results_arguments_short_besu.csv"
-  marginal_estimated_cost: "reports-08.11.2024/estimated_cost_besu_full.csv"
+  env: ""
+  programs: ""
+  results: ""
+  marginal_estimated_cost: ""
   output_estimated_cost: ""
   details: ""
 ---
@@ -16,7 +16,7 @@ library(nlme)
 library(mixtools)
 library(zeallot) # for multi-assignment %<-%
 
-knitr::opts_knit$set(root.dir = '/home/lukaszglen/sources/imapp5/local')
+knitr::opts_knit$set(root.dir = '')
 
 if (params$env == "") {
   stop("'env' param is missing, the name of EVM client")
@@ -232,6 +232,9 @@ for(i in 1:nrow(opcode_arity_df)) {
   arity <- opcode_arity[["arity"]]
   args_ns_raw = c(NA, NA, NA)
   args_ns_p = c(NA, NA, NA)
+  if (arity == 0) { # TODO is it good?
+    model = lm(measure_total_time_ns ~ op_count, data=measurements[which(measurements$opcode==opcode), ])
+  }
   if (arity == 1) {
     model = lm(measure_total_time_ns ~ op_count + arg0 + arg0:op_count, data=measurements[which(measurements$opcode==opcode), ])
   }
