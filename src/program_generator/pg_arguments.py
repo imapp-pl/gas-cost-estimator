@@ -108,6 +108,31 @@ class ProgramGenerator(object):
 
   def _generate_program_triplet(self, operation, op_count):
     opcode = operation['Mnemonic']
+
+    # the program triplet will be for the following number of measured OPCODEs
+    op_counts = [0, op_count, op_count * 2]
+
+    if opcode == "CREATE":
+      # the opcode arity is 3
+      # allocate max possible used memory
+      mem_allocation = "5f61080052"
+      # put on stack the initial code for CREATE,
+      # the initial code on stack is the same as for marginal examination but shifted left for convenience
+      initial_code_on_stack = "7f6460016001015f526005601bf360000000000000000000000000000000000000"
+      # fill memory first 32 slots stores the same initial code
+      initial_code_in_mem = ""
+      for pre_offset in range(32):
+        offset = "%0.4X" % (32 * pre_offset)
+        initial_code_in_mem += "8061" + offset + "52"
+      # prefix code is the same for all programs - the same gas cost
+      prefix_code = mem_allocation + initial_code_on_stack + initial_code_in_mem
+      arg_sizes = [1, random.randint(1, 32), random.randint(1, 32)]
+      # prepare arguments, the range for the initial code passed to CREATE
+      # the offset and size are random, but effectively executed initial code is the same
+      # note that the effectively executed initial code and the deployed code are the same as for marginal examination
+      single_op_pushes = ["61%0.4X" % (arg_sizes[2] * 32), "61%0.4X" % ((arg_sizes[1] - 1) * 32), "5f"]
+      return [Program(prefix_code + generate_single_marginal(single_op_pushes, operation, o), operation['Mnemonic'], o, arg_sizes) for
+              o in op_counts]
     if opcode in constants.MEMORY_OPCODES:
       # memory-copying OPCODEs need arguments to indicate up to 16KB of memory
       args = [random.randint(0, (1<<14) - 1) for _ in range(0, arity(operation))]
@@ -123,9 +148,6 @@ class ProgramGenerator(object):
       arg_sizes = arg_byte_sizes
     # the arguments are popped from the stack
     single_op_pushes.reverse()
-
-    # the program triplet will be for the following number of measured OPCODEs
-    op_counts = [0, op_count, op_count * 2]
 
     return [Program(generate_single_marginal(single_op_pushes, operation, o), operation['Mnemonic'], o, arg_sizes) for o in op_counts]
 
