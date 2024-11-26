@@ -1,11 +1,8 @@
-import os
 import csv
 import fire
 import random
 import sys
 
-import constants
-from common import generate_single_marginal, prepare_opcodes, get_selection, arity, random_value_byte_size_push, byte_size_push
 
 WRAPPING_INSTRUCTIONS_COUNT = 5
 
@@ -88,15 +85,18 @@ def _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, se
     """
     Generic program generator
     """
+
     programs = []
     single_op_pushes = '60ff' * WRAPPING_INSTRUCTIONS_COUNT
     single_op_pops = '50' * WRAPPING_INSTRUCTIONS_COUNT
+    noop_args_pops = '505050505050'  # 6xPOP
 
     for op_count in op_counts:
+        # There should always be additional noop at start, even when creating variant for max_op_count
+        noop_calls = '858585858585fa50' * (max_op_count - op_count + 1)
         calls = '858585858585fa50' * op_count
-        no_ops = '85858585858550' * (max_op_count - op_count)
 
-        bytecode = single_op_pushes + setup_code + calls + no_ops + single_op_pops
+        bytecode = single_op_pushes + setup_code + noop_calls + noop_args_pops + calls + single_op_pops
         programs.append(Program(bytecode, precompile, op_count, nominal_gas_cost))
     return programs
 
@@ -162,6 +162,8 @@ def _generate_ecpairing_programs(op_counts, max_op_count):
         '7f1851abe58ef4e08916bec8034ca62c04cd08340ab6cc525e6170634092622165608052'
         '7f1b71422869c92e49465200ca19033a8aa425f955be3d8329c4475503e45c00e160a052'
         '60ff60c052602060c060c06000600863ffffffff'
+        # Noops args: PUSH1 20, PUSH1 c0, PUSH1 c0, PUSH1 00, PUSH1 ff, PUSH4 ffffffff
+        '602060c060c0600060ff63ffffffff'
     )
     programs += _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
 
@@ -180,6 +182,8 @@ def _generate_ecpairing_programs(op_counts, max_op_count):
         '7f2a23af9a5ce2ba2796c1f4e453a370eb0af8c212d9dc9acd8fc02c2e907baea261014052'
         '7f23a8eb0b0996252cb548a4487da97b02422ebc0e834613f954de6c7e0afdc1fc61016052'
         '60ff6101805260206101806101806000600863ffffffff'
+        # Noops args: PUSH1 20, PUSH2 0180, PUSH2 0180, PUSH1 00, PUSH1 ff, PUSH4 ffffffff
+        '6020610180610180600060ff63ffffffff'
     )
     programs += _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
 
@@ -210,6 +214,8 @@ def _generate_ecpairing_programs(op_counts, max_op_count):
         '7f240c9c5a6993d344744d77bbb855960b6704e91846cf362444bff1ccaf45a7c26102c052'
         '7f17873a5d7834d0c1d7d9bab5f9934d7ac218834aa916d459d8ceafc280d59efb6102e052'
         '60ff6103005260206103006103006000600863ffffffff'
+        # Noops args: PUSH1 20, PUSH2 0300, PUSH2 0300, PUSH1 00, PUSH1 ff, PUSH4 ffffffff
+        '6020610300610300600060ff63ffffffff'
     )
     programs += _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
 
@@ -264,6 +270,8 @@ def _generate_ecpairing_programs(op_counts, max_op_count):
         '7f2a628ffe54a17a274af70c3584b4f9a2e567c6ae5d5a00d14ac7ffc12d04e06a6105c052'
         '7f03d1fee23fa99c63fb8a760fe4794af4221f7bb7ceb194c7df2c63859c8b03296105e052'
         '60ff6106005260206106006106006000600863ffffffff'
+        # Noops args: PUSH1 20, PUSH2 0600, PUSH2 0600, PUSH1 00, PUSH1 ff, PUSH4 ffffffff
+        '6020610600610600600060ff63ffffffff'
     )
     programs += _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, setup_code)
 
