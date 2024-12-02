@@ -97,6 +97,8 @@ class ProgramGenerator(object):
   def _generate_single_program(self, operation, op_count, max_op_count):
     assert op_count <= constants.MAX_INSTRUCTIONS
     # for compatibility with the generate_single_marginal function
+    if operation['Mnemonic'] in ['CALLDATASIZE', 'CALLDATACOPY', 'CALLDATALOAD']:
+      return Program(_generate_calldata_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] == 'CREATE':
       return Program(_generate_create_program(operation, op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] in ['EXTCODEHASH', 'EXTCODESIZE']:
@@ -366,7 +368,39 @@ def _generate_subcontext_exit_program(operation, op_count, max_op_count):
   op_calls = '60006000600060008461fffff450' * op_count
   
   return op_deployment_code + op_address_store + no_op_deployment_code + no_op_calls + op_address_load + op_calls
-        
+
+def _generate_calldata_program(operation, op_count, max_op_count):
+  """
+  Generates a program for CALLDATASIZE
+  """
+  assert operation['Mnemonic'] in ['CALLDATASIZE', 'CALLDATACOPY', 'CALLDATALOAD']
+
+  if operation['Mnemonic'] == 'CALLDATALOAD':
+    no_op_subcontext_code = '5f'
+    op_subcontext_code = '5f35'
+    op_deployment_code = '6961' + op_subcontext_code + '5f526002601ef36000526013600d6000f0'
+    no_op_deployment_code = '6860' + no_op_subcontext_code + '5f526001601ff36000526013600d6000f0'
+  elif operation['Mnemonic'] == 'CALLDATASIZE':
+    no_op_subcontext_code = '5f'
+    op_subcontext_code = '5f36'
+    op_deployment_code = '6961' + op_subcontext_code + '5f526002601ef36000526013600d6000f0'
+    no_op_deployment_code = '6860' + no_op_subcontext_code + '5f526001601ff36000526013600d6000f0'
+  elif operation['Mnemonic'] == 'CALLDATACOPY':
+    no_op_subcontext_code = '60ff5f5f'
+    op_subcontext_code = no_op_subcontext_code + '37'
+    op_deployment_code = '6c64' + op_subcontext_code + '5f526005601af36000526013600d6000f0'
+    no_op_deployment_code = '6b63' + no_op_subcontext_code + '5f526004601bf36000526013600d6000f0'  
+
+  op_address_store = '60ff52'
+  op_address_load = '60ff51'
+
+  # 32 bytes calldata
+  no_op_calls = '60006000602060008461fffff450' * (max_op_count - op_count)
+  op_calls = '60006000602060008461fffff450' * op_count
+  
+  return op_deployment_code + op_address_store + no_op_deployment_code + no_op_calls + op_address_load + op_calls
+
+    
 def main():
   fire.Fire(ProgramGenerator, name='generate')
 
