@@ -2,10 +2,10 @@
 title: "Gas Cost Estimator: estimation of impact of arguments on gas costs"
 output: html_document
 params:
-  env: ""
-  programs: ""
-  results: ""
-  marginal_estimated_cost: ""
+  env: "besu"
+  programs: "pg_arguments_short.csv"
+  results: "results_arguments_short_besu.csv"
+  marginal_estimated_cost: "reports-08.11.2024/estimated_cost_besu_full.csv"
   output_estimated_cost: ""
   details: ""
 ---
@@ -16,7 +16,7 @@ library(nlme)
 library(mixtools)
 library(zeallot) # for multi-assignment %<-%
 
-knitr::opts_knit$set(root.dir = '/data')
+knitr::opts_knit$set(root.dir = '/home/lukaszglen/sources/imapp5/local')
 
 if (params$env == "") {
   stop("'env' param is missing, the name of EVM client")
@@ -175,7 +175,7 @@ if (nrow(opcode_arity_compare[which(opcode_arity_compare$arity.x != opcode_arity
 }
 ```
 
-```{r fig.width=15}
+```{r fig.width=12}
 for(i in 1:nrow(opcode_arity_df)) {
   opcode_arity <- opcode_arity_df[i,]
   opcode <- opcode_arity[["opcode"]]
@@ -207,6 +207,26 @@ for all OPCODEs.
 We gather all the results in the `first_pass` table, inspect this to see where the arguments turned out to be significantly impacting the computation cost.
 
 ```{r, include=FALSE}
+div_opcodes = c('DIV', 'MOD', 'SDIV', 'SMOD')
+expensive_opcodes = c(div_opcodes, 'ADDMOD', 'MULMOD')
+
+# all and only opcodes with expensive (expensive_opcodes) have non NA expensive column
+measurements$expensive = NA
+measurements[which(measurements$opcode %in% div_opcodes), ]$expensive =
+  measurements[which(measurements$opcode %in% div_opcodes), ]$arg0 >
+  measurements[which(measurements$opcode %in% div_opcodes), ]$arg1
+# remember that argX is the byte-size of the argument in these measurements
+measurements[which(measurements$opcode == 'ADDMOD'), ]$expensive =
+  8**measurements[which(measurements$opcode == 'ADDMOD'), ]$arg0 +
+  8**measurements[which(measurements$opcode == 'ADDMOD'), ]$arg1 > 
+  8**measurements[which(measurements$opcode == 'ADDMOD'), ]$arg2
+measurements[which(measurements$opcode == 'MULMOD'), ]$expensive =
+  measurements[which(measurements$opcode == 'MULMOD'), ]$arg0 +
+  measurements[which(measurements$opcode == 'MULMOD'), ]$arg1 >
+  measurements[which(measurements$opcode == 'MULMOD'), ]$arg2
+```
+
+```{r, include=FALSE}
 # Every `arg` coefficient represents the impact of the argument's byte size growing by 1.
 # We treat as impactful the arguments where p-value is effectively zero. The previous approach was:
 # Treat as impactful the arguments, where:
@@ -222,35 +242,55 @@ ifNA <- function(x, v) {
   ifelse(is.na(x), v, x)
 }
 
-first_pass = data.frame(opcode=character(0),estimate_marginal_ns=numeric(0),
+first_pass = data.frame(opcode=character(0), estimate_marginal_ns=numeric(0), estimate_marginal_ns_p=numeric(0),
                         arg0_ns_raw=numeric(0), arg1_ns_raw=numeric(0), arg2_ns_raw=numeric(0),
-                        arg0_ns_p=numeric(0), arg1_ns_p=numeric(0), arg2_ns_p=numeric(0))
+                        arg0_ns_p=numeric(0), arg1_ns_p=numeric(0), arg2_ns_p=numeric(0),
+                        expensive_ns_raw=numeric(0), expensive_ns_p=numeric(0))
 
 for(i in 1:nrow(opcode_arity_df)) {
   opcode_arity <- opcode_arity_df[i,]
   opcode <- opcode_arity[["opcode"]]
   arity <- opcode_arity[["arity"]]
-  args_ns_raw = c(NA, NA, NA)
-  args_ns_p = c(NA, NA, NA)
-  if (arity == 0) { # TODO is it good?
-    model = lm(measure_total_time_ns ~ op_count, data=measurements[which(measurements$opcode==opcode), ])
+  if (arity == 0) { 
+    if (opcode %in% expensive_opcodes) {
+      stop("expensive not supported for null arity")
+    } else {
+      # TODO is it good?
+      model = lm(measure_total_time_ns ~ op_count, data=measurements[which(measurements$opcode==opcode), ])
+    }
   }
   if (arity == 1) {
-    model = lm(measure_total_time_ns ~ op_count + arg0 + arg0:op_count, data=measurements[which(measurements$opcode==opcode), ])
+    if (opcode %in% expensive_opcodes) {
+      stop("expensive not supported for unary arity")
+    } else {
+      model = lm(measure_total_time_ns ~ op_count + arg0 + arg0:op_count, data=measurements[which(measurements$opcode==opcode), ])
+    }
   }
   if (arity == 2) {
-    model = lm(measure_total_time_ns ~ op_count + arg0 + arg1 + arg0:op_count + arg1:op_count, data=measurements[which(measurements$opcode==opcode), ])
+    if (opcode %in% expensive_opcodes) {
+      model = lm(measure_total_time_ns ~ op_count + arg0 + arg1 + expensive + arg0:op_count + arg1:op_count + expensive:op_count, data=measurements[which(measurements$opcode==opcode), ])
+    } else {
+      model = lm(measure_total_time_ns ~ op_count + arg0 + arg1 + arg0:op_count + arg1:op_count, data=measurements[which(measurements$opcode==opcode), ])
+    }
   }
   if (arity == 3) {
-    model = lm(measure_total_time_ns ~ op_count + arg0 + arg1 + arg2 + arg0:op_count + arg1:op_count + arg2:op_count, data=measurements[which(measurements$opcode==opcode), ])
+    if (opcode %in% expensive_opcodes) {
+      model = lm(measure_total_time_ns ~ op_count + arg0 + arg1 + arg2 + expensive + arg0:op_count + arg1:op_count + arg2:op_count + expensive:op_count, data=measurements[which(measurements$opcode==opcode), ])
+    } else {
+      model = lm(measure_total_time_ns ~ op_count + arg0 + arg1 + arg2 + arg0:op_count + arg1:op_count + arg2:op_count, data=measurements[which(measurements$opcode==opcode), ])
+    }
   }
   all_coefficients = summary(model)$coefficients
   arg_coefficients = all_coefficients[!(row.names(all_coefficients) %in% c("op_count", "(Intercept)", "arg0", "arg1", "arg2")), , drop = FALSE]
-  pure_op_count_coeff = all_coefficients["op_count", 1]
+  arg_coefficients_names = row.names(arg_coefficients)
   
+  pure_op_count_coeff = all_coefficients["op_count", 1]
+  pure_op_count_coeff_p = all_coefficients["op_count", 4]
+  
+  args_ns_raw = c(NA, NA, NA)
+  args_ns_p = c(NA, NA, NA)
   # it may be that lm drops a coefficient if its arguments are constant,
   # this is a way to exclude an arg from examination
-  arg_coefficients_names = row.names(arg_coefficients)
   if ("op_count:arg0" %in% arg_coefficients_names) {
     args_ns_raw[1] = arg_coefficients["op_count:arg0", 1]
     args_ns_p[1] = arg_coefficients["op_count:arg0", 4]
@@ -264,12 +304,37 @@ for(i in 1:nrow(opcode_arity_df)) {
     args_ns_p[3] = arg_coefficients["op_count:arg2", 4]
   }
   
-  first_pass[nrow(first_pass) + 1, ] = list(opcode, pure_op_count_coeff, args_ns_raw[1], args_ns_raw[2], args_ns_raw[3], args_ns_p[1], args_ns_p[2], args_ns_p[3])
+  expensive_ns_raw = NA
+  expensive_ns_p = NA
+  if (opcode %in% expensive_opcodes) {
+    expensive_ns_raw = all_coefficients["op_count:expensiveTRUE", 1]
+    expensive_ns_p = all_coefficients["op_count:expensiveTRUE", 4]
+  }
+  
+  first_pass[nrow(first_pass) + 1, ] = list(opcode, pure_op_count_coeff, pure_op_count_coeff_p, args_ns_raw[1], args_ns_raw[2], args_ns_raw[3], args_ns_p[1], args_ns_p[2], args_ns_p[3], expensive_ns_raw, expensive_ns_p)
 }
 
 first_pass$has_impacting_arg0 <- !is.na(first_pass$arg0_ns_raw) & !is.na(first_pass$arg0_ns_p) & first_pass$arg0_ns_p < p_value_thresh & abs(ifNA(first_pass$arg0_ns_raw, 0)) > first_pass$estimate_marginal_ns * impact_ratio
 first_pass$has_impacting_arg1 <- !is.na(first_pass$arg1_ns_raw) & !is.na(first_pass$arg1_ns_p) & first_pass$arg1_ns_p < p_value_thresh & abs(ifNA(first_pass$arg1_ns_raw, 0)) > first_pass$estimate_marginal_ns * impact_ratio
 first_pass$has_impacting_arg2 <- !is.na(first_pass$arg2_ns_raw) & !is.na(first_pass$arg2_ns_p) & first_pass$arg2_ns_p < p_value_thresh & abs(ifNA(first_pass$arg2_ns_raw, 0)) > first_pass$estimate_marginal_ns * impact_ratio
+
+# these arguments are explicitly expressed in the currenct gas cost calculation
+first_pass[which(first_pass$opcode == "EXP"), "has_impacting_arg1"] = TRUE
+first_pass[which(first_pass$opcode == "KECCAK256"), "has_impacting_arg1"] = TRUE
+first_pass[which(first_pass$opcode == "CALLDATACOPY"), "has_impacting_arg2"] = TRUE
+first_pass[which(first_pass$opcode == "CODECOPY"), "has_impacting_arg2"] = TRUE
+first_pass[which(first_pass$opcode == "EXTCODECOPY"), "has_impacting_arg2"] = TRUE
+first_pass[which(first_pass$opcode == "RETURNDATACOPY"), "has_impacting_arg2"] = TRUE
+first_pass[which(first_pass$opcode == "MCOPY"), "has_impacting_arg2"] = TRUE
+first_pass[which(first_pass$opcode == "LOG0"), "has_impacting_arg1"] = TRUE
+first_pass[which(first_pass$opcode == "LOG1"), "has_impacting_arg1"] = TRUE
+first_pass[which(first_pass$opcode == "LOG2"), "has_impacting_arg1"] = TRUE
+first_pass[which(first_pass$opcode == "LOG3"), "has_impacting_arg1"] = TRUE
+first_pass[which(first_pass$opcode == "LOG4"), "has_impacting_arg1"] = TRUE
+first_pass[which(first_pass$opcode == "CREATE"), "has_impacting_arg2"] = TRUE
+first_pass[which(first_pass$opcode == "RETURN"), "has_impacting_arg1"] = TRUE
+first_pass[which(first_pass$opcode == "CREATE2"), "has_impacting_arg2"] = TRUE
+first_pass[which(first_pass$opcode == "REVERT"), "has_impacting_arg1"] = TRUE
 
 first_pass$has_impacting <- first_pass$has_impacting_arg0 | first_pass$has_impacting_arg1 | first_pass$has_impacting_arg2
 ```
@@ -296,6 +361,10 @@ if (details) {
 } else {
   args_estimates[which(args_estimates$has_impacting), ]
 }
+```
+
+```{r}
+first_pass[which(!is.na(first_pass$expensive_ns_raw)), c("opcode", "estimate_marginal_ns", "estimate_marginal_ns_p", "expensive_ns_raw", "expensive_ns_p")]
 ```
 
 ```{r, include=FALSE}
@@ -334,7 +403,7 @@ if (details) {
 }
 ```
 
-```{r fig.width=15}
+```{r fig.width=12}
 for(opcode in proceed_with_opcodes) {
   working_args <- args_estimates[which(args_estimates$opcode == opcode), "arg"]
   if (length(working_args) == 1) {
@@ -352,9 +421,9 @@ In this section we compare opcodes cost obtained in the arguments course with pr
 `r if(marginal_estimated_cost_empty){"No marginal estimated cost files given."}`
 
 ```{r, include = FALSE}
-q <- "SELECT first_pass.opcode, first_pass.estimate_marginal_ns AS 'estimate_marginal_ns inner', marginal_estimated_cost.estimate_marginal_ns AS 'estimate_marginal_ns outer' FROM first_pass LEFT JOIN marginal_estimated_cost ON first_pass.opcode = marginal_estimated_cost.op"
+q <- "SELECT first_pass.opcode, first_pass.estimate_marginal_ns + IFNULL(first_pass.expensive_ns_raw, 0) AS 'opcode_cost(arguments)', marginal_estimated_cost.estimate_marginal_ns AS 'opcode_cost(marginal)' FROM first_pass LEFT JOIN marginal_estimated_cost ON first_pass.opcode = marginal_estimated_cost.op"
 compare_marginal <- sqldf(q)
-compare_marginal$'rel diff' <- (compare_marginal$'estimate_marginal_ns inner' / compare_marginal$'estimate_marginal_ns outer') - 1
+compare_marginal$'rel diff' <- (compare_marginal$'opcode_cost(arguments)' / compare_marginal$'opcode_cost(marginal)') - 1
 ```
 
 ```{r, include = !marginal_estimated_cost_empty}
@@ -366,4 +435,3 @@ if (params$output_estimated_cost != "") {
   write.csv(first_pass, params$output_estimated_cost, quote=FALSE, row.names=FALSE)
 }
 ```
-
