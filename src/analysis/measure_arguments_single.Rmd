@@ -2,10 +2,10 @@
 title: "Gas Cost Estimator: estimation of impact of arguments on gas costs"
 output: html_document
 params:
-  env: "besu"
-  programs: "pg_arguments_short.csv"
-  results: "results_arguments_short_besu.csv"
-  marginal_estimated_cost: "reports-08.11.2024/estimated_cost_besu_full.csv"
+  env: ""
+  programs: ""
+  results: ""
+  marginal_estimated_cost: ""
   output_estimated_cost: ""
   details: ""
 ---
@@ -249,7 +249,7 @@ for(i in 1:nrow(opcode_arity_df)) {
   opcode_arity <- opcode_arity_df[i,]
   opcode <- opcode_arity[["opcode"]]
   arity <- opcode_arity[["arity"]]
-  if (arity == 0) { 
+  if (arity == 0) {
     if (opcode %in% expensive_opcodes) {
       stop("expensive not supported for null arity")
     } else {
@@ -355,6 +355,7 @@ for(i in 1:nrow(first_pass)) {
 }
 ```
 
+<<<<<<< HEAD
 The argument is considered impacting on the gas cost of opcode execution
 if its coefficient in the regression model
 
@@ -383,6 +384,8 @@ included in the current gas cost calculation.
 
 Below is the listing of arguments impact.
 
+=======
+>>>>>>> master
 ```{r}
 if (details) {
   args_estimates
@@ -391,6 +394,7 @@ if (details) {
 }
 ```
 
+<<<<<<< HEAD
 The blue graph is the measurements, the red line is the estimated arguments cost shifted by the estimated constant cost of the programs execution.
 The default opcodes count is 30.
 
@@ -425,6 +429,8 @@ first_pass[which(!is.na(first_pass$expensive_ns_raw)), c("opcode", "estimate_mar
 Heat maps help to visualize dependency between two arguments, in particular division into trivial and expensive modes.
 Other strong or weak dependencies can be also detected.
 
+=======
+>>>>>>> master
 ```{r, include=FALSE}
 # it may be that for opcode with arity == 3 or arity == 2 only 1 arg is examined, use_arg is the arg
 plot_args_dependency_1 <- function(df, opcode, use_arg) {
