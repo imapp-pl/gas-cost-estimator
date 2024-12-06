@@ -42,7 +42,10 @@ marginal_estimated_cost_empty = params$marginal_estimated_cost == ""
 ```
 
 
-In this script we conduct the estimation for the `measure_arguments` approach.
+In this script we conduct the estimation for the `measure_arguments` approach. 
+It is to verify and detect arguments cost for opcodes execution.
+
+Below are the parameters used for this report.
 
 EVM client ENV=`r params$env`. 
 
@@ -98,7 +101,6 @@ measurements = sqldf("SELECT opcode, op_count, arg0, arg1, arg2, sample_id, run_
                        programs ON(results.program_id = programs.program_id)
                      ")
 measurements$env <- env
-# measurements$opcode = factor(measurements$opcode, levels=unique(programs$opcode))
 ```
 
 ```{r, include=FALSE}
@@ -155,8 +157,6 @@ if (removed_outliers) {
 }
 ```
 
-TODO remove_outliers_2 ?
-
 # Detailed view
 
 This is massive and detailed overview on the impact of arguments. 
@@ -197,10 +197,6 @@ for(i in 1:nrow(opcode_arity_df)) {
 
 # Models
 
-Notes:
-1. Outliers need to be removed if detected
-2. The `argX:op_count` interactions measure the impact on the OPCODE
-3. The `argX` are just auxiliary variables added to exclude the effect of cheaper/more expensive PUSHes. We only want to extract the effect of the argument on the measured OPCODE repeated `op_count` times.
 
 This is the so-called "first-pass" at the estimation procedure, where we estimated all possible argument impact variables
 for all OPCODEs.
@@ -242,7 +238,9 @@ ifNA <- function(x, v) {
   ifelse(is.na(x), v, x)
 }
 
-first_pass = data.frame(opcode=character(0), estimate_marginal_ns=numeric(0), estimate_marginal_ns_p=numeric(0),
+first_pass = data.frame(opcode=character(0), 
+                        intercept=numeric(0), intercept_p=numeric(0),
+                        estimate_marginal_ns=numeric(0), estimate_marginal_ns_p=numeric(0),
                         arg0_ns_raw=numeric(0), arg1_ns_raw=numeric(0), arg2_ns_raw=numeric(0),
                         arg0_ns_p=numeric(0), arg1_ns_p=numeric(0), arg2_ns_p=numeric(0),
                         expensive_ns_raw=numeric(0), expensive_ns_p=numeric(0))
@@ -283,7 +281,9 @@ for(i in 1:nrow(opcode_arity_df)) {
   all_coefficients = summary(model)$coefficients
   arg_coefficients = all_coefficients[!(row.names(all_coefficients) %in% c("op_count", "(Intercept)", "arg0", "arg1", "arg2")), , drop = FALSE]
   arg_coefficients_names = row.names(arg_coefficients)
-  
+
+  intercept = all_coefficients["(Intercept)", 1]
+  intercept_p = all_coefficients["(Intercept)", 4]
   pure_op_count_coeff = all_coefficients["op_count", 1]
   pure_op_count_coeff_p = all_coefficients["op_count", 4]
   
@@ -311,7 +311,7 @@ for(i in 1:nrow(opcode_arity_df)) {
     expensive_ns_p = all_coefficients["op_count:expensiveTRUE", 4]
   }
   
-  first_pass[nrow(first_pass) + 1, ] = list(opcode, pure_op_count_coeff, pure_op_count_coeff_p, args_ns_raw[1], args_ns_raw[2], args_ns_raw[3], args_ns_p[1], args_ns_p[2], args_ns_p[3], expensive_ns_raw, expensive_ns_p)
+  first_pass[nrow(first_pass) + 1, ] = list(opcode, intercept, intercept_p, pure_op_count_coeff, pure_op_count_coeff_p, args_ns_raw[1], args_ns_raw[2], args_ns_raw[3], args_ns_p[1], args_ns_p[2], args_ns_p[3], expensive_ns_raw, expensive_ns_p)
 }
 
 first_pass$has_impacting_arg0 <- !is.na(first_pass$arg0_ns_raw) & !is.na(first_pass$arg0_ns_p) & first_pass$arg0_ns_p < p_value_thresh & abs(ifNA(first_pass$arg0_ns_raw, 0)) > first_pass$estimate_marginal_ns * impact_ratio
@@ -355,6 +355,34 @@ for(i in 1:nrow(first_pass)) {
 }
 ```
 
+The argument is considered impacting on the gas cost of opcode execution
+if its coefficient in the regression model
+
+1. is noticeable comparing to the marginal cost (at least `r paste(impact_ratio, '%')`),
+2. has high correlation (`r paste0('Pr(>|t|)=Pr(>|Estimate/Std. Error|)<', p_value_thresh)`).
+
+Moreover, these opcodes are considered having impacting arguments by default as they are explicitly 
+included in the current gas cost calculation.
+
+- EXP, arg1
+- KECCAK256, arg1
+- CALLDATACOPY, arg2
+- CODECOPY, arg2
+- EXTCODECOPY, arg2
+- RETURNDATACOPY, arg2
+- MCOPY, arg2
+- LOG0, arg1
+- LOG1, arg1
+- LOG2, arg1
+- LOG3, arg1
+- LOG4, arg1
+- CREATE, arg2
+- RETURN, arg1
+- CREATE2, arg2
+- REVERT, arg1
+
+Below is the listing of arguments impact.
+
 ```{r}
 if (details) {
   args_estimates
@@ -363,9 +391,39 @@ if (details) {
 }
 ```
 
+The blue graph is the measurements, the red line is the estimated arguments cost shifted by the estimated constant cost of the programs execution.
+The default opcodes count is 30.
+
+```{r fig.width=12}
+proceed_with_opcodes <- first_pass[which(first_pass$has_impacting), "opcode"]
+for(opcode in proceed_with_opcodes) {
+  opcode_estimates <- first_pass[which(first_pass$opcode == opcode),]
+  if (opcode_estimates[["has_impacting_arg1"]]) {
+    slope = opcode_estimates[["arg1_ns_raw"]] * 30
+    intercept = opcode_estimates[["intercept"]] + opcode_estimates[["estimate_marginal_ns"]] * 30
+    xmax = max(measurements[which(measurements$opcode == opcode & measurements$op_count == 30), "arg1"])
+    ymin = min(measurements[which(measurements$opcode == opcode & measurements$op_count == 30), "measure_total_time_ns"], intercept, intercept + slope * xmax)
+    ymax = max(measurements[which(measurements$opcode == opcode & measurements$op_count == 30), "measure_total_time_ns"], intercept, intercept + slope * xmax)
+    plot(measure_total_time_ns ~ arg1, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 30), ], pch=5, col='blue', ylim=c(ymin*0.95, ymax*1.05))
+    title(main = paste(env, opcode, 'arg1', 'opcount 30'))
+    abline(a=intercept, b=slope, col="red")
+  }
+}
+```
+
+# Expensive and trivial modes
+
+In some cases an execution of opcode is trivial. For instance DIV x, y for x < y fives 0 without further work.
+For selected opcodes we investigate the trivial mode and so the called expensive mode 
+when typical algorithm needs to be run fully.
+
+
 ```{r}
 first_pass[which(!is.na(first_pass$expensive_ns_raw)), c("opcode", "estimate_marginal_ns", "estimate_marginal_ns_p", "expensive_ns_raw", "expensive_ns_p")]
 ```
+
+Heat maps help to visualize dependency between two arguments, in particular division into trivial and expensive modes.
+Other strong or weak dependencies can be also detected.
 
 ```{r, include=FALSE}
 # it may be that for opcode with arity == 3 or arity == 2 only 1 arg is examined, use_arg is the arg
@@ -415,6 +473,7 @@ for(opcode in proceed_with_opcodes) {
 ```
 
 # Verification against marginal estimations
+
 
 In this section we compare opcodes cost obtained in the arguments course with previous estimations obtained in the marginal procedure.
 
