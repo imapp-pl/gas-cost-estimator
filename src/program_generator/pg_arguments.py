@@ -139,6 +139,15 @@ class ProgramGenerator(object):
       single_op_pushes = [byte_size_push(2, arg) for arg in args]
       # for these OPCODEs the important size variable is just the argument
       arg_sizes = args
+    elif opcode.startswith("PUSH"):
+      push_size = int(opcode[4:])
+      arg_size = random.randint(1, push_size + 1)
+      value = random.getrandbits(8 * arg_size)
+      push_format = "%0." + str(push_size * 2) + "X"
+      operation = operation.copy()
+      operation['Value'] = operation['Value'] + (push_format % int(value))
+      single_op_pushes = []
+      arg_sizes = [arg_size]
     else:
       arg_byte_sizes = [random.randint(1, 32) for _ in range(0, arity(operation))]
       # NOTE: `random_value_byte_size_push` means in this case, we randomize the size of pushed value, but keep the PUSH
