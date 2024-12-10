@@ -31,6 +31,8 @@ Form:
   - marginal
   - arguments
   - final
+- compare with:
+  - select existing evm client results
 - data files (multiple file upload)
 - base gas schedule (optional file upload)
 - Generate button    
