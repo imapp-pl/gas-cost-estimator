@@ -55,8 +55,12 @@ Value,Mnemonic,Gas Used,Subset,Removed from stack,Added to stack,Notes,Formula N
 0x52,MSTORE,3,verylow,2,0,Save word to memory,
 0x52,MSTORE_COLD,3 + memory_expanstion_cost,verylow,2,0,Save word to memory (cold),
 0x53,MSTORE8,3,verylow,2,0,Save byte to memory.,
-0x54,SLOAD,200,,1,1,Load word from storage,
-0x55,SSTORE,((value != 0) && (storage_location == 0)) ? 20000 : 5000,,1,1,Save word to storage.,20000 is paid when storage value is set to non-zero from zero. 5000 is paid when the storage value's zeroness remains unchanged or is set to zero.
+0x54,SLOAD_COLD,2100,,1,1,Load word from storage,
+0x54,SLOAD_WARM,100,,1,1,Load word from storage,
+0x55,SSTORE_COLD_CHANGE,22100,,2,0,Save word to storage.,20000 is paid when storage value is set to non-zero from zero. 5000 is paid when the storage value's zeroness remains unchanged or is set to zero.
+0x55,SSTORE_COLD_NO_CHANGE,5000,,2,0,Save word to storage.,20000 is paid when storage value is set to non-zero from zero. 5000 is paid when the storage value's zeroness remains unchanged or is set to zero.
+0x55,SSTORE_WARM_CHANGE,100,2,0,Save word to storage.,20000 is paid when storage value is set to non-zero from zero. 5000 is paid when the storage value's zeroness remains unchanged or is set to zero.
+0x55,SSTORE_WARM_NO_CHANGE,100,,2,0,Save word to storage.,20000 is paid when storage value is set to non-zero from zero. 5000 is paid when the storage value's zeroness remains unchanged or is set to zero.
 0x56,JUMP,8,mid,1,0,Alter the program counter,
 0x57,JUMPI,10,high,2,0,Conditionally alter the program counter.,
 0x58,PC,2,base,0,1,Get the value of the program counter prior to the increment corresponding to this instruction.,

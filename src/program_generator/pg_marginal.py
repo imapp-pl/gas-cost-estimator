@@ -119,6 +119,18 @@ class ProgramGenerator(object):
       return Program(_generate_mcopy_cold_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] == 'KECCAK256':
       return Program(_generate_keccak256_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] == 'SLOAD_COLD':
+      return Program(_generate_sload_cold_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] == 'SLOAD_WARM':
+      return Program(_generate_sload_warm_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] == 'SSTORE_COLD_CHANGE':
+      return Program(_generate_sstore_cold_change_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] == 'SSTORE_COLD_NO_CHANGE':
+      return Program(_generate_sstore_cold_no_change_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] == 'SSTORE_WARM_CHANGE':
+      return Program(_generate_sstore_warm_change_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'] == 'SSTORE_WARM_NO_CHANGE':
+      return Program(_generate_sstore_warm_no_change_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] == 'TLOAD':
       return Program(_generate_tload_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] == 'TLOAD_EXT':
@@ -366,9 +378,88 @@ def _generate_subcontext_exit_program(operation, op_count, max_op_count):
   op_calls = '60006000600060008461fffff450' * op_count
   
   return op_deployment_code + op_address_store + no_op_deployment_code + no_op_calls + op_address_load + op_calls
-        
+
+def _generate_sload_cold_program(operation, op_count, max_op_count):
+  """
+  Generates a program for SLOAD where every SLOAD loads from a cold slot
+  """
+  assert operation['Mnemonic'] == 'SLOAD_COLD'
+
+  # push 0..max_op_count range on the stack
+  args_pushes = ''.join([f'60{i:02x}' for i in range(max_op_count)])
+  opcodes = (operation['Value'][2:] + '50') * op_count
+  pops = '50' * (max_op_count - op_count)
+  
+  return args_pushes + opcodes + pops
+
+def _generate_sload_warm_program(operation, op_count, max_op_count):
+  """
+  Generates a program for SLOAD where every SLOAD loads from a warm slot
+  """
+  assert operation['Mnemonic'] == 'SLOAD_WARM'
+
+  slot_warmup_code = '5f5450' # SLOAD from slot 0 and pop
+  args_pushes = '5f' * max_op_count
+  opcodes = (operation['Value'][2:] + '50') * op_count
+  pops = '50' * (max_op_count - op_count)
+  
+  return slot_warmup_code + args_pushes + opcodes + pops
+
+def _generate_sstore_cold_change_program(operation, op_count, max_op_count):
+  """
+  Generates a program for SSTORE opcode where every SSTORE stores in a cold storage slot and value in the slot is changed
+  """
+  assert operation['Mnemonic'] == 'SSTORE_COLD_CHANGE'
+
+  # store values in different slots
+  args_pushes = ''.join([('7f' + 'ff' * 32 + f'60{i:02x}') for i in range(0, max_op_count)])
+  opcodes = operation['Value'][2:] * op_count
+  
+  return args_pushes + opcodes
+
+def _generate_sstore_cold_no_change_program(operation, op_count, max_op_count):
+  """
+  Generates a program for SSTORE opcode where every SSTORE stores in a cold storage slot but value is unchanged
+  """
+  assert operation['Mnemonic'] == 'SSTORE_COLD_NO_CHANGE'
+
+  # store 0 in different slots - values not changed in slots
+  args_pushes = ''.join([('5f' + f'60{i:02x}') for i in range(0, max_op_count)])
+  opcodes = operation['Value'][2:] * op_count
+  
+  return args_pushes + opcodes
+
+def _generate_sstore_warm_no_change_program(operation, op_count, max_op_count):
+  """
+  Generates a program SSTORE opcode where every SSTORE stores in a warm storage slot but value is unchanged
+  """
+  assert operation['Mnemonic'] == 'SSTORE_WARM_NO_CHANGE'
+
+  args_push = '7f' + 'ff' * 32 + '5f'
+  slot_warmup_code = args_push + '55' # SSTORE to slot 0
+  args_pushes = args_push * max_op_count
+  opcodes = operation['Value'][2:] * op_count
+  
+  return slot_warmup_code + args_pushes + opcodes
+
+def _generate_sstore_warm_change_program(operation, op_count, max_op_count):
+  """
+  Generates a program for SSTORE opcode where every SSTORE stores in a warm storage slot and value in the slot is changed
+  """
+  assert operation['Mnemonic'] == 'SSTORE_WARM_CHANGE'
+
+  slot_warmup_code = '5f5450' # SLOAD from slot 0 and pop
+  # store different values in slot 0
+  args_pushes = ''.join([(f'60{i:02x}' + '5f') for i in range(1, max_op_count + 1)])
+  opcodes = operation['Value'][2:] * op_count
+  
+  return slot_warmup_code + args_pushes + opcodes
+
+
+
 def main():
   fire.Fire(ProgramGenerator, name='generate')
+
 
 if __name__ == '__main__':
   main()
