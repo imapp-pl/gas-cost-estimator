@@ -19,7 +19,12 @@ The result of our work is the proposal for the new gas cost schedule. It is base
 
 ## Reproduce
 
-### Generate Report 
+### Generate Report
+
+User manual:
+- release
+- program generator
+- step-by-step guide
 
 Form:
 - selected report types (checklist)
