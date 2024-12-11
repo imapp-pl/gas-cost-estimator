@@ -133,23 +133,8 @@ class ProgramGenerator(object):
       single_op_pushes = ["61%0.4X" % (arg_sizes[2] * 32), "61%0.4X" % ((arg_sizes[1] - 1) * 32), "5f"]
       return [Program(prefix_code + generate_single_marginal(single_op_pushes, operation, o), operation['Mnemonic'], o, arg_sizes) for
               o in op_counts]
-    if opcode in constants.MEMORY_OPCODES:
-      # memory-copying OPCODEs need arguments to indicate up to 16KB of memory
-      args = [random.randint(0, (1<<14) - 1) for _ in range(0, arity(operation))]
-      single_op_pushes = [byte_size_push(2, arg) for arg in args]
-      # for these OPCODEs the important size variable is just the argument
-      arg_sizes = args
-    elif opcode.startswith("PUSH"):
-      push_size = int(opcode[4:])
-      arg_size = random.randint(1, push_size + 1)
-      value = random.getrandbits(8 * arg_size)
-      push_format = "%0." + str(push_size * 2) + "X"
-      operation = operation.copy()
-      operation['Value'] = operation['Value'] + (push_format % int(value))
-      single_op_pushes = []
-      arg_sizes = [arg_size]
-    elif opcode in ['CALL', 'STATICCALL', 'DELEGATECALL']:
-      arg_sizes = [random.randint(1, 32) for _ in range(0, 2)] # argsOffset and argsSize
+    if opcode in ['CALL', 'STATICCALL', 'DELEGATECALL']:
+      arg_sizes = [random.randint(1, 32) for _ in range(0, 2)]  # argsOffset and argsSize
       args_offset = "61%0.4X" % ((arg_sizes[0] - 1) * 32)
       args_size = "61%0.4X" % (arg_sizes[1] * 32)
       single_call = ''
@@ -167,17 +152,39 @@ class ProgramGenerator(object):
       dummy_pushes = '60ff' * 5
       # allocate max possible used memory
       mem_allocation = "5f61080052"
-      account_deployment_code = '716860015860060157fe5b60005260096017f36000526012600e6000f0' # CREATE
-      account_deployment_code += '5f5f' + args_size + args_offset # retSize + retOffset + argsOffset + argsSize in reverse order
-      if opcode == 'CALL': # CALL takes extra parameter 'value'
+      account_deployment_code = '716860015860060157fe5b60005260096017f36000526012600e6000f0'  # CREATE
+      account_deployment_code += '5f5f' + args_size + args_offset  # retSize + retOffset + argsOffset + argsSize in reverse order
+      if opcode == 'CALL':  # CALL takes extra parameter 'value'
         account_deployment_code += '5f85'
       else:
         account_deployment_code += '84'
-      account_deployment_code += '61ffff' # gas
+      account_deployment_code += '61ffff'  # gas
       dummy_pops = '50' * 5
       # calls = single_call * op_count
       # noops = noop * (max_op_count - op_count)
-      return [Program(dummy_pushes + mem_allocation + account_deployment_code + (single_call * o) + (noop * (max_op_count - o)) + dummy_pops, opcode, o, arg_sizes) for o in op_counts]
+      return [Program(dummy_pushes + mem_allocation + account_deployment_code + (single_call * o) + (
+                noop * (max_op_count - o)) + dummy_pops, opcode, o, arg_sizes) for o in op_counts]
+    if opcode == "MCOPY":
+      arg_sizes = [random.randint(1, 32) for _ in range(0, 3)]  # dest, offset and size, but in words
+      dest = "61%0.4X" % ((arg_sizes[0] - 1) * 32)
+      offset = "61%0.4X" % ((arg_sizes[1] - 1) * 32)
+      size = "61%0.4X" % (arg_sizes[2] * 32)
+      single_op_pushes = [dest, offset, size]
+    elif opcode in constants.MEMORY_OPCODES:
+      # memory-copying OPCODEs need arguments to indicate up to 16KB of memory
+      args = [random.randint(0, (1<<14) - 1) for _ in range(0, arity(operation))]
+      single_op_pushes = [byte_size_push(2, arg) for arg in args]
+      # for these OPCODEs the important size variable is just the argument
+      arg_sizes = args
+    elif opcode.startswith("PUSH"):
+      push_size = int(opcode[4:])
+      arg_size = random.randint(1, push_size + 1)
+      value = random.getrandbits(8 * arg_size)
+      push_format = "%0." + str(push_size * 2) + "X"
+      operation = operation.copy()
+      operation['Value'] = operation['Value'] + (push_format % int(value))
+      single_op_pushes = []
+      arg_sizes = [arg_size]
     else: # arithemetic
       arg_byte_sizes = [random.randint(1, 32) for _ in range(0, arity(operation))]
       # NOTE: `random_value_byte_size_push` means in this case, we randomize the size of pushed value, but keep the PUSH
