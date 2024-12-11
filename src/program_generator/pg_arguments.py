@@ -148,7 +148,37 @@ class ProgramGenerator(object):
       operation['Value'] = operation['Value'] + (push_format % int(value))
       single_op_pushes = []
       arg_sizes = [arg_size]
-    else:
+    elif opcode in ['CALL', 'STATICCALL', 'DELEGATECALL']:
+      arg_sizes = [random.randint(1, 32) for _ in range(0, 2)] # argsOffset and argsSize
+      args_offset = "61%0.4X" % ((arg_sizes[0] - 1) * 32)
+      args_size = "61%0.4X" % (arg_sizes[1] * 32)
+      single_call = ''
+      noop = ''  # contains the same series of opcodes as those invoked by single_call
+      if opcode == 'CALL':  #
+        single_call = '86868686868686f150'
+        noop = '8686868686868660015860060157fe5b50'
+      elif opcode == 'STATICCALL':
+        single_call = '858585858585fa50'
+        noop = '85858585858560015860060157fe5b50'
+      elif opcode == 'DELEGATECALL':  #
+        single_call = '858585858585f450'
+        noop = '85858585858560015860060157fe5b50'
+      max_op_count = max(op_counts)
+      dummy_pushes = '60ff' * 5
+      # allocate max possible used memory
+      mem_allocation = "5f61080052"
+      account_deployment_code = '716860015860060157fe5b60005260096017f36000526012600e6000f0' # CREATE
+      account_deployment_code += '5f5f' + args_size + args_offset # retSize + retOffset + argsOffset + argsSize in reverse order
+      if opcode == 'CALL': # CALL takes extra parameter 'value'
+        account_deployment_code += '5f85'
+      else:
+        account_deployment_code += '84'
+      account_deployment_code += '61ffff' # gas
+      dummy_pops = '50' * 5
+      # calls = single_call * op_count
+      # noops = noop * (max_op_count - op_count)
+      return [Program(dummy_pushes + mem_allocation + account_deployment_code + (single_call * o) + (noop * (max_op_count - o)) + dummy_pops, opcode, o, arg_sizes) for o in op_counts]
+    else: # arithemetic
       arg_byte_sizes = [random.randint(1, 32) for _ in range(0, arity(operation))]
       # NOTE: `random_value_byte_size_push` means in this case, we randomize the size of pushed value, but keep the PUSH
       # variant resticted to PUSH32.
