@@ -164,12 +164,28 @@ class ProgramGenerator(object):
       # noops = noop * (max_op_count - op_count)
       return [Program(dummy_pushes + mem_allocation + account_deployment_code + (single_call * o) + (
                 noop * (max_op_count - o)) + dummy_pops, opcode, o, arg_sizes) for o in op_counts]
-    if opcode == "MCOPY":
+
+    init_code = None
+    if opcode == "MCOPY": # MCOPY is also in MEMORY_OPCODES
       arg_sizes = [random.randint(1, 32) for _ in range(0, 3)]  # dest, offset and size, but in words
       dest = "61%0.4X" % ((arg_sizes[0] - 1) * 32)
       offset = "61%0.4X" % ((arg_sizes[1] - 1) * 32)
       size = "61%0.4X" % (arg_sizes[2] * 32)
       single_op_pushes = [dest, offset, size]
+    elif opcode in ['MLOAD', 'MSTORE', 'MSTORE8']:
+      offset_size = random.randint(0, 31 * 32) # 32 words only, it is enough
+      if opcode == 'MSTORE8':
+        value_size = 1
+      else:
+        value_size = random.randint(1, 32)
+      offset = "61%0.4X" % offset_size
+      value = "7f%0.64X" % random.getrandbits(8 * value_size)
+      arg_sizes = [offset_size, value_size]
+      if opcode == 'MLOAD':
+        single_op_pushes = [offset]
+        init_code = value + offset + '52'
+      else:
+        single_op_pushes = [offset, value]
     elif opcode in constants.MEMORY_OPCODES:
       # memory-copying OPCODEs need arguments to indicate up to 16KB of memory
       args = [random.randint(0, (1<<14) - 1) for _ in range(0, arity(operation))]
@@ -178,7 +194,7 @@ class ProgramGenerator(object):
       arg_sizes = args
     elif opcode.startswith("PUSH"):
       push_size = int(opcode[4:])
-      arg_size = random.randint(1, push_size + 1)
+      arg_size = random.randint(1, push_size)
       value = random.getrandbits(8 * arg_size)
       push_format = "%0." + str(push_size * 2) + "X"
       operation = operation.copy()
@@ -195,7 +211,7 @@ class ProgramGenerator(object):
     # the arguments are popped from the stack
     single_op_pushes.reverse()
 
-    return [Program(generate_single_marginal(single_op_pushes, operation, o), operation['Mnemonic'], o, arg_sizes) for o in op_counts]
+    return [Program(generate_single_marginal(single_op_pushes, operation, o, init_code), operation['Mnemonic'], o, arg_sizes) for o in op_counts]
 
 def main():
   fire.Fire(ProgramGenerator, name='generate')

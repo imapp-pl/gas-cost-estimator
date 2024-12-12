@@ -9,10 +9,11 @@ Common tools for program generation. To be organized if needed, for now just bag
 """
 
 
-def generate_single_marginal(single_op_pushes, operation, op_count):
+def generate_single_marginal(single_op_pushes, operation, op_count, init_code = None):
   """
   The number of pushes in single_op_pushes must be equal to arity.
   The returned program has the same number of empty pushes, pushes and pops regardless op_count.
+  The init_code is executed once before the main opcodes
   """
   nreturns = int(operation['Added to stack'])
 
@@ -44,7 +45,10 @@ def generate_single_marginal(single_op_pushes, operation, op_count):
 
   initial_call = initial_call_bytecode() if operation['Mnemonic'] in constants.RETURNDATA_OPCODES else ''
   bytecode += initial_call
-    
+
+  if init_code:
+    bytecode += init_code
+
   empty_pushes = ["6000"] * empty_push_count
   bytecode += ''.join(empty_pushes)
   pushes = single_op_pushes * ceil(push_count / arity(operation)) if arity(operation) > 0 else []
