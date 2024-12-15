@@ -172,7 +172,7 @@ class ProgramGenerator(object):
       offset = "61%0.4X" % ((arg_sizes[1] - 1) * 32)
       size = "61%0.4X" % (arg_sizes[2] * 32)
       single_op_pushes = [dest, offset, size]
-    elif opcode in ['MLOAD', 'MSTORE', 'MSTORE8']:
+    elif opcode in ['MLOAD', 'MSTORE', 'MSTORE8']: # MLOAD, MSTORE, MSTORE8 are also in MEMORY_OPCODES
       offset_size = random.randint(0, 31 * 32) # 32 words only, it is enough
       if opcode == 'MSTORE8':
         value_size = 1
@@ -186,6 +186,14 @@ class ProgramGenerator(object):
         init_code = value + offset + '52'
       else:
         single_op_pushes = [offset, value]
+    elif opcode in ['LOG0', 'LOG1', 'LOG2', 'LOG3', 'LOG4']: # LOGs are also in MEMORY_OPCODES
+      # memory-copying part need arguments to indicate up to 16KB of memory
+      args = [random.randint(0, (1 << 14) - 1) for _ in range(0, 2)]
+      # topics
+      args = args + [random.randint(1, 32) for _ in range(2, arity(operation))]
+      single_op_pushes = [byte_size_push(2, arg) for arg in args[0:2]]
+      single_op_pushes = single_op_pushes + [random_value_byte_size_push(size, 32) for size in args[2:]]
+      arg_sizes = args
     elif opcode in constants.MEMORY_OPCODES:
       # memory-copying OPCODEs need arguments to indicate up to 16KB of memory
       args = [random.randint(0, (1<<14) - 1) for _ in range(0, arity(operation))]
