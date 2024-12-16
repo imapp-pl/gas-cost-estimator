@@ -164,6 +164,25 @@ class ProgramGenerator(object):
       # noops = noop * (max_op_count - op_count)
       return [Program(dummy_pushes + mem_allocation + account_deployment_code + (single_call * o) + (
                 noop * (max_op_count - o)) + dummy_pops, opcode, o, arg_sizes) for o in op_counts]
+    if opcode in ['REVERT', 'RETURN']: # not in MEMORY_OPCODES, maybe should be
+      arg_sizes = [random.randint(0, (1<<14) - 1) for _ in range(0, arity(operation))]
+      no_op_subcontext_code = '6000617fff5361%0.4X61%0.4X' % (arg_sizes[0], arg_sizes[1])
+      op_subcontext_code = no_op_subcontext_code + operation['Value'][2:4]
+      op_deployment_code = '756c' + op_subcontext_code + '600052600d6013f36000526016600a6000f0'
+      no_op_deployment_code = '746b' + no_op_subcontext_code + '600052600c6014f36000526015600b6000f0'
+
+      op_address_store = '60ff52'
+      op_address_load = '60ff51'
+
+      no_op_call = '60006000600060008461fffff450'
+      op_call = '60006000600060008461fffff450'
+
+      max_op_count = max(op_counts)
+
+      return [Program(
+        op_deployment_code + op_address_store + no_op_deployment_code + (no_op_call * (max_op_count - o)) + op_address_load + (op_call * o),
+        operation['Mnemonic'], o, arg_sizes
+      ) for o in op_counts]
 
     init_code = None
     if opcode == "MCOPY": # MCOPY is also in MEMORY_OPCODES
