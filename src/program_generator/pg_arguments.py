@@ -133,13 +133,102 @@ class ProgramGenerator(object):
       single_op_pushes = ["61%0.4X" % (arg_sizes[2] * 32), "61%0.4X" % ((arg_sizes[1] - 1) * 32), "5f"]
       return [Program(prefix_code + generate_single_marginal(single_op_pushes, operation, o), operation['Mnemonic'], o, arg_sizes) for
               o in op_counts]
-    if opcode in constants.MEMORY_OPCODES:
+    if opcode in ['CALL', 'STATICCALL', 'DELEGATECALL']:
+      arg_sizes = [random.randint(1, 32) for _ in range(0, 2)]  # argsOffset and argsSize
+      args_offset = "61%0.4X" % ((arg_sizes[0] - 1) * 32)
+      args_size = "61%0.4X" % (arg_sizes[1] * 32)
+      single_call = ''
+      noop = ''  # contains the same series of opcodes as those invoked by single_call
+      if opcode == 'CALL':  #
+        single_call = '86868686868686f150'
+        noop = '8686868686868660015860060157fe5b50'
+      elif opcode == 'STATICCALL':
+        single_call = '858585858585fa50'
+        noop = '85858585858560015860060157fe5b50'
+      elif opcode == 'DELEGATECALL':  #
+        single_call = '858585858585f450'
+        noop = '85858585858560015860060157fe5b50'
+      max_op_count = max(op_counts)
+      dummy_pushes = '60ff' * 5
+      # allocate max possible used memory
+      mem_allocation = "5f61080052"
+      account_deployment_code = '716860015860060157fe5b60005260096017f36000526012600e6000f0'  # CREATE
+      account_deployment_code += '5f5f' + args_size + args_offset  # retSize + retOffset + argsOffset + argsSize in reverse order
+      if opcode == 'CALL':  # CALL takes extra parameter 'value'
+        account_deployment_code += '5f85'
+      else:
+        account_deployment_code += '84'
+      account_deployment_code += '61ffff'  # gas
+      dummy_pops = '50' * 5
+      # calls = single_call * op_count
+      # noops = noop * (max_op_count - op_count)
+      return [Program(dummy_pushes + mem_allocation + account_deployment_code + (single_call * o) + (
+                noop * (max_op_count - o)) + dummy_pops, opcode, o, arg_sizes) for o in op_counts]
+    if opcode in ['REVERT', 'RETURN']: # not in MEMORY_OPCODES, maybe should be
+      arg_sizes = [random.randint(0, (1<<14) - 1) for _ in range(0, arity(operation))]
+      no_op_subcontext_code = '6000617fff5361%0.4X61%0.4X' % (arg_sizes[0], arg_sizes[1])
+      op_subcontext_code = no_op_subcontext_code + operation['Value'][2:4]
+      op_deployment_code = '756c' + op_subcontext_code + '600052600d6013f36000526016600a6000f0'
+      no_op_deployment_code = '746b' + no_op_subcontext_code + '600052600c6014f36000526015600b6000f0'
+
+      op_address_store = '60ff52'
+      op_address_load = '60ff51'
+
+      no_op_call = '60006000600060008461fffff450'
+      op_call = '60006000600060008461fffff450'
+
+      max_op_count = max(op_counts)
+
+      return [Program(
+        op_deployment_code + op_address_store + no_op_deployment_code + (no_op_call * (max_op_count - o)) + op_address_load + (op_call * o),
+        operation['Mnemonic'], o, arg_sizes
+      ) for o in op_counts]
+
+    init_code = None
+    if opcode == "MCOPY": # MCOPY is also in MEMORY_OPCODES
+      arg_sizes = [random.randint(1, 32) for _ in range(0, 3)]  # dest, offset and size, but in words
+      dest = "61%0.4X" % ((arg_sizes[0] - 1) * 32)
+      offset = "61%0.4X" % ((arg_sizes[1] - 1) * 32)
+      size = "61%0.4X" % (arg_sizes[2] * 32)
+      single_op_pushes = [dest, offset, size]
+    elif opcode in ['MLOAD', 'MSTORE', 'MSTORE8']: # MLOAD, MSTORE, MSTORE8 are also in MEMORY_OPCODES
+      offset_size = random.randint(0, 31 * 32) # 32 words only, it is enough
+      if opcode == 'MSTORE8':
+        value_size = 1
+      else:
+        value_size = random.randint(1, 32)
+      offset = "61%0.4X" % offset_size
+      value = "7f%0.64X" % random.getrandbits(8 * value_size)
+      arg_sizes = [offset_size, value_size]
+      if opcode == 'MLOAD':
+        single_op_pushes = [offset]
+        init_code = value + offset + '52'
+      else:
+        single_op_pushes = [offset, value]
+    elif opcode in ['LOG0', 'LOG1', 'LOG2', 'LOG3', 'LOG4']: # LOGs are also in MEMORY_OPCODES
+      # memory-copying part need arguments to indicate up to 16KB of memory
+      args = [random.randint(0, (1 << 14) - 1) for _ in range(0, 2)]
+      # topics
+      args = args + [random.randint(1, 32) for _ in range(2, arity(operation))]
+      single_op_pushes = [byte_size_push(2, arg) for arg in args[0:2]]
+      single_op_pushes = single_op_pushes + [random_value_byte_size_push(size, 32) for size in args[2:]]
+      arg_sizes = args
+    elif opcode in constants.MEMORY_OPCODES:
       # memory-copying OPCODEs need arguments to indicate up to 16KB of memory
       args = [random.randint(0, (1<<14) - 1) for _ in range(0, arity(operation))]
       single_op_pushes = [byte_size_push(2, arg) for arg in args]
       # for these OPCODEs the important size variable is just the argument
       arg_sizes = args
-    else:
+    elif opcode.startswith("PUSH"):
+      push_size = int(opcode[4:])
+      arg_size = random.randint(1, push_size)
+      value = random.getrandbits(8 * arg_size)
+      push_format = "%0." + str(push_size * 2) + "X"
+      operation = operation.copy()
+      operation['Value'] = operation['Value'] + (push_format % int(value))
+      single_op_pushes = []
+      arg_sizes = [arg_size]
+    else: # arithemetic
       arg_byte_sizes = [random.randint(1, 32) for _ in range(0, arity(operation))]
       # NOTE: `random_value_byte_size_push` means in this case, we randomize the size of pushed value, but keep the PUSH
       # variant resticted to PUSH32.
@@ -149,7 +238,7 @@ class ProgramGenerator(object):
     # the arguments are popped from the stack
     single_op_pushes.reverse()
 
-    return [Program(generate_single_marginal(single_op_pushes, operation, o), operation['Mnemonic'], o, arg_sizes) for o in op_counts]
+    return [Program(generate_single_marginal(single_op_pushes, operation, o, init_code), operation['Mnemonic'], o, arg_sizes) for o in op_counts]
 
 def main():
   fire.Fire(ProgramGenerator, name='generate')

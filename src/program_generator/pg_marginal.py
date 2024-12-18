@@ -129,6 +129,8 @@ class ProgramGenerator(object):
       return Program(_generate_tstore0_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] == 'TSTORE_EXT':
       return Program(_generate_tstore_ext_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
+    if operation['Mnemonic'].startswith('PUSH'):
+      return Program(_generate_push_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
 
     single_op_pushes = ["6003"] * arity(operation)
 
@@ -347,6 +349,20 @@ def _generate_tstore_ext_program(tstore_operation, op_count, max_op_count):
   op_calls =    '600060006000600060008561fffff150' * op_count
 
   return op_deployment_code + op_address_store + no_op_deployment_code + no_op_calls + op_address_load + op_calls
+
+def _generate_push_program(operation, op_count, max_op_count):
+  """
+  Generates a program for PUSH opcodes
+  """
+  assert operation['Mnemonic'].startswith('PUSH')
+
+  push_size = int(operation['Mnemonic'][4:])
+  operation = operation.copy()
+  operation['Value'] = operation['Value'] + ('03' * push_size)  # just add default value
+
+  single_op_pushes = []
+
+  return generate_single_marginal(single_op_pushes, operation, op_count)
 
 def _generate_subcontext_exit_program(operation, op_count, max_op_count):
   """
