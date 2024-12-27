@@ -403,21 +403,23 @@ def _generate_calldata_program(operation, op_count, max_op_count):
   """
   assert operation['Mnemonic'] in ['CALLDATASIZE', 'CALLDATACOPY', 'CALLDATALOAD']
 
+  op_deployment_code = '' # this prevents warnings
+  no_op_deployment_code = ''
   if operation['Mnemonic'] == 'CALLDATALOAD':
     no_op_subcontext_code = '5f'
     op_subcontext_code = '5f35'
-    op_deployment_code = '6961' + op_subcontext_code + '5f526002601ef36000526013600d6000f0'
-    no_op_deployment_code = '6860' + no_op_subcontext_code + '5f526001601ff36000526013600d6000f0'
+    op_deployment_code = '6961' + op_subcontext_code + '5f526002601ef3600052600a60166000f0'
+    no_op_deployment_code = '6860' + no_op_subcontext_code + '5f526001601ff3600052600960176000f0'
   elif operation['Mnemonic'] == 'CALLDATASIZE':
     no_op_subcontext_code = '5f'
     op_subcontext_code = '5f36'
-    op_deployment_code = '6961' + op_subcontext_code + '5f526002601ef36000526013600d6000f0'
-    no_op_deployment_code = '6860' + no_op_subcontext_code + '5f526001601ff36000526013600d6000f0'
+    op_deployment_code = '6961' + op_subcontext_code + '5f526002601ef3600052600a60166000f0'
+    no_op_deployment_code = '6860' + no_op_subcontext_code + '5f526001601ff3600052600960176000f0'
   elif operation['Mnemonic'] == 'CALLDATACOPY':
-    no_op_subcontext_code = '60ff5f5f'
+    no_op_subcontext_code = '5f5f5260205f5f'
     op_subcontext_code = no_op_subcontext_code + '37'
-    op_deployment_code = '6c64' + op_subcontext_code + '5f526005601af36000526013600d6000f0'
-    no_op_deployment_code = '6b63' + no_op_subcontext_code + '5f526004601bf36000526013600d6000f0'  
+    op_deployment_code = '6f67' + op_subcontext_code + '5f5260086018f3600052601060106000f0'
+    no_op_deployment_code = '6e66' + no_op_subcontext_code + '5f5260076019f3600052600f60116000f0'
 
   op_address_store = '60ff52'
   op_address_load = '60ff51'
