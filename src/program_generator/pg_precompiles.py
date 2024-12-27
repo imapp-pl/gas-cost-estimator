@@ -89,7 +89,7 @@ def _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, se
     programs = []
     single_op_pushes = '60ff' * WRAPPING_INSTRUCTIONS_COUNT
     single_op_pops = '50' * WRAPPING_INSTRUCTIONS_COUNT
-    noop_args_pops = '505050505050'  # 6xPOP
+    noop_args_pops = '61ffff9150'  # instead of pops, replace the target address to 0xffff, setup_code does not put arguments for noop calls on the stack
 
     for op_count in op_counts:
         # There should always be additional noop at start, even when creating variant for max_op_count
