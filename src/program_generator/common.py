@@ -120,14 +120,14 @@ def _fill_opcodes_push_dup_swap(opcodes):
   dups = constants.EVM_DUPS
   swaps = constants.EVM_SWAPS
 
-  # For dups and swaps the removeds/addeds aren't precise. "removed" is how much is required to be on stack
+  # For dups and swaps the removes/adds aren't precise. "removed" is how much is required to be on stack
   # so it must be pushed there once. "added" is how much is really added "extra"
   dups = _opcodes_list_push_dup_swap(dups, range(1, len(dups)), [1] * len(dups))
   swaps = _opcodes_list_push_dup_swap(swaps, range(2, len(swaps)+1), [0] * len(swaps))
 
   return opcodes + dups + swaps
 
-def _opcodes_list_push_dup_swap(source, removeds, addeds):
+def _opcodes_list_push_dup_swap(source, removes, adds):
   source_list = source.split()
   opcodes = source_list[::2]
   names = source_list[1::2]
@@ -137,7 +137,7 @@ def _opcodes_list_push_dup_swap(source, removeds, addeds):
       'Mnemonic': name,
       'Removed from stack': removed,
       'Added to stack': added
-    } for opcode, name, removed, added in zip(opcodes, names, removeds, addeds)
+    } for opcode, name, removed, added in zip(opcodes, names, removes, adds)
   ]
 
   return new_part
