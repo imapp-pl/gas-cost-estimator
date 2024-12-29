@@ -1,0 +1,18 @@
+FROM debian:bookworm-slim
+
+RUN apt update
+RUN apt install -y r-base r-base-dev pandoc curl libcurl4-openssl-dev libssl-dev
+RUN apt install -y python3 python3-flask
+RUN Rscript -e "install.packages('rmarkdown')"
+RUN Rscript -e "install.packages('sqldf')"
+RUN Rscript -e "install.packages('mixtools')"
+RUN Rscript -e "install.packages('zeallot')"
+
+COPY ./src/analysis/common.R /reports/common.R
+COPY ./src/analysis/measure_marginal_single.Rmd /reports/measure_marginal_single.Rmd
+COPY ./src/analysis/final_estimation.Rmd /reports/final_estimation.Rmd
+COPY ./src/analysis/measure_arguments_single.Rmd /reports/measure_arguments_single.Rmd
+
+COPY ./src/gui /gui/
+
+WORKDIR /gui
