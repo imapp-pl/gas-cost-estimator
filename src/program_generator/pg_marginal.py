@@ -97,6 +97,8 @@ class ProgramGenerator(object):
   def _generate_single_program(self, operation, op_count, max_op_count):
     assert op_count <= constants.MAX_INSTRUCTIONS
     # for compatibility with the generate_single_marginal function
+    if operation['Mnemonic'] in ['CALLDATASIZE', 'CALLDATACOPY', 'CALLDATALOAD']:
+      return Program(_generate_calldata_program(operation, op_count, max_op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] == 'CREATE':
       return Program(_generate_create_program(operation, op_count), operation['Mnemonic'], op_count)
     if operation['Mnemonic'] in ['EXTCODEHASH', 'EXTCODESIZE']:
@@ -395,6 +397,40 @@ def _generate_subcontext_exit_program(operation, op_count, max_op_count):
   
   return op_deployment_code + op_address_store + no_op_deployment_code + no_op_calls + op_address_load + op_calls
 
+def _generate_calldata_program(operation, op_count, max_op_count):
+  """
+  Generates a program for CALLDATASIZE
+  """
+  assert operation['Mnemonic'] in ['CALLDATASIZE', 'CALLDATACOPY', 'CALLDATALOAD']
+
+  op_deployment_code = '' # this prevents warnings
+  no_op_deployment_code = ''
+  if operation['Mnemonic'] == 'CALLDATALOAD':
+    no_op_subcontext_code = '5f'
+    op_subcontext_code = '5f35'
+    op_deployment_code = '6961' + op_subcontext_code + '5f526002601ef3600052600a60166000f0'
+    no_op_deployment_code = '6860' + no_op_subcontext_code + '5f526001601ff3600052600960176000f0'
+  elif operation['Mnemonic'] == 'CALLDATASIZE':
+    no_op_subcontext_code = '5f'
+    op_subcontext_code = '5f36'
+    op_deployment_code = '6961' + op_subcontext_code + '5f526002601ef3600052600a60166000f0'
+    no_op_deployment_code = '6860' + no_op_subcontext_code + '5f526001601ff3600052600960176000f0'
+  elif operation['Mnemonic'] == 'CALLDATACOPY':
+    no_op_subcontext_code = '5f5f5260205f5f'
+    op_subcontext_code = no_op_subcontext_code + '37'
+    op_deployment_code = '6f67' + op_subcontext_code + '5f5260086018f3600052601060106000f0'
+    no_op_deployment_code = '6e66' + no_op_subcontext_code + '5f5260076019f3600052600f60116000f0'
+
+  op_address_store = '60ff52'
+  op_address_load = '60ff51'
+
+  # 32 bytes calldata
+  no_op_calls = '60006000602060008461fffff450' * (max_op_count - op_count)
+  op_calls = '60006000602060008461fffff450' * op_count
+  
+  return op_deployment_code + op_address_store + no_op_deployment_code + no_op_calls + op_address_load + op_calls
+
+    
 def _generate_sload_cold_program(operation, op_count, max_op_count):
   """
   Generates a program for SLOAD where every SLOAD loads from a cold slot
@@ -470,7 +506,6 @@ def _generate_sstore_warm_change_program(operation, op_count, max_op_count):
   opcodes = operation['Value'][2:] * op_count
   
   return slot_warmup_code + args_pushes + opcodes
-
 
 
 def main():
