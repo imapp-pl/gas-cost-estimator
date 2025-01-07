@@ -65,10 +65,6 @@ def handle_report(report_type, request):
             selected_results_paths = request.form.getlist("selected_results_paths")
             assert len(selected_results_paths) > 0
 
-            print(env)
-            print(selected_files)
-            print(selected_results_paths)
-
             local_output_file_name = OUTPUT_DIR + selected_files[0] + '_raport_' + report_type + '.html'
             host_output_file_name = host_output_dir + selected_files[0] + '_raport_' + report_type + '.html'
             
@@ -86,7 +82,6 @@ def handle_final_report(request):
     else:
         paths = request.form.getlist("paths")
         assert len(paths) > 0
-        print(paths)
 
         local_output_file_name = OUTPUT_DIR + 'final_raport.html'
         host_output_file_name = host_output_dir + 'final_raport.html'

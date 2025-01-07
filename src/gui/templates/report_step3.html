@@ -5,21 +5,33 @@
     <title>Step 3</title>
 </head>
 <body>
+    <div id="loadingMessage" style="display:none;">GENERATING REPORT...</div>
+    <div id="generateForm">
     <h3>Select files with benchmark results</h3>
-    <form method="POST" action="/{{ report_type }}">
-        <input type="hidden" name="step" value="3">
-        <select id="selected_results_paths" name="selected_results_paths" multiple>
-            {% for path in results_paths %}
-                <option value="{{ path }}">
-                    {{ path }}
-                </option>
+        <form method="POST" action="/{{ report_type }}">
+            <input type="hidden" name="step" value="3">
+            <select id="selected_results_paths" name="selected_results_paths" multiple>
+                {% for path in results_paths %}
+                    <option value="{{ path }}">
+                        {{ path }}
+                    </option>
+                {% endfor %}
+            </select>
+            {% for path in selected_bytecodes_paths %}
+                <input type="hidden" name="selected_bytecodes_paths" value="{{ path }}">
             {% endfor %}
-        </select>
-        {% for path in selected_bytecodes_paths %}
-            <input type="hidden" name="selected_bytecodes_paths" value="{{ path }}">
-        {% endfor %}
-        <input type="hidden" name="env" value="{{ env }}">
-        <button type="submit">Generate raport</button>
-    </form>
+            <input type="hidden" name="env" value="{{ env }}">
+            <button type="submit" id="generateBtn">Generate raport</button>
+        </form>
+    </div>
+    <script>
+        document.getElementById('generateBtn').addEventListener('click', function() {
+            // Show the loading message
+            const loadingMessage = document.getElementById('loadingMessage');
+            loadingMessage.style.display = 'block';
+            const generateForm = document.getElementById('generateForm');
+            generateForm.style.display = 'none';
+        });
+    </script>
 </body>
 </html>
