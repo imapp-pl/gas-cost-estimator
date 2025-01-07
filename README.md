@@ -106,3 +106,15 @@ To render `final_estimate` report provide your params and an output file and exe
 ```shell
 docker run -it -v /your/path/to/data:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e "rmarkdown::render('/reports/final_estimation.Rmd', params = list(estimate_files='besu_marginal_estimated_cost.csv, erigon_marginal_estimated_cost.csv, ethereumjs_marginal_estimated_cost.csv, geth_marginal_estimated_cost.csv, nethermind_marginal_estimated_cost.csv, revm_marginal_estimated_cost.csv', current_gas_cost='current_gas_cost.csv'), output_file = '/data/final_estimation.html')"
 ```
+
+## GUI - reports
+You can use a simple web form to generate reports.
+To build the app, run:
+```shell
+./build_gui.sh
+```
+The script build a docker image with the app, to run it
+```shell
+./run_gui.sh path_to_directory_with_programs_and_results
+```
+This starts a Python Flask app available on http://127.0.0.1:5000
