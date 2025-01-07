@@ -13,6 +13,8 @@ COPY ./src/analysis/measure_marginal_single.Rmd /reports/measure_marginal_single
 COPY ./src/analysis/final_estimation.Rmd /reports/final_estimation.Rmd
 COPY ./src/analysis/measure_arguments_single.Rmd /reports/measure_arguments_single.Rmd
 
+COPY ./src/program_generator/data/current_gas_cost.csv /reports/current_gas_cost.csv
+
 COPY ./src/gui /gui/
 
 WORKDIR /gui

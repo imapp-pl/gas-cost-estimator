@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request
 import os
 import subprocess
+import sys
 
 SCRIPTS = {
     'FINAL': r'/reports/final_estimation.Rmd',
@@ -8,63 +9,102 @@ SCRIPTS = {
     'ARGUMENTS': r'/reports/measure_arguments_single.Rmd',
 }
 INPUT_DIR = '/data/'
+CURRENT_GAS_COST_PATH = '/reports/current_gas_cost.csv'
+OUTPUT_DIR = INPUT_DIR
+ALLOWED_ENVS = ['geth', 'erigon', 'ethereumjs', 'nethermind', 'revm', 'besu']
 
 
+host_output_dir = ""
 available_input_paths = []
 app = Flask(__name__)
 
-@app.route("/", methods=["GET", "POST"])
-def index():
-    if request.method == "POST":
+
+@app.route("/marginal_report", methods=["GET", "POST"])
+def final_report():
+    return handle_report('MARGINAL', request)
+
+
+@app.route("/arguments_report", methods=["GET", "POST"])
+def final_report():
+    return handle_report('ARGUMENTS', request)
+
+@app.route("/final_report", methods=["GET", "POST"])
+def final_report():
+    return handle_final_report(request)
+
+
+def handle_report(raport_type, request):
+    # handles GET request to render the initial form
+    if request.method == "GET":
+        return render_template("report_step1.html")
+    
+    # handles POST requests to render the next form
+    else:
         step = request.form.get("step")
-        print(step)
+
+        env = request.form.get("env")
+        assert env in ALLOWED_ENVS
+
+        raport_type = request.form.get("raport_type")
+        assert raport_type in SCRIPTS.keys()
 
         if step == "1":
-            env = request.form.get("env")
-            raport_type = request.form.get("raport_type")
-            # No need to initialize selected_file_paths here
-            return render_template("step2.html", env=env, raport_type = raport_type, bytecodes_paths=available_input_paths)
+            return render_template("report_step2.html", env=env, bytecodes_paths=available_input_paths)
         elif step == "2":
-            # Initialize selected_file_paths for step 2
-            selected_bytecodes_paths = request.form.getlist("selected_bytecodes_paths")
-            print(selected_bytecodes_paths)
-            env = request.form.get("env")
-            raport_type = request.form.get("raport_type")
-            return render_template("step3.html", env=env, results_paths=available_input_paths, selected_bytecodes_paths=selected_bytecodes_paths, raport_type = raport_type)
+            selected_files = request.form.getlist("selected_bytecodes_paths")
+            assert len(selected_files) > 0
+            return render_template("report_step3.html", env=env, results_paths=available_input_paths, selected_bytecodes_paths=selected_files)
         elif step == "3":
-            # Initialize selected_final_file_paths for step 3
-            env = request.form.get("env")
-            raport_type = request.form.get("raport_type")
-            selected_bytecodes_paths = request.form.getlist("selected_bytecodes_paths")
-            assert len(selected_bytecodes_paths) > 0
+            selected_files = request.form.getlist("selected_bytecodes_paths")
+            assert len(selected_files) > 0
 
             selected_results_paths = request.form.getlist("selected_results_paths")
             assert len(selected_results_paths) > 0
 
             print(env)
-            print(raport_type)
-            print(selected_bytecodes_paths)
+            print(selected_files)
             print(selected_results_paths)
+
+            local_output_file_name = OUTPUT_DIR + selected_files[0] + '_raport_' + raport_type + '.html'
+            host_output_file_name = host_output_dir + selected_files[0] + '_raport_' + raport_type + '.html'
             
-            r_command = f"rmarkdown::render('{SCRIPTS[raport_type]}', params=list(env='geth', programs='{INPUT_DIR + selected_bytecodes_paths[0]}', results='{INPUT_DIR + selected_results_paths[0]}', output_estimated_cost='erigon_marginal_estimated_cost.csv'), output_file='{INPUT_DIR + selected_bytecodes_paths[0] + '_raport.html'}')"
-            print(r_command)
-
-            #most likely wrong path, because it maps to host, web_api.py should be copied into the container
-            invocation = ['Rscript', '-e', r_command]
+            if raport_type == 'MARGINAL':
+                r_command = f"rmarkdown::render('{SCRIPTS[raport_type]}', params=list(env='{env}', programs='{INPUT_DIR + selected_files[0]}', results='{INPUT_DIR + selected_results_paths[0]}', output_estimated_cost='{env}_final_estimated_cost.csv'), output_file='{local_output_file_name}')"
+            elif raport_type == 'ARGUMENTS':
+                r_command = f"rmarkdown::render('{SCRIPTS[raport_type]}', params=list(env='{env}', programs='{INPUT_DIR + selected_files[0]}', results='{INPUT_DIR + selected_results_paths[0]}', marginal_estimated_cost='{env}_marginal_estimated_cost.csv', output_estimated_cost='{env}_final_estimated_cost.csv'), output_file='{local_output_file_name}')"
             
-            pro = subprocess.Popen(invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-            stdout, stderr = pro.communicate()
-            print(stdout)
-            print(stderr)
+            return run_r_script(r_command, host_output_file_name)
 
-            return render_template("results.html", env=env, raport_type=raport_type)
 
-    return render_template("step1.html")
+def handle_final_report(request):
+    if request.method == "GET":
+        return render_template("final_report_step_1.html", paths=available_input_paths)
+    else:
+        paths = request.form.getlist("paths")
+        assert len(paths) > 0
+        print(paths)
+
+        local_output_file_name = OUTPUT_DIR + 'final_raport.html'
+        host_output_file_name = host_output_dir + 'final_raport.html'
+        r_command = f"rmarkdown::render('{SCRIPTS['FINAL']}', params=list(estimate_files='{','.join(paths)}', current_gas_cost='{CURRENT_GAS_COST_PATH}'), output_file='{local_output_file_name}')"
+
+        return run_r_script(r_command, host_output_file_name)
+
+
+def run_r_script(r_command, host_output_file_name):
+    print(r_command)
+    pro = subprocess.Popen(['Rscript', '-e', r_command], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+    _, stderr = pro.communicate()
+    if pro.returncode != 0:
+        return render_template("results_error.html", error_message=stderr)
+
+    return render_template("results_success.html", output_file_name=host_output_file_name)
 
 
 def main():
-    # Check if the command line argument is provided
     global available_input_paths
+    global host_output_dir
+    host_output_dir = sys.argv[1]
 
     # Check if the provided path is a directory
     assert os.path.isdir(INPUT_DIR)

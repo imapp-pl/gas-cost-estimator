@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Step 2</title>
+</head>
+<body>
+    <h3>Select files</h3>
+    <form method="POST">
+        <select id="selected_files" name="selected_files" multiple>
+            {% for path in paths %}
+                <option value="{{ path }}">
+                    {{ path }}
+                </option>
+            {% endfor %}
+        </select>
+        <button type="submit">Next</button>
+    </form>
+</body>
+</html>
