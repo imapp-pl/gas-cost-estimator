@@ -2,7 +2,7 @@
 
 # Check if an argument was provided
 if [ $# -eq 0 ]; then
-    echo "No argument provided. Please provide a directory path to your data."
+    echo "No argument provided. Please provide an aboslute directory path to your data."
     exit 1
 fi
 

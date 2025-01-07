@@ -43,7 +43,7 @@ def handle_report(report_type, request):
     assert report_type in ['MARGINAL', 'ARGUMENTS']
     # handles GET request to render the initial form
     if request.method == "GET":
-        return render_template("report_step1.html")
+        return render_template("report_step1.html", report_type=report_type)
     
     # handles POST requests to render the next form
     else:
