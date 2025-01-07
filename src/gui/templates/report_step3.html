@@ -6,7 +6,7 @@
 </head>
 <body>
     <h3>Select files with benchmark results</h3>
-    <form method="POST">
+    <form method="POST" action="/{{ report_type }}">
         <input type="hidden" name="step" value="3">
         <select id="selected_results_paths" name="selected_results_paths" multiple>
             {% for path in results_paths %}

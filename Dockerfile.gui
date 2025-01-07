@@ -16,5 +16,3 @@ COPY ./src/analysis/measure_arguments_single.Rmd /reports/measure_arguments_sing
 COPY ./src/program_generator/data/current_gas_cost.csv /reports/current_gas_cost.csv
 
 COPY ./src/gui /gui/
-
-WORKDIR /gui

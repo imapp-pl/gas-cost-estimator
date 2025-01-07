@@ -19,21 +19,28 @@ available_input_paths = []
 app = Flask(__name__)
 
 
-@app.route("/marginal_report", methods=["GET", "POST"])
-def final_report():
+@app.route("/", methods=["GET"])
+def index():
+    return render_template("index.html")
+
+
+@app.route("/MARGINAL", methods=["GET", "POST"])
+def marginal_report():
     return handle_report('MARGINAL', request)
 
 
-@app.route("/arguments_report", methods=["GET", "POST"])
-def final_report():
+@app.route("/ARGUMENTS", methods=["GET", "POST"])
+def arguments_report():
     return handle_report('ARGUMENTS', request)
 
-@app.route("/final_report", methods=["GET", "POST"])
+
+@app.route("/FINAL", methods=["GET", "POST"])
 def final_report():
     return handle_final_report(request)
 
 
-def handle_report(raport_type, request):
+def handle_report(report_type, request):
+    assert report_type in ['MARGINAL', 'ARGUMENTS']
     # handles GET request to render the initial form
     if request.method == "GET":
         return render_template("report_step1.html")
@@ -41,19 +48,16 @@ def handle_report(raport_type, request):
     # handles POST requests to render the next form
     else:
         step = request.form.get("step")
-
         env = request.form.get("env")
         assert env in ALLOWED_ENVS
 
-        raport_type = request.form.get("raport_type")
-        assert raport_type in SCRIPTS.keys()
-
         if step == "1":
-            return render_template("report_step2.html", env=env, bytecodes_paths=available_input_paths)
+            return render_template("report_step2.html", report_type=report_type, env=env, bytecodes_paths=available_input_paths)
         elif step == "2":
             selected_files = request.form.getlist("selected_bytecodes_paths")
             assert len(selected_files) > 0
-            return render_template("report_step3.html", env=env, results_paths=available_input_paths, selected_bytecodes_paths=selected_files)
+
+            return render_template("report_step3.html", report_type=report_type, env=env, results_paths=available_input_paths, selected_bytecodes_paths=selected_files)
         elif step == "3":
             selected_files = request.form.getlist("selected_bytecodes_paths")
             assert len(selected_files) > 0
@@ -65,13 +69,13 @@ def handle_report(raport_type, request):
             print(selected_files)
             print(selected_results_paths)
 
-            local_output_file_name = OUTPUT_DIR + selected_files[0] + '_raport_' + raport_type + '.html'
-            host_output_file_name = host_output_dir + selected_files[0] + '_raport_' + raport_type + '.html'
+            local_output_file_name = OUTPUT_DIR + selected_files[0] + '_raport_' + report_type + '.html'
+            host_output_file_name = host_output_dir + selected_files[0] + '_raport_' + report_type + '.html'
             
-            if raport_type == 'MARGINAL':
-                r_command = f"rmarkdown::render('{SCRIPTS[raport_type]}', params=list(env='{env}', programs='{INPUT_DIR + selected_files[0]}', results='{INPUT_DIR + selected_results_paths[0]}', output_estimated_cost='{env}_final_estimated_cost.csv'), output_file='{local_output_file_name}')"
-            elif raport_type == 'ARGUMENTS':
-                r_command = f"rmarkdown::render('{SCRIPTS[raport_type]}', params=list(env='{env}', programs='{INPUT_DIR + selected_files[0]}', results='{INPUT_DIR + selected_results_paths[0]}', marginal_estimated_cost='{env}_marginal_estimated_cost.csv', output_estimated_cost='{env}_final_estimated_cost.csv'), output_file='{local_output_file_name}')"
+            if report_type == 'MARGINAL':
+                r_command = f"rmarkdown::render('{SCRIPTS[report_type]}', params=list(env='{env}', programs='{INPUT_DIR + selected_files[0]}', results='{INPUT_DIR + selected_results_paths[0]}', output_estimated_cost='{env}_final_estimated_cost.csv'), output_file='{local_output_file_name}')"
+            else:
+                r_command = f"rmarkdown::render('{SCRIPTS[report_type]}', params=list(env='{env}', programs='{INPUT_DIR + selected_files[0]}', results='{INPUT_DIR + selected_results_paths[0]}', marginal_estimated_cost='{env}_marginal_estimated_cost.csv', output_estimated_cost='{env}_final_estimated_cost.csv'), output_file='{local_output_file_name}')"
             
             return run_r_script(r_command, host_output_file_name)
 

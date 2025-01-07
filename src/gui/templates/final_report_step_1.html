@@ -6,7 +6,7 @@
 </head>
 <body>
     <h3>Select files</h3>
-    <form method="POST">
+    <form method="POST" action="/final_report">
         <select id="selected_files" name="selected_files" multiple>
             {% for path in paths %}
                 <option value="{{ path }}">
