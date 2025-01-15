@@ -16,7 +16,7 @@ library(nlme)
 library(mixtools)
 library(zeallot) # for multi-assignment %<-%
 
-knitr::opts_knit$set(root.dir = '/home/lukaszglen/sources/imapp5/local')
+knitr::opts_knit$set(root.dir = '/data')
 
 if (params$env == "") {
   stop("'env' param is missing, the name of EVM client")
@@ -179,6 +179,10 @@ if (nrow(opcode_arity_compare[which(opcode_arity_compare$arity.x != opcode_arity
 for(i in 1:nrow(opcode_arity_df)) {
   opcode_arity <- opcode_arity_df[i,]
   opcode <- opcode_arity[["opcode"]]
+  # skip opcodes without measurements
+  if(length(which(measurements$opcode == opcode & measurements$op_count == 30)) == 0) {
+    next
+  }
   arity <- opcode_arity[["arity"]]
   if (arity >= 1) {
     plot(measure_total_time_ns ~ arg0, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 30), ], pch=5, col='blue')
@@ -248,6 +252,10 @@ first_pass = data.frame(opcode=character(0),
 for(i in 1:nrow(opcode_arity_df)) {
   opcode_arity <- opcode_arity_df[i,]
   opcode <- opcode_arity[["opcode"]]
+  # skip opcodes without measurements
+  if(length(which(measurements$opcode == opcode)) == 0) {
+    next
+  }
   arity <- opcode_arity[["arity"]]
   if (arity == 0) {
     if (opcode %in% expensive_opcodes) {
@@ -355,7 +363,6 @@ for(i in 1:nrow(first_pass)) {
 }
 ```
 
-<<<<<<< HEAD
 The argument is considered impacting on the gas cost of opcode execution
 if its coefficient in the regression model
 
@@ -384,8 +391,6 @@ included in the current gas cost calculation.
 
 Below is the listing of arguments impact.
 
-=======
->>>>>>> master
 ```{r}
 if (details) {
   args_estimates
@@ -394,14 +399,26 @@ if (details) {
 }
 ```
 
-<<<<<<< HEAD
 The blue graph is the measurements, the red line is the estimated arguments cost shifted by the estimated constant cost of the programs execution.
 The default opcodes count is 30.
 
 ```{r fig.width=12}
 proceed_with_opcodes <- first_pass[which(first_pass$has_impacting), "opcode"]
 for(opcode in proceed_with_opcodes) {
+  if (nrow(measurements[which(measurements$opcode == opcode & measurements$op_count == 30), ]) == 0) {
+    stop(paste("measurements for ", opcode, "are invalid, there are no measurements for op_count==30"))
+  }
   opcode_estimates <- first_pass[which(first_pass$opcode == opcode),]
+  if (opcode_estimates[["has_impacting_arg0"]]) {
+    slope = opcode_estimates[["arg0_ns_raw"]] * 30
+    intercept = opcode_estimates[["intercept"]] + opcode_estimates[["estimate_marginal_ns"]] * 30
+    xmax = max(measurements[which(measurements$opcode == opcode & measurements$op_count == 30), "arg0"])
+    ymin = min(measurements[which(measurements$opcode == opcode & measurements$op_count == 30), "measure_total_time_ns"], intercept, intercept + slope * xmax)
+    ymax = max(measurements[which(measurements$opcode == opcode & measurements$op_count == 30), "measure_total_time_ns"], intercept, intercept + slope * xmax)
+    plot(measure_total_time_ns ~ arg0, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 30), ], pch=5, col='blue', ylim=c(ymin*0.95, ymax*1.05))
+    title(main = paste(env, opcode, 'arg0', 'opcount 30'))
+    abline(a=intercept, b=slope, col="red")
+  }
   if (opcode_estimates[["has_impacting_arg1"]]) {
     slope = opcode_estimates[["arg1_ns_raw"]] * 30
     intercept = opcode_estimates[["intercept"]] + opcode_estimates[["estimate_marginal_ns"]] * 30
@@ -410,6 +427,16 @@ for(opcode in proceed_with_opcodes) {
     ymax = max(measurements[which(measurements$opcode == opcode & measurements$op_count == 30), "measure_total_time_ns"], intercept, intercept + slope * xmax)
     plot(measure_total_time_ns ~ arg1, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 30), ], pch=5, col='blue', ylim=c(ymin*0.95, ymax*1.05))
     title(main = paste(env, opcode, 'arg1', 'opcount 30'))
+    abline(a=intercept, b=slope, col="red")
+  }
+  if (opcode_estimates[["has_impacting_arg2"]]) {
+    slope = opcode_estimates[["arg2_ns_raw"]] * 30
+    intercept = opcode_estimates[["intercept"]] + opcode_estimates[["estimate_marginal_ns"]] * 30
+    xmax = max(measurements[which(measurements$opcode == opcode & measurements$op_count == 30), "arg2"])
+    ymin = min(measurements[which(measurements$opcode == opcode & measurements$op_count == 30), "measure_total_time_ns"], intercept, intercept + slope * xmax)
+    ymax = max(measurements[which(measurements$opcode == opcode & measurements$op_count == 30), "measure_total_time_ns"], intercept, intercept + slope * xmax)
+    plot(measure_total_time_ns ~ arg2, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 30), ], pch=5, col='blue', ylim=c(ymin*0.95, ymax*1.05))
+    title(main = paste(env, opcode, 'arg2', 'opcount 30'))
     abline(a=intercept, b=slope, col="red")
   }
 }
@@ -429,8 +456,6 @@ first_pass[which(!is.na(first_pass$expensive_ns_raw)), c("opcode", "estimate_mar
 Heat maps help to visualize dependency between two arguments, in particular division into trivial and expensive modes.
 Other strong or weak dependencies can be also detected.
 
-=======
->>>>>>> master
 ```{r, include=FALSE}
 # it may be that for opcode with arity == 3 or arity == 2 only 1 arg is examined, use_arg is the arg
 plot_args_dependency_1 <- function(df, opcode, use_arg) {
