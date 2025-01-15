@@ -347,10 +347,16 @@ class Measurements(object):
         # header = "program_id,sample_id,total_time_ns,iterations_count,std_dev_time_ns"
 
         iterations = int(sum(base_benchmark_samples_data['iters']))
+        sampling_mode = base_benchmark_samples_data['sampling_mode']
+        if sampling_mode == 'Linear':
+            total_time_ns = int(base_benchmark_data['slope']['point_estimate'])
+        elif sampling_mode == 'Flat':
+            total_time_ns = int(base_benchmark_data['mean']['point_estimate'])
+        else:
+            raise ValueError('Unknown sampling mode' + sampling_mode)
         columns = [
             sample_id,  # sample_id
-            int(base_benchmark_data['slope']
-                ['point_estimate']),  # total_time_ns
+            total_time_ns,  # total_time_ns
             iterations,  # iterations_count
             # engine_overhead_time_ns
             round(base_benchmark_data['std_dev']
