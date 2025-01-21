@@ -3,7 +3,7 @@
 set -o errexit -o pipefail -o noclobber -o nounset
 
 help() {
-    echo "This script generates the arguments report for Gas Cost Esitmator"
+    echo "This script generates the marginal report for Gas Cost Esitmator"
     echo "Docker is required and the recent image imapp-pl/gas-cost-estimator/reports:4.0"
     echo "For more info see https://github.com/imapp-pl/gas-cost-estimator"
     echo
@@ -16,35 +16,31 @@ help() {
     echo "                             All input and output files must be relative to the working directory"
     echo " -r, --results <file>        The .csv file with measurements results"
     echo "                             Must be in the format program_id,sample_id,total_time_ns may contain other data"
-    echo "                             If the file name is of the form results_arguments_<MEASUREMENT_GROUP>_<EVM>.csv, the script autodetects other param files"
+    echo "                             If the file name is of the form results_marginal_<MEASUREMENT_GROUP>_<EVM>.csv, the script autodetects other param files"
     echo "                             It is required"
     echo " -e, --evm <name>            The name of EVM client. If not autodetected, it is required"
     echo " -p, --programs <file>       The csv file with programs used for measurements"
     echo "                             If not autodetected, it is required"
-    echo " -m, --marginal-estimated-cost <files>"
-    echo "                             A comma separated list of csv files. These are output of the marginal report generation."
-    echo "                             The marginal estimated cost of opcodes is for comparison in the report"
-    echo "                             It is optional"
     echo " -d, --details <1,t,true,on> Whether the report should include more details, detailed graphs"
     echo "                             The default is true"
     echo " -s, --output-dir <folder>   The subfolder to place output files in"
     echo "                             The default behaviour is no subfolder"
     echo "                             Note that -c and -o ignore this setting"
     echo " -c, --output-estimated-cost <file>"
-    echo "                             The output csv file with the estimated costs of arguments"
+    echo "                             The output csv file with the estimated costs of opcodes"
     echo "                             If not autodetected, it is required"
     echo " -o, --output-report <file>  The output html file with the report"
     echo "                             If not autodetected, it is required"
     echo
     echo "Examples:"
-    echo "  ./generate_arguments_report.sh -r results_arguments_arithmetic_geth.csv"
+    echo "  ./generate_marginal_report.sh -r results_marginal_full_geth.csv"
     echo "    this is equivalent to (after autodetection) the following"
-    echo "  ./generate_arguments_report.sh -r results_arguments_arithmetic_geth.csv -e geth -p pg_arguments_arithmetic.csv -c estimated_cost_arguments_arithmetic_geth.csv -o report_arguments_arithmetic_geth.html"
+    echo "  ./generate_marginal_report.sh -r results_marginal_full_geth.csv -e geth -p pg_marginal_full.csv -c estimated_cost_marginal_full_geth.csv -o report_marginal_full_geth.html"
     echo "    this looks for input files in the current directory and saves output files in the current directory"
-    echo "  ./generate_arguments_report.sh -r results_arguments_arithmetic_geth.csv -s reports-2025-01-21"
-    echo "  ./generate_arguments_report.sh -r my_dir/results_arguments_arithmetic_geth.csv -s reports-2025-01-21"
+    echo "  ./generate_marginal_report.sh -r results_marginal_full_geth.csv -s reports-2025-01-21"
+    echo "  ./generate_marginal_report.sh -r my_dir/results_marginal_full_geth.csv -s reports-2025-01-21"
     echo "    this reads input files from my_dir folder and saves output files to my_dir/reports-2025-01-21 folder"
-    echo "  ./generate_arguments_report.sh -r results_arguments_arithmetic_geth.csv -w /home/user/gas-cost-reports"
+    echo "  ./generate_marginal_report.sh -r results_marginal_full_geth.csv -w /home/user/gas-cost-reports"
 }
 
 if [ "$#" == 0 ]; then
@@ -53,8 +49,8 @@ if [ "$#" == 0 ]; then
 fi
 
 # options
-LONGOPTS=working-dir:,output-dir:,evm:,programs:,results:,marginal-estimated-cost:,details:,output-estimated-cost:,output-report:,help
-OPTIONS=w:,s:,e:,p:,r:,m:,d:,c:,o:,h
+LONGOPTS=working-dir:,output-dir:,evm:,programs:,results:,details:,output-estimated-cost:,output-report:,help
+OPTIONS=w:,s:,e:,p:,r:,d:,c:,o:,h
 
 # -temporarily store output to be able to check for errors
 # -activate quoting/enhanced mode (e.g. by writing out “--options”)
@@ -111,18 +107,17 @@ fi
 # set default values for params if RESULTS is parsable
 EVM=""
 PROGRAMS=""
-MARGINAL_ESTIMATED_COST_PARAM=""
 DETAILS_PARAM=""
 OUTPUT_ESTIMATED_COST=""
 OUTPUT_REPORT=""
-PATTERN="(.*)results_arguments_(\w+)_([a-zA-Z0-9]+)\.csv$"
+PATTERN="(.*)results_marginal_(\w+)_([a-zA-Z0-9]+)\.csv$"
 if [[ ${RESULTS} =~ ${PATTERN} ]]; then
     CTX="${BASH_REMATCH[1]}"
     MEASUREMENT_GROUP="${BASH_REMATCH[2]}"
     EVM="${BASH_REMATCH[3]}"
-    PROGRAMS="${CTX}pg_arguments_${MEASUREMENT_GROUP}.csv"
-    OUTPUT_ESTIMATED_COST="${CTX}${OUTPUT_DIR}estimated_cost_arguments_${MEASUREMENT_GROUP}_${EVM}.csv"
-    OUTPUT_REPORT="${CTX}${OUTPUT_DIR}report_arguments_${MEASUREMENT_GROUP}_${EVM}.html"
+    PROGRAMS="${CTX}pg_marginal_${MEASUREMENT_GROUP}.csv"
+    OUTPUT_ESTIMATED_COST="${CTX}${OUTPUT_DIR}estimated_cost_marginal_${MEASUREMENT_GROUP}_${EVM}.csv"
+    OUTPUT_REPORT="${CTX}${OUTPUT_DIR}report_marginal_${MEASUREMENT_GROUP}_${EVM}.html"
     if [ ! -z "${OUTPUT_DIR}" ]; then
 	echo "${WORKING_DIR}/${CTX}${OUTPUT_DIR}"
 	mkdir -p "${WORKING_DIR}/${CTX}${OUTPUT_DIR}"
@@ -143,10 +138,6 @@ while true; do
             ;;
         -p|--programs)
             PROGRAMS="$2"
-            shift 2
-            ;;
-        -m|--marginal-estimated-cost)
-            MARGINAL_ESTIMATED_COST_PARAM=", marginal_estimated_cost='$2'"
             shift 2
             ;;
         -d|--details)
@@ -193,5 +184,5 @@ fi
 touch "${WORKING_DIR}/${OUTPUT_ESTIMATED_COST}"
 touch "${WORKING_DIR}/${OUTPUT_REPORT}"
 
-eval "docker run -it -v ${WORKING_DIR}:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e \"rmarkdown::render('/reports/measure_arguments_single.Rmd', params = list(env = '${EVM}', programs='${PROGRAMS}', results='${RESULTS}', output_estimated_cost='${OUTPUT_ESTIMATED_COST}'${DETAILS_PARAM}${MARGINAL_ESTIMATED_COST_PARAM}), output_file = '/data/${OUTPUT_REPORT}')\""
+echo "docker run -it -v ${WORKING_DIR}:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e \"rmarkdown::render('/reports/measure_marginal_single.Rmd', params = list(env = '${EVM}', programs='${PROGRAMS}', results='${RESULTS}', output_estimated_cost='${OUTPUT_ESTIMATED_COST}'${DETAILS_PARAM}), output_file = '/data/${OUTPUT_REPORT}')\""
 
