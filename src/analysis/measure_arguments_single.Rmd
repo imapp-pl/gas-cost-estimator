@@ -326,6 +326,8 @@ first_pass$has_impacting_arg0 <- !is.na(first_pass$arg0_ns_raw) & !is.na(first_p
 first_pass$has_impacting_arg1 <- !is.na(first_pass$arg1_ns_raw) & !is.na(first_pass$arg1_ns_p) & first_pass$arg1_ns_p < p_value_thresh & abs(ifNA(first_pass$arg1_ns_raw, 0)) > first_pass$estimate_marginal_ns * impact_ratio
 first_pass$has_impacting_arg2 <- !is.na(first_pass$arg2_ns_raw) & !is.na(first_pass$arg2_ns_p) & first_pass$arg2_ns_p < p_value_thresh & abs(ifNA(first_pass$arg2_ns_raw, 0)) > first_pass$estimate_marginal_ns * impact_ratio
 
+first_pass$env <- env
+
 # these arguments are explicitly expressed in the currenct gas cost calculation
 first_pass[which(first_pass$opcode == "EXP"), "has_impacting_arg1"] = TRUE
 first_pass[which(first_pass$opcode == "KECCAK256"), "has_impacting_arg1"] = TRUE
