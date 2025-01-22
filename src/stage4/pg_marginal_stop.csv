@@ -1,5 +1,3 @@
-program_id,opcode,op_count,bytecode
-STOP_0,STOP,0,5f
-STOP_1,STOP,1,5f00
-INVALID_0,INVALID,0,5f
-INVALID_1,INVALID,1,5ffe
+version https://git-lfs.github.com/spec/v1
+oid sha256:255f9f3049eace38aa07befca2f6a75bf88f8417f4befa84d2ccbd6f5bdc9f67
+size 125
