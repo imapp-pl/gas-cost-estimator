@@ -2,8 +2,9 @@
 title: "Gas Cost Estimator: comparison of obtained estimates, alternative gas cost schedule"
 output: html_document
 params:
-  estimate_files: "/data/reports-12.01.2025/estimate_marginal*.csv,/data/reports-12.01.2025/estimate_arguments*.csv"
+  estimate_files: ""
   current_gas_cost: "/reports/current_gas_cost.csv"
+  output_comparison_file: "final_gas_schedule_comparison.csv"
   metric: "l1"
   details: ""
 ---
@@ -15,6 +16,10 @@ if (params$estimate_files == "") {
 
 if (params$current_gas_cost == "") {
   stop("'current_gas_cost' param is missing, the file with current gas cost schedule")
+}
+
+if (params$output_comparison_file == "") {
+  stop("'output_comparison_file' param is missing, the output file name with alternative gas cost schedule and comparison")
 }
 
 if (!(params$metric %in% c("l1", "l2"))) {
@@ -271,5 +276,5 @@ legend(75, maximum_gas_cost, c("Alternative gas cost schedule", "Current gas cos
 ```{r, include=FALSE}
 # just export the final compiled estimations to a file
 # write.csv(estimated_cost, "final_estimated_cost.csv", quote=FALSE, row.names=FALSE) # estimated_cost is changed in stage4
-write.csv(gas_schedule_comparison, "final_gas_schedule_comparison.csv", quote=FALSE, row.names=FALSE)
+write.csv(gas_schedule_comparison, params$output_comparison_file, quote=FALSE, row.names=FALSE)
 ```

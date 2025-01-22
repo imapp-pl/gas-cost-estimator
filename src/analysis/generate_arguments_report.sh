@@ -124,7 +124,6 @@ if [[ ${RESULTS} =~ ${PATTERN} ]]; then
     OUTPUT_ESTIMATED_COST="${CTX}${OUTPUT_DIR}estimated_cost_arguments_${MEASUREMENT_GROUP}_${EVM}.csv"
     OUTPUT_REPORT="${CTX}${OUTPUT_DIR}report_arguments_${MEASUREMENT_GROUP}_${EVM}.html"
     if [ ! -z "${OUTPUT_DIR}" ]; then
-	echo "${WORKING_DIR}/${CTX}${OUTPUT_DIR}"
 	mkdir -p "${WORKING_DIR}/${CTX}${OUTPUT_DIR}"
     fi
 else

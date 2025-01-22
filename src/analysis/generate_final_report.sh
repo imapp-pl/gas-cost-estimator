@@ -3,7 +3,7 @@
 set -o errexit -o pipefail -o noclobber -o nounset
 
 help() {
-    echo "This script generates the marginal report for Gas Cost Esitmator"
+    echo "This script generates the final report for Gas Cost Esitmator with comparison to the current gas cost schedule"
     echo "Docker is required and the recent image imapp-pl/gas-cost-estimator/reports:4.0"
     echo "For more info see https://github.com/imapp-pl/gas-cost-estimator"
     echo
@@ -18,15 +18,13 @@ help() {
     echo "                             Must be in the format program_id,sample_id,total_time_ns may contain other data"
     echo "                             If the file name is of the form results_marginal_<MEASUREMENT_GROUP>_<EVM>.csv, the script autodetects other param files"
     echo "                             It is required"
-    echo " -e, --evm <name>            The name of EVM client. If not autodetected, it is required"
-    echo " -p, --programs <file>       The csv file with programs used for measurements"
-    echo "                             If not autodetected, it is required"
+    echo " -g, --current-gas-cost <file>"
     echo " -d, --details <1,t,true,on> Whether the report should include more details, detailed graphs"
-    echo "                             The default is true"
+    echo "                             The default is false"
     echo " -s, --output-dir <folder>   The subfolder to place output files in"
     echo "                             The default behaviour is no subfolder"
     echo "                             Note that -c and -o ignore this setting"
-    echo " -c, --output-estimated-cost <file>"
+    echo " -c, --output-comparison <file>"
     echo "                             The output csv file with the estimated costs of opcodes"
     echo "                             If not autodetected, it is required"
     echo " -o, --output-report <file>  The output html file with the report"
@@ -49,8 +47,8 @@ if [ "$#" == 0 ]; then
 fi
 
 # options
-LONGOPTS=working-dir:,output-dir:,evm:,programs:,results:,details:,output-estimated-cost:,output-report:,help
-OPTIONS=w:,s:,e:,p:,r:,d:,c:,o:,h
+LONGOPTS=working-dir:,output-dir:,results:,current-gas-cost:,details:,output-comparison:,output-report:,help
+OPTIONS=w:,s:,r:,g:,d:,c:,o:,h
 
 # -temporarily store output to be able to check for errors
 # -activate quoting/enhanced mode (e.g. by writing out “--options”)
@@ -62,7 +60,7 @@ eval set -- "$PARSED"
 
 WORKING_DIR=`pwd`
 OUTPUT_DIR=""
-RESULTS=""
+RESULTS_RAW=""
 while true; do
     case "$1" in
         -w|--working-dir)
@@ -74,7 +72,7 @@ while true; do
             shift 2
             ;;
         -r|--results)
-            RESULTS="$2"
+            RESULTS_RAW="$2"
             shift 2
             ;;
         -h|--help)
@@ -92,10 +90,15 @@ while true; do
 done
 
 # required in any case
-if [ -z "${RESULTS}" ]; then 
-    echo "the measurement result file is required"
+if [ -z "${RESULTS_RAW}" ]; then 
+    echo "the input estimated cost file/files are required"
     exit 3
 fi
+
+# this is the trick to expand wildcards, into an array
+RESULTS_ARR=( $(grep -Eo '[^\\s,]*[^,]*[^\\s,]*' <<<"${RESULTS_RAW}") )
+# and concat an array back again
+RESULTS=$(IFS=, ; echo "${RESULTS_ARR[*]}")
 
 # add trailing / to output dir if necessary
 if [ ! -z "${OUTPUT_DIR}" ]; then
@@ -104,54 +107,37 @@ if [ ! -z "${OUTPUT_DIR}" ]; then
     fi
 fi
 
-# set default values for params if RESULTS is parsable
-EVM=""
-PROGRAMS=""
-DETAILS_PARAM=""
-OUTPUT_ESTIMATED_COST=""
-OUTPUT_REPORT=""
-PATTERN="(.*)results_marginal_(\w+)_([a-zA-Z0-9]+)\.csv$"
-if [[ ${RESULTS} =~ ${PATTERN} ]]; then
-    CTX="${BASH_REMATCH[1]}"
-    MEASUREMENT_GROUP="${BASH_REMATCH[2]}"
-    EVM="${BASH_REMATCH[3]}"
-    PROGRAMS="${CTX}pg_marginal_${MEASUREMENT_GROUP}.csv"
-    OUTPUT_ESTIMATED_COST="${CTX}${OUTPUT_DIR}estimated_cost_marginal_${MEASUREMENT_GROUP}_${EVM}.csv"
-    OUTPUT_REPORT="${CTX}${OUTPUT_DIR}report_marginal_${MEASUREMENT_GROUP}_${EVM}.html"
-    if [ ! -z "${OUTPUT_DIR}" ]; then
-	mkdir -p "${WORKING_DIR}/${CTX}${OUTPUT_DIR}"
-    fi
-else
-    if [ ! -z "${OUTPUT_DIR}" ]; then
-        mkdir -p "${WORKING_DIR}/${OUTPUT_DIR}"
-    fi
+if [ ! -z "${OUTPUT_DIR}" ]; then
+    mkdir -p "${WORKING_DIR}/${OUTPUT_DIR}"
 fi
+
+# set default values for params
+CURRENT_GAS_COST_PARAM=""
+DETAILS_PARAM=""
+OUTPUT_COMPARISON="${OUTPUT_DIR}final_gas_schedule_comparison.csv"
+OUTPUT_REPORT="${OUTPUT_DIR}final_estimation.html"
 
 # again
 eval set -- "$PARSED"
 while true; do
     case "$1" in
-        -e|--evm)
-            EVM="$2"
-            shift 2
-            ;;
-        -p|--programs)
-            PROGRAMS="$2"
+        -g|--current-gas-cost)
+            CURRENT_GAS_COST_PARAM=", current_gas_cost='$2'"
             shift 2
             ;;
         -d|--details)
             DETAILS_PARAM=", details='$2'"
             shift 2
             ;;
-         -c|--output-estimated-cost)
-            OUTPUT_ESTIMATED_COST="$2"
+        -c|--output-comparison)
+            OUTPUT_COMPARISON="$2"
             shift 2
             ;;
         -o|--output-report)
             OUTPUT_REPORT="$2"
             shift 2
             ;;
-        --)
+         --)
             shift
             break
             ;;
@@ -162,26 +148,14 @@ while true; do
 done
 
 # basic validation
-if [ -z "${EVM}" ]; then
-    echo evm is not set or detected
-    exit 4
-fi
-if [ -z "${PROGRAMS}" ]; then
-    echo programs is not set or detected
-    exit 4
-fi
-if [ -z "${OUTPUT_ESTIMATED_COST}" ]; then
-    echo output-estimated-cost is not set or detected
-    exit 4
-fi
 if [ -z "${OUTPUT_REPORT}" ]; then
     echo output-report is not set or detected
     exit 4
 fi
 
 # walkaround, docker sets new files to root:root ownership
-touch "${WORKING_DIR}/${OUTPUT_ESTIMATED_COST}"
+touch "${WORKING_DIR}/${OUTPUT_COMPARISON}"
 touch "${WORKING_DIR}/${OUTPUT_REPORT}"
 
-echo "docker run -it -v ${WORKING_DIR}:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e \"rmarkdown::render('/reports/measure_marginal_single.Rmd', params = list(env = '${EVM}', programs='${PROGRAMS}', results='${RESULTS}', output_estimated_cost='${OUTPUT_ESTIMATED_COST}'${DETAILS_PARAM}), output_file = '/data/${OUTPUT_REPORT}')\""
+eval "docker run -it -v ${WORKING_DIR}:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e \"rmarkdown::render('/reports/final_estimation.Rmd', params = list(estimate_files='${RESULTS}', output_comparison_file='${OUTPUT_COMPARISON}'${DETAILS_PARAM}${CURRENT_GAS_COST_PARAM}), output_file = '/data/${OUTPUT_REPORT}')\""
 
