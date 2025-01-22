@@ -2,8 +2,8 @@
 title: "Gas Cost Estimator: comparison of obtained estimates, alternative gas cost schedule"
 output: html_document
 params:
-  estimate_files: ""
-  current_gas_cost: ""
+  estimate_files: "/data/reports-12.01.2025/estimate_marginal*.csv,/data/reports-12.01.2025/estimate_arguments*.csv"
+  current_gas_cost: "/reports/current_gas_cost.csv"
   metric: "l1"
   details: ""
 ---
@@ -60,9 +60,20 @@ if (length(all_estimate_files) == 0) {
   stop("No estimated cost file found.")
 }
 # TODO details
-estimated_cost = data.frame(op=character(0),estimate_marginal_ns=numeric(0),estimate_marginal_stderr=numeric(0),env=character(0))
+estimated_cost = data.frame(op=character(0),estimate_marginal_ns=numeric(0),estimate_marginal_ns_stderr=numeric(0),env=character(0))
 for (i in 1:length(all_estimate_files)) {
-  add_estimated_cost = read.csv(all_estimate_files[i])
+  add_estimated_cost_raw = read.csv(all_estimate_files[i])
+  if (all(c("opcode", "arg0_ns_raw", "arg1_ns_raw", "arg2_ns_raw", "env") %in% colnames(add_estimated_cost_raw))) {
+    add_estimated_cost = data.frame(op=character(0),estimate_marginal_ns=numeric(0),estimate_marginal_ns_stderr=numeric(0),env=character(0))
+    add_estimated_cost_arg0 <- sqldf("SELECT opcode || '_ARG0' AS op, arg0_ns_raw AS estimate_marginal_ns, 0 AS estimate_marginal_ns_stderr, env FROM add_estimated_cost_raw WHERE arg0_ns_raw IS NOT NULL")
+    add_estimated_cost_arg1 <- sqldf("SELECT opcode || '_ARG1' AS op, arg1_ns_raw AS estimate_marginal_ns, 0 AS estimate_marginal_ns_stderr, env FROM add_estimated_cost_raw WHERE arg1_ns_raw IS NOT NULL")
+    add_estimated_cost_arg2 <- sqldf("SELECT opcode || '_ARG2' AS op, arg2_ns_raw AS estimate_marginal_ns, 0 AS estimate_marginal_ns_stderr, env FROM add_estimated_cost_raw WHERE arg2_ns_raw IS NOT NULL")
+    add_estimated_cost = rbind(add_estimated_cost, add_estimated_cost_arg0, add_estimated_cost_arg1, add_estimated_cost_arg2)
+  } else if (all(c("op", "estimate_marginal_ns", "estimate_marginal_ns_stderr", "env") %in% colnames(add_estimated_cost_raw))) { # it is marginal
+    add_estimated_cost <- add_estimated_cost_raw
+  } else {
+    stop(paste("Unrecognized file format: ", all_estimate_files[i]))
+  }
   estimated_cost = rbind(estimated_cost, add_estimated_cost[, c("op", "estimate_marginal_ns", "estimate_marginal_ns_stderr", "env")])
 }
 if (nrow(estimated_cost) == 0) {

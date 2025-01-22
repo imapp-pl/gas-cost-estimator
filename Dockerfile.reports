@@ -7,6 +7,7 @@ RUN Rscript -e "install.packages('sqldf')"
 RUN Rscript -e "install.packages('mixtools')"
 RUN Rscript -e "install.packages('zeallot')"
 
+COPY current_gas_cost.csv /reports/current_gas_cost.csv
 COPY common.R /reports/common.R
 COPY measure_marginal_single.Rmd /reports/measure_marginal_single.Rmd
 COPY final_estimation.Rmd /reports/final_estimation.Rmd
