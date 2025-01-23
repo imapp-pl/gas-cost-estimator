@@ -4,15 +4,15 @@
 
 ## Overview
 
-Based on the current [research](report_stage_iv.md) we propose a new gas cost schedule for the Ethereum Virtual Machine (EVM). The current gas schedule is based on the original [yellow paper](https://ethereum.github.io/yellowpaper/paper.pdf) and has seldom been updated since the launch of the Ethereum mainnet. The current gas schedule has several issues that have been identified in the research. The proposed gas schedules aim to address these issues and provide a more accurate representation of the computational cost of EVM operations.
+Based on the current [research](report_stage_iv.md), we propose a new gas cost schedule for the Ethereum Virtual Machine (EVM). The current gas schedule is based on the original [yellow paper](https://ethereum.github.io/yellowpaper/paper.pdf) and has rarely been updated since the launch of the Ethereum mainnet. The current gas schedule has several issues that have been identified in the research. The proposed gas schedules aim to address these issues and provide a more accurate representation of the computational cost of EVM operations.
 
 While the measurements in the Stage IV report are based on solid research, the proposed gas cost schedule is more subjective. This is why we propose two different gas schedules: a conservative one and a radical one. Each has pros and cons.
 
 ## Conservative Gas Schedule Proposal
 
-The idea behind the conservative gas schedule is to limit changes only to the most mispriced elements. By doing so, we aim to minimize the impact on the existing ecosystem, while still improving security. This should be also easier to implement, as it requires fewer changes to the existing codebases in EVM clients.
+The idea behind the conservative gas schedule is to limit changes only to the most mispriced elements. By doing so, we aim to minimize the impact on the existing ecosystem, while still improving security. This should also be easier to implement, as it requires fewer changes to the existing codebases in EVM clients.
 
-The opcodes that are proposed to be changed are those that have been identified as mispriced in the research.
+The opcodes proposed for change are those that have been identified to be mispriced during the research.
 
 | Opcode | Name | Current Gas | Proposed Gas |
 | ------------- | ------------- | ------------- | ------------- |
@@ -56,26 +56,26 @@ The opcodes that are proposed to be changed are those that have been identified 
 The current cost for the `memory_expansion_cost` is calculated as `quadratical_cost + 3 * memory_word_count`. We propose to change it to `quadratical_cost + 2 * memory_word_count` as the results indicate that memory expansion costs are quite low.
 
 ## Radical Gas Schedule Proposal
-The idea behind the radical gas schedule proposal is a complete overhaul of the current gas schedule. Rather than just changing the most mispriced opcodes, we propose to change all opcodes to better reflect the computational cost of the operations.
+The idea behind the radical gas schedule proposal is a complete overhaul of the current gas schedule. Rather than just addressing the most mispriced opcodes, we propose altering all opcodes to better reflect the computational cost of the operations.
 
-Let's run through the consequences of the radical gas schedule proposal. The cheapest operations are priced at 1 gas and we gradually increase the gas cost for more complex operations. As a result most arithmetic and basic opcodes will be much cheaper, i.e. valued at 1 rather than 3 or 5. Then all other operations will be adjusted accordingly, usually by lowering the gas cost. This matches some of the [sentiments](https://x.com/VitalikButerin/status/1849338545498210652) in the community.
+Let's run through the consequences of the radical gas schedule proposal. The cheapest operations are priced at 1. Then we gradually adjust the gas cost for more complex operations. As a result most arithmetic and basic opcodes will be much cheaper, i.e. valued at 1 rather than 3 or 5. Then all other operations will be adjusted accordingly, usually by lowering the gas cost. This matches some of the [sentiments](https://x.com/VitalikButerin/status/1849338545498210652) in the community.
 
 > Client Implementation notes: <br/>
-> Such radical change to the gas schedule would require a fully configurable gas schedule in EVM clients. This would allow clients to easily switch between different gas schedules, but also different chains.
+> Such radical change to the gas schedule would require a fully configurable schedule in EVM clients. This would allow clients to easily switch between different gas schedules, but also different chains.
 
-In this scenario, the storage cost remains at the same level as this reflects the network cost of storing data. Thus the radical gas schedule proposal expands the gap between the cost of storage and computation. This is a good thing as it makes it more expensive to store data than to compute it. The memory expansion cost is lowered but still keeps its characteristic of being quadratic, thus improving network security.
+In this scenario, the storage cost remains at the same level as this reflects the network cost of storing data. Thus the radical gas schedule proposal increase the disparity between the cost of storage and computation. This is a good thing as it makes it more expensive to store data than to compute it. The memory expansion cost is lowered but still keeps its characteristic of being quadratic, thus improving network security.
 
 Pros:
 - The gas cost reflects the computational cost of the operations
 - The larger gap between the cost of storage and computation promotes more efficient use of the network
-- Configurable gas schedules are easier to update in the future
+- Configurable gas schedules allow for simpler updates in the future
 - Configurable gas schedules can better match L2 chain requirements
 
 Cons:
 - EVM Clients need to implement configurable gas schedules
-- The radical changes may have unforeseen consequences
+- The radical changes may lead to unforeseen issues or challenges
 
-The radical gas schedule was created by taking the calculated gas costs from the research and rescaling them. The rescale factor is the key to achieving the desired effect. For this purpose, we took an average of the basic arithmetic opcodes. In this proposal, the rescale factor is `1/4.6 = 0.217391304`.
+The radical gas schedule was derived by rescaling the calculated gas costs from the research. The rescale factor is the key to achieving the desired effect. For this purpose, we took an average of the basic arithmetic opcodes. In this proposal, the rescale factor is `1/4.6 = 0.217391304`.
 
 The tables below contain the additional Rescaled Fractional column. This shows the actual gas cost of the opcode after rescaling. It could be useful for further discussion on the proposed Fractional Gas Costs schedule.
 

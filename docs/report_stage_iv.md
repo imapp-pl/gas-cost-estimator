@@ -9,7 +9,7 @@ In this stage, we use the findings from the previous stages and apply them to pr
 ## Introduction and project scope
 This project continues the previous stages of the Gas Cost Estimator. Please visit https://github.com/imapp-pl/gas-cost-estimator to find more information. After publishing our report from the second and third stages of the Gas Cost Estimator project we received feedback from the community. The community expressed the need to see other implementations being included in the research as well as to have the tooling automated and the benchmarks standardized.
 
-### EVM Implementaions
+### EVM Implementations
 The following EVM implementations have been included in the research:
 - [EvmOne](https://github.com/JacekGlen/evmone), version 0.13.0, commit [492e513](https://github.com/JacekGlen/evmone/commit/492e513a7d1cd905c6c45cf17d830fc8dc13288b)
 - [Go Ethereum](https://github.com/ethereum/go-ethereum), version  Rayingri (v1.14.12)
@@ -24,7 +24,7 @@ The following EVM implementations have been included in the research:
 In this stage, we measure all OPCODEs together with the precompiles.
 
 ### Tooling and automation
-The reproducibility is the key to the research. We have provided a complete setup guide and tooling to make the execution of the benchmarks as easy as possible. There are two ways to perform the measurements in your environment. The first one is to use the provided scripts to build the EVM implementations and run the benchmarks. The second one is to use the provided release with precompiled binaries. The binaries are available for Linux x64, MacOS x64 and Windows.
+The reproducibility is key to the research. We have provided a complete setup guide and tooling to make the execution of the benchmarks as easy as possible. There are two ways to perform the measurements in the environment. The first one is to use the provided scripts to build the EVM implementations and run the benchmarks. The second one is to use the provided release with precompiled binaries. The binaries are available for Linux x64, MacOS x64 and Windows.
 
 ## Methodology
 
@@ -74,7 +74,7 @@ Go Ethereum is the most popular EVM implementation. It is written in Go. For our
 Erigon is another EVM implementation written in Go. It has a similar `evm` tool as Go Ethereum that was harnessed for the benchmarks.
 
 ### EthereumJS
-EtherumJS is written in TypeScript and executed in NodeJS environment. No existing tool was available for benchmarking, so we created a new one. The code is available in [https://github.com/imapp-pl/ethereumjs-monorepo/blob/benchmark-bytecode-execution/packages/vm/benchmarks/bytecode.ts](). It uses `tinybench` library for benchmarking. The EVM engine is contained in `@ethereumjs/evm` library. The state is cleared on every benchmark run.
+EthereumJS is written in TypeScript and executed in NodeJS environment. No existing tool was available for benchmarking, so we created a new one. The code is available at [https://github.com/imapp-pl/ethereumjs-monorepo/blob/benchmark-bytecode-execution/packages/vm/benchmarks/bytecode.ts](). It uses `tinybench` library for benchmarking. The EVM engine is contained in `@ethereumjs/evm` library. The state is cleared on every benchmark run.
 
 ### Nethermind
 Nethermind is developed in the .NET framework using C# language. The existing benchmark did not satisfy our requirements, so we created a new one. The source code is available at [https://github.com/imapp-pl/nethermind/blob/benchmark-bytecode-execution/src/Nethermind/Nethermind.Benchmark.Runner/BytecodeBenchmark.cs](). The improvements include:
@@ -168,7 +168,7 @@ The cost of these opcodes usually matches the nominal gas value, with some notab
 #### Logs
 Included OPCODEs: `LOG0`, `LOG1`, `LOG2`, `LOG3`, `LOG4`
 
-Logs are difficult to measure as our methodology does not cover the network cost of storing logs. The results do confirm that the cost increases with the number of topics though. Also, we can consider lowering the base cost for topics.
+Logs are difficult to measure, as our methodology does not cover the network cost of storing logs. The results do confirm that the cost increases with the number of topics though. Also, we can consider lowering the base cost for topics.
 
 > Client Implementation notes:
 > Although not a top priority, Erigon could investigate the cost of logs.
@@ -206,7 +206,7 @@ The `KECCAK256` opcode is more expensive than the nominal. Both static costs and
 #### Elliptic Curve precompiles
 Included precompiles: `ecRecover`, `ecAdd`, `ecMul`, `ecPairing`
 
-It's been reported many times earlier that elliptic curve operations are underpriced. Our measurements confirm that.
+Elliptic curve operations have been frequently reported as underpriced. Our measurements confirm that reports.
 While `ecPairing` is mostly in the range, the other precompiles are significantly more expensive than the nominal.
 
 > Client Implementation notes:

@@ -2,7 +2,7 @@
 
 Reproducibility is a key aspect of any research. It allows other researchers to verify the results of a study and to build upon them.
 
-This document describes how to reproduce the measurements, analysis and final reports contained in the project. There are two aspects of the project replication: data and reports. They can be executed independently, i.e. researchers can use the provided data to run their analysis and generate reports. Alternatively, they can use the provided report generators to automatically analyze their data.
+This document describes how to reproduce the measurements, the analysis and final reports contained in the project. There are two aspects of the project replication: data and reports. They can be executed independently, i.e. researchers can use the provided data to run their analysis and generate reports. Alternatively, they can use the provided report generators to automatically analyze their data.
 
 ## Measurement data
 
@@ -14,7 +14,7 @@ The original benchmarks were executed on a reference machine with the following 
 
 The following EVM implementations were used: EvmOne, Go Ethereum, Erigon, EthereumJS, Nethermind, Revm and Besu.
 
-Execution of your benchmarks might have the following aims:
+Execution of benchmarks might have the following aims:
 - Reproduce and verify the results of the project
 - Run benchmarks on a different machine architecture or setup
 - Add more EVM implementations
@@ -24,7 +24,7 @@ Whatever your goals might be, we provide a framework that you can use to execute
 
 ### Conventions and data format
 
-The data is stored in CSV files. File names follow the pattern `<content_type>-<measurement_type>-<group>-<client>.csv`. Where each field might take the following values:
+The data is stored in CSV files. File names follow the pattern `<content_type>_<measurement_type>_<group>_<client>.csv`, where each field might take the following values:
 - `content_type`: `pg`, `results`, `estimated_cost`
 - `measurement_type`: `marginal`, `arguments`
 - `group`: `full`, `precompiles`, `mem`, `create`, `stop`, etc
@@ -52,7 +52,7 @@ Now you are ready to run benchmarks by executing the `measure_full.sh` script. B
 
 To build the EVM implementations yourself, your environment needs to have the dependencies installed as required for each client. The script `setup_tools.sh` guides you through the process, but it might require some manual intervention. Refer to the EVM implementation documentation for more details.
 
-The script `setup_clients.sh` downloads and compiles the EVM implementation used in this project. Edit the script to add more clients or change the versions. By default, the binaries are stored in the `gas-cost-estimator-clients` folder, next to the existing `gas-cost-estimator`. As you can see in the script sometimes we used our forks that enable benchmarking. You can find them in the `imapp-pl` organization on GitHub. We intend to include all the necessary changes in the upstream repositories in the future.
+The script `setup_clients.sh` downloads and compiles the EVM implementation used in this project. Edit the script to add more clients or change the versions. By default, the binaries are stored in the `gas-cost-estimator-clients` folder, next to the existing `gas-cost-estimator`. As you can see in the script sometimes we used our forks that enable benchmarking. You can find them in the `imapp-pl` organization on GitHub. We intend to include all necessary changes in upstream repositories in the future.
 
 ### Program Generation
 
@@ -78,7 +78,7 @@ python3 ./src/program_generator/pg_arguments.py generate
 python3 ./src/program_generator/pg_arguments_precompiles.py generate
 python3 ./src/program_generator/pg_validation.py generate
 ```
-They all use the same parameters. Both arguments and validation produce very large files. You might want to review before running benchmarks.
+They all use the same parameters. Both arguments and validation produce very large files. You might want to review the files before running benchmarks.
 
 All outputs are directed to the console, so you might want to redirect them to a file. Assuming you are in a parent folder:
 ```shell
@@ -87,7 +87,7 @@ python3 gas-cost-estimator/src/program_generator/pg_marginal.py generate > local
 
 ### Running benchmarks
 
-We used native benchmark tools for each client. As such they tend to differ in terms of executing options, output format and so on. The script `measurements.py` contains the logic to run benchmarks for each client.
+We used native benchmark tools for each client. As such they tend to differ in terms of executing options, output format and environment setup. The script `measurements.py` contains the logic to run benchmarks for each client.
 
 The example usage:
 ```shell
