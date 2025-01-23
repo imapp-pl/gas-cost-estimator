@@ -3,7 +3,7 @@
 set -o errexit -o pipefail -o noclobber -o nounset
 
 help() {
-    echo "This script generates the marginal report for Gas Cost Esitmator"
+    echo "This script generates the marginal report for Gas Cost Estimator"
     echo "Docker is required and the recent image imapp-pl/gas-cost-estimator/reports:4.0"
     echo "For more info see https://github.com/imapp-pl/gas-cost-estimator"
     echo
@@ -12,7 +12,7 @@ help() {
     echo " -h, --help                  Prints this help and exit"
     echo " -w, --working-dir <folder>  The working directory that contains all input and output files"
     echo "                             The Docker volume /data is mounted at this point"
-    echo "                             By default equals pwd, if set then must be an absolut path"
+    echo "                             By default equals pwd, if set then must be an absolute path"
     echo "                             All input and output files must be relative to the working directory"
     echo " -r, --results <file>        The .csv file with measurements results"
     echo "                             Must be in the format program_id,sample_id,total_time_ns may contain other data"

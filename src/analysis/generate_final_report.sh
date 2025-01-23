@@ -3,7 +3,7 @@
 set -o errexit -o pipefail -o noclobber -o nounset
 
 help() {
-    echo "This script generates the final report for Gas Cost Esitmator with comparison to the current gas cost schedule"
+    echo "This script generates the final report for Gas Cost Estimator with comparison to the current gas cost schedule"
     echo "Docker is required and the recent image imapp-pl/gas-cost-estimator/reports:4.0"
     echo "For more info see https://github.com/imapp-pl/gas-cost-estimator"
     echo
@@ -12,10 +12,10 @@ help() {
     echo " -h, --help                  Prints this help and exit"
     echo " -w, --working-dir <folder>  The working directory that contains all input and output files"
     echo "                             The Docker volume /data is mounted at this point"
-    echo "                             By default equals pwd, if set then must be an absolut path"
+    echo "                             By default equals pwd, if set then must be an absolute path"
     echo "                             All input and output files must be relative to the working directory"
     echo " -r, --results <file>        The comma separated list of .csv files with estimated costs, originating from marginal or arguments reports"
-    echo "                             Must be in the format provided by marginal or agruments reports"
+    echo "                             Must be in the format provided by marginal or arguments reports"
     echo "                             Wildcards are supported"
     echo "                             It is required"
     echo " -g, --current-gas-cost <file>"
@@ -27,7 +27,7 @@ help() {
     echo "                             The default behaviour is no subfolder"
     echo "                             Note that -c and -o ignore this setting"
     echo " -c, --output-comparison <file>"
-    echo "                             The output csv file with the alternative gas cost schedule and comparision"
+    echo "                             The output csv file with the alternative gas cost schedule and comparison"
     echo "                             The default name is final_gas_schedule_comparison.csv with regard to output-dir"
     echo " -o, --output-report <file>  The output html file with the report"
     echo "                             The default name is final_estimation.html with regard to output-dir"
