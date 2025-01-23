@@ -109,8 +109,10 @@ For your convenience, we have provided scripts that generate the reports automat
 First, build the Docker image:
 
 ```shell
-docker build . -f Dockerfile.reports -t imapp-pl/gas-cost-estimator/reports:4.0
+docker build ./src/analysis -f Dockerfile.reports -t imapp-pl/gas-cost-estimator/reports:4.0
 ```
+
+> TODO: LG provide correct scripts
 
 Then you can generate reports:
 ```shell

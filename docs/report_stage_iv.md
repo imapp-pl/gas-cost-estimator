@@ -12,12 +12,12 @@ This project continues the previous stages of the Gas Cost Estimator. Please vis
 ### EVM Implementaions
 The following EVM implementations have been included in the research:
 - [EvmOne](https://github.com/JacekGlen/evmone), version 0.13.0, commit [492e513](https://github.com/JacekGlen/evmone/commit/492e513a7d1cd905c6c45cf17d830fc8dc13288b)
-- [Go Ethereum](https://github.com/ethereum/go-ethereum), version  Rayingri (v1.14.8)
+- [Go Ethereum](https://github.com/ethereum/go-ethereum), version  Rayingri (v1.14.12)
 , commit [a9523b6](https://github.com/ethereum/go-ethereum/commit/a9523b6428238a762e1a1e55e46ead47630c3a23)
-- [Erigon](https://github.com/erigontech/erigon), version 2.60.6, commit [d24e5d4](https://github.com/erigontech/erigon/commit/d24e5d45755d7b23075c507ad9216e1d60ad03de)
-- [EthereumJS](https://github.com/imapp-pl/ethereumjs-monorepo), version 8.1.0, commit [db8c0db](https://github.com/imapp-pl/ethereumjs-monorepo/commit/db8c0dbe76b366edae7b609960bd99ff00e10cf7)
-- [Nethermind](https://github.com/imapp-pl/nethermind), version 1.28.0, commit [e65c1cd](https://github.com/imapp-pl/nethermind/commit/e65c1cd59d858e3add8203d1bc21ec1c1f38de5b)
-- [Revm](https://github.com/imapp-pl/revm), version 13.0.0, commit [d82c762](https://github.com/imapp-pl/revm/commit/d82c7621d7256d8067e97845411c68a3e1d6ef57)
+- [Erigon](https://github.com/erigontech/erigon), version 2.60.10, commit [d24e5d4](https://github.com/erigontech/erigon/commit/d24e5d45755d7b23075c507ad9216e1d60ad03de)
+- [EthereumJS](https://github.com/imapp-pl/ethereumjs-monorepo), version 8.1.1, commit [db8c0db](https://github.com/imapp-pl/ethereumjs-monorepo/commit/db8c0dbe76b366edae7b609960bd99ff00e10cf7)
+- [Nethermind](https://github.com/imapp-pl/nethermind), version 1.29.1, commit [e65c1cd](https://github.com/imapp-pl/nethermind/commit/e65c1cd59d858e3add8203d1bc21ec1c1f38de5b)
+- [Revm](https://github.com/imapp-pl/revm), version 18.0.0, commit [d82c762](https://github.com/imapp-pl/revm/commit/d82c7621d7256d8067e97845411c68a3e1d6ef57)
 - [Besu](https://github.com/lukasz-glen/besu), version 24.10.0, commit [d061dfa](https://github.com/lukasz-glen/besu/commit/d061dfa0d574fe2d4b4be4b0e61b8d11ce1501ee)
 
 ### Measured OPCODEs and precompiles
@@ -90,6 +90,7 @@ Revm is developed in Rust. The existing `revme` tool did not satisfy our require
 
 ### Besu
 Besu is developed in Java.
+> TODO: LG provide benchmarking tool used for Java
 
 ## Measurement Analysis
 
@@ -109,6 +110,10 @@ The full results of the measurements are available in the [stage4](../src/stage4
 **Figure: All Clients stack OPCODEs comparison**
 
 <img src="./report_stage_iv_assets/all_clients_stack.png" width="700"/>&nbsp;
+
+**Figure: All Clients precompiles comparison**
+
+<img src="./report_stage_iv_assets/all_clients_precompile.png" width="700"/>&nbsp;
 
 ### OPCODEs Details
 
