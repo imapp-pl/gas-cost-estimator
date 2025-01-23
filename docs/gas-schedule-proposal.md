@@ -10,7 +10,7 @@ While the measurements in the Stage IV report are based on solid research, the p
 
 ## Conservative Gas Schedule Proposal
 
-The idea behind the conservative gas schedule is to limit changes only to the most mispriced elements. By doing so, we aim to minimize the impact on the existing ecosystem, while still improving security. This should also be easier to implement, as it requires fewer changes to the existing codebases in EVM clients.
+The idea behind the conservative gas schedule is to limit changes only to the most mispriced elements. By doing so, we aim to minimize the impact on the existing ecosystem while still improving security. This should also be easier to implement, as it requires fewer changes to the existing codebases in EVM clients.
 
 The opcodes proposed for change are those that have been identified to be mispriced during the research.
 
@@ -51,19 +51,20 @@ The opcodes proposed for change are those that have been identified to be mispri
 | 07 | ECMUL * | 6000 | 10000 |
 | 0A | POINTEVAL * | 50000 | 300000 |
 
-> The * indicates increased gas cost for the given opcode of precompile. This should be implemented with caution as it might break backwards compatibility.
+> The * indicates increased gas cost for the given opcode or precompile. This should be implemented with caution as it might break backward compatibility.
 
 The current cost for the `memory_expansion_cost` is calculated as `quadratical_cost + 3 * memory_word_count`. We propose to change it to `quadratical_cost + 2 * memory_word_count` as the results indicate that memory expansion costs are quite low.
 
 ## Radical Gas Schedule Proposal
+
 The idea behind the radical gas schedule proposal is a complete overhaul of the current gas schedule. Rather than just addressing the most mispriced opcodes, we propose altering all opcodes to better reflect the computational cost of the operations.
 
-Let's run through the consequences of the radical gas schedule proposal. The cheapest operations are priced at 1. Then we gradually adjust the gas cost for more complex operations. As a result most arithmetic and basic opcodes will be much cheaper, i.e. valued at 1 rather than 3 or 5. Then all other operations will be adjusted accordingly, usually by lowering the gas cost. This matches some of the [sentiments](https://x.com/VitalikButerin/status/1849338545498210652) in the community.
+Let's run through the consequences of the radical gas schedule proposal. The cheapest operations are priced at 1. Then we gradually adjust the gas cost for more complex operations. As a result, most arithmetic and basic opcodes will be much cheaper, i.e., valued at 1 rather than 3 or 5. Then all other operations will be adjusted accordingly, usually by lowering the gas cost. This matches some of the [sentiments](https://x.com/VitalikButerin/status/1849338545498210652) in the community.
 
 > Client Implementation notes: <br/>
-> Such radical change to the gas schedule would require a fully configurable schedule in EVM clients. This would allow clients to easily switch between different gas schedules, but also different chains.
+> Such a radical change to the gas schedule would require a fully configurable schedule in EVM clients. This would allow clients to easily switch between different gas schedules, but also different chains.
 
-In this scenario, the storage cost remains at the same level as this reflects the network cost of storing data. Thus the radical gas schedule proposal increase the disparity between the cost of storage and computation. This is a good thing as it makes it more expensive to store data than to compute it. The memory expansion cost is lowered but still keeps its characteristic of being quadratic, thus improving network security.
+In this scenario, the storage cost remains at the same level as this reflects the network cost of storing data. Thus the radical gas schedule proposal increases the disparity between the cost of storage and computation. This is a good thing as it makes it more expensive to store data than to compute it. The memory expansion cost is lowered but still keeps its characteristic of being quadratic, thus improving network security.
 
 Pros:
 - The gas cost reflects the computational cost of the operations
@@ -78,7 +79,6 @@ Cons:
 The radical gas schedule was derived by rescaling the calculated gas costs from the research. The rescale factor is the key to achieving the desired effect. For this purpose, we took an average of the basic arithmetic opcodes. In this proposal, the rescale factor is `1/4.6 = 0.217391304`.
 
 The tables below contain the additional Rescaled Fractional column. This shows the actual gas cost of the opcode after rescaling. It could be useful for further discussion on the proposed Fractional Gas Costs schedule.
-
 
 | Opcode | Name | Current Gas | Rescaled Fractional | Proposed Gas |
 | ------------- | ------------- | -------------: | -------------: | -------------: |
