@@ -35,6 +35,7 @@ help() {
     echo "                             If not autodetected, it is required"
     echo " -o, --output-report <file>  The output html file with the report"
     echo "                             If not autodetected, it is required"
+    echo " -q, --quiet                 Suppress the output"
     echo
     echo "Examples:"
     echo "  ./generate_arguments_report.sh -r results_arguments_arithmetic_geth.csv"
@@ -42,6 +43,7 @@ help() {
     echo "  ./generate_arguments_report.sh -r results_arguments_arithmetic_geth.csv -e geth -p pg_arguments_arithmetic.csv -c estimated_cost_arguments_arithmetic_geth.csv -o report_arguments_arithmetic_geth.html"
     echo "    this looks for input files in the current directory and saves output files in the current directory"
     echo "  ./generate_arguments_report.sh -r results_arguments_arithmetic_geth.csv -s reports-2025-01-21"
+    echo "  ./generate_arguments_report.sh -r results_arguments_arithmetic_geth.csv -q"
     echo "  ./generate_arguments_report.sh -r my_dir/results_arguments_arithmetic_geth.csv -s reports-2025-01-21"
     echo "    this reads input files from my_dir folder and saves output files to my_dir/reports-2025-01-21 folder"
     echo "  ./generate_arguments_report.sh -r results_arguments_arithmetic_geth.csv -w /home/user/gas-cost-reports"
@@ -53,8 +55,8 @@ if [ "$#" == 0 ]; then
 fi
 
 # options
-LONGOPTS=working-dir:,output-dir:,evm:,programs:,results:,marginal-estimated-cost:,details:,output-estimated-cost:,output-report:,help
-OPTIONS=w:,s:,e:,p:,r:,m:,d:,c:,o:,h
+LONGOPTS=working-dir:,output-dir:,evm:,programs:,results:,marginal-estimated-cost:,details:,output-estimated-cost:,output-report:,help,quiet
+OPTIONS=w:,s:,e:,p:,r:,m:,d:,c:,o:,h,q
 
 # -temporarily store output to be able to check for errors
 # -activate quoting/enhanced mode (e.g. by writing out “--options”)
@@ -85,12 +87,19 @@ while true; do
 	    help
             exit 0
             ;;
+        -e|--evm|-p|--programs|-m|--marginal-estimated-cost|-d|--details|-c|--output-estimated-cost|-o|--output-report) # just validation
+            shift 2
+            ;;
+        -q|--quiet) # just validation
+            shift 
+            ;;
         --)
             shift
             break
             ;;
         *)
-            shift 2
+            echo Unrecognized argument "$1"
+            exit 2            
             ;;
     esac
 done
@@ -115,6 +124,7 @@ MARGINAL_ESTIMATED_COST_PARAM=""
 DETAILS_PARAM=""
 OUTPUT_ESTIMATED_COST=""
 OUTPUT_REPORT=""
+QUIET_PARAM=""
 PATTERN="(.*)results_arguments_(\w+)_([a-zA-Z0-9]+)\.csv$"
 if [[ ${RESULTS} =~ ${PATTERN} ]]; then
     CTX="${BASH_REMATCH[1]}"
@@ -152,7 +162,7 @@ while true; do
             DETAILS_PARAM=", details='$2'"
             shift 2
             ;;
-         -c|--output-estimated-cost)
+        -c|--output-estimated-cost)
             OUTPUT_ESTIMATED_COST="$2"
             shift 2
             ;;
@@ -160,7 +170,11 @@ while true; do
             OUTPUT_REPORT="$2"
             shift 2
             ;;
-        --)
+        -q|--quiet)
+            QUIET_PARAM=", quiet=TRUE"
+            shift
+            ;;
+         --)
             shift
             break
             ;;
@@ -192,5 +206,5 @@ fi
 touch "${WORKING_DIR}/${OUTPUT_ESTIMATED_COST}"
 touch "${WORKING_DIR}/${OUTPUT_REPORT}"
 
-eval "docker run -it -v ${WORKING_DIR}:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e \"rmarkdown::render('/reports/measure_arguments_single.Rmd', params = list(env = '${EVM}', programs='${PROGRAMS}', results='${RESULTS}', output_estimated_cost='${OUTPUT_ESTIMATED_COST}'${DETAILS_PARAM}${MARGINAL_ESTIMATED_COST_PARAM}), output_file = '/data/${OUTPUT_REPORT}')\""
+eval "docker run -it -v ${WORKING_DIR}:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e \"rmarkdown::render('/reports/measure_arguments_single.Rmd', params = list(env = '${EVM}', programs='${PROGRAMS}', results='${RESULTS}', output_estimated_cost='${OUTPUT_ESTIMATED_COST}'${DETAILS_PARAM}${MARGINAL_ESTIMATED_COST_PARAM}), output_file = '/data/${OUTPUT_REPORT}'${QUIET_PARAM})\""
 

@@ -31,6 +31,7 @@ help() {
     echo "                             The default name is final_gas_schedule_comparison.csv with regard to output-dir"
     echo " -o, --output-report <file>  The output html file with the report"
     echo "                             The default name is final_estimation.html with regard to output-dir"
+    echo " -q, --quiet                 Suppress the output"
     echo
     echo "Examples:"
     echo "  ./generate_final_report.sh -r estimated_cost_marginal_full_geth.csv"
@@ -39,6 +40,7 @@ help() {
     echo "    this looks for input files in the current directory and saves output files in the current directory"
     echo "  ./generate_final_report.sh -r estimated_cost_marginal_full_geth.csv -w /home/user/gas-cost-reports"
     echo "  ./generate_final_report.sh -r estimated_cost_marginal_full_geth.csv -g my-current_gas_cost.csv"
+    echo "  ./generate_final_report.sh -r estimated_cost_marginal_full_geth.csv -q"
     echo "  ./generate_final_report.sh -r reports-2025-01-21/estimated_cost_marginal_*,reports-2025-01-21/estimated_cost_arguments_* -s reports-2025-01-21"
     echo "    this reads input files from reports-2025-01-21 folder and saves output files to reports-2025-01-21 folder"
     echo "  ./generate_final_report.sh -r reports-2025-01-21/estimated_cost_marginal_*"
@@ -52,8 +54,8 @@ if [ "$#" == 0 ]; then
 fi
 
 # options
-LONGOPTS=working-dir:,output-dir:,results:,current-gas-cost:,details:,output-comparison:,output-report:,help
-OPTIONS=w:,s:,r:,g:,d:,c:,o:,h
+LONGOPTS=working-dir:,output-dir:,results:,current-gas-cost:,details:,output-comparison:,output-report:,help,quiet
+OPTIONS=w:,s:,r:,g:,d:,c:,o:,h,q
 
 # -temporarily store output to be able to check for errors
 # -activate quoting/enhanced mode (e.g. by writing out “--options”)
@@ -84,12 +86,19 @@ while true; do
 	    help
             exit 0
             ;;
+        -g|--current-gas-cost|-d|--details|-c|--output-comparison|-o|--output-report) # just validation
+            shift 2
+            ;;
+        -q|--quiet) # just validation
+            shift
+            ;;
         --)
             shift
             break
             ;;
         *)
-            shift 2
+            echo Unrecognized argument "$1"
+	    exit 2
             ;;
     esac
 done
@@ -121,6 +130,7 @@ CURRENT_GAS_COST_PARAM=""
 DETAILS_PARAM=""
 OUTPUT_COMPARISON="${OUTPUT_DIR}final_gas_schedule_comparison.csv"
 OUTPUT_REPORT="${OUTPUT_DIR}final_estimation.html"
+QUIET_PARAM=""
 
 # again
 eval set -- "$PARSED"
@@ -142,6 +152,10 @@ while true; do
             OUTPUT_REPORT="$2"
             shift 2
             ;;
+        -q|--quiet)
+            QUIET_PARAM=", quiet=TRUE"
+            shift
+            ;;
          --)
             shift
             break
@@ -162,5 +176,5 @@ fi
 touch "${WORKING_DIR}/${OUTPUT_COMPARISON}"
 touch "${WORKING_DIR}/${OUTPUT_REPORT}"
 
-eval "docker run -it -v ${WORKING_DIR}:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e \"rmarkdown::render('/reports/final_estimation.Rmd', params = list(estimate_files='${RESULTS}', output_comparison_file='${OUTPUT_COMPARISON}'${DETAILS_PARAM}${CURRENT_GAS_COST_PARAM}), output_file = '/data/${OUTPUT_REPORT}')\""
+eval "docker run -it -v ${WORKING_DIR}:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e \"rmarkdown::render('/reports/final_estimation.Rmd', params = list(estimate_files='${RESULTS}', output_comparison_file='${OUTPUT_COMPARISON}'${DETAILS_PARAM}${CURRENT_GAS_COST_PARAM}), output_file = '/data/${OUTPUT_REPORT}'${QUIET_PARAM})\""
 
