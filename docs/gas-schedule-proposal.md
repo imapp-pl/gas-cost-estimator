@@ -4,15 +4,15 @@
 
 ## Overview
 
-Based on the current [reasearch](report_stage_iv.md) we propose a new gas cost schedule for the Ethereum Virtual Machine (EVM). The current gas schedule is based on the original [yellow paper](https://ethereum.github.io/yellowpaper/paper.pdf) and has seldom been updated since the launch of the Ethereum mainnet. The current gas schedule has a number of issues that have been identified in the research. The proposed gas schedules aim to address these issues and provide a more accurate representation of the computational cost of EVM operations.
+Based on the current [research](report_stage_iv.md) we propose a new gas cost schedule for the Ethereum Virtual Machine (EVM). The current gas schedule is based on the original [yellow paper](https://ethereum.github.io/yellowpaper/paper.pdf) and has seldom been updated since the launch of the Ethereum mainnet. The current gas schedule has several issues that have been identified in the research. The proposed gas schedules aim to address these issues and provide a more accurate representation of the computational cost of EVM operations.
 
-While the measurements in the Stage IV report are based on solid reasearch, the proposed gas cost schedule is more subjective. This is why we propose two different gas schedules: a conservative one and a radical one. Each having pros and cons. 
+While the measurements in the Stage IV report are based on solid research, the proposed gas cost schedule is more subjective. This is why we propose two different gas schedules: a conservative one and a radical one. Each has pros and cons.
 
 ## Conservative Gas Schedule Proposal
 
-The idea behind the conservative gas schedule is to limit changes only to the most mispriced elements. By doing so, we aim to minimize the impact on the existing ecosystem, while still improving security. This should be also easier to implement, as it requires less changes to the existing codebases in EVM clients.
+The idea behind the conservative gas schedule is to limit changes only to the most mispriced elements. By doing so, we aim to minimize the impact on the existing ecosystem, while still improving security. This should be also easier to implement, as it requires fewer changes to the existing codebases in EVM clients.
 
-The opcodes that are proposed to be changed are those that have been identified as mispriced in the research. 
+The opcodes that are proposed to be changed are those that have been identified as mispriced in the research.
 
 | Opcode | Name | Current Gas | Proposed Gas |
 | ------------- | ------------- | ------------- | ------------- |
@@ -63,21 +63,21 @@ Let's run through the consequences of the radical gas schedule proposal. The che
 > Client Implementation notes: <br/>
 > Such radical change to the gas schedule would require a fully configurable gas schedule in EVM clients. This would allow clients to easily switch between different gas schedules, but also different chains.
 
-In this scenario the storage cost remains at the same level as this refects the network cost of storing data. Thus the radical gas schedule proposal expands the gap between the cost of storage and computation. This is a good thing as it makes it more expensive to store data than to compute it. The memory expansion cost is lowered, but still keeps its characteristic of being quadratic, thus improving network security.
+In this scenario, the storage cost remains at the same level as this reflects the network cost of storing data. Thus the radical gas schedule proposal expands the gap between the cost of storage and computation. This is a good thing as it makes it more expensive to store data than to compute it. The memory expansion cost is lowered but still keeps its characteristic of being quadratic, thus improving network security.
 
 Pros:
 - The gas cost reflects the computational cost of the operations
 - The larger gap between the cost of storage and computation promotes more efficient use of the network
-- Configurable gas schedules are easier update in the future
+- Configurable gas schedules are easier to update in the future
 - Configurable gas schedules can better match L2 chain requirements
 
 Cons:
 - EVM Clients need to implement configurable gas schedules
 - The radical changes may have unforeseen consequences
 
-The radical gas schedule was created by taking the calculated gas costs from the research and rescaling them. The rescale factor is the key to achieve the desired effect. For this purpose we took an average of the basic arthmetic opcodes. In this proposal the rescale factor is `1/4.6 = 0.217391304`.
+The radical gas schedule was created by taking the calculated gas costs from the research and rescaling them. The rescale factor is the key to achieving the desired effect. For this purpose, we took an average of the basic arithmetic opcodes. In this proposal, the rescale factor is `1/4.6 = 0.217391304`.
 
-The tables below contain the additional Rescaled Fractional column. This shows the actual gas cost of the opcode after rescaling. It could be usefull to for futher discussion on the proposed Fractional Gas Costs schedule.
+The tables below contain the additional Rescaled Fractional column. This shows the actual gas cost of the opcode after rescaling. It could be useful for further discussion on the proposed Fractional Gas Costs schedule.
 
 
 | Opcode | Name | Current Gas | Rescaled Fractional | Proposed Gas |

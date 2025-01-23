@@ -22,7 +22,7 @@ Execution of your benchmarks might have the following aims:
 
 Whatever your goals might be, we provide a framework that you can use to execute benchmarks and generate data.
 
-### Convetions and data format
+### Conventions and data format
 
 The data is stored in CSV files. File names follow the pattern `<content_type>-<measurement_type>-<group>-<client>.csv`. Where each field might take the following values:
 - `content_type`: `pg`, `results`, `estimated_cost`
@@ -30,7 +30,7 @@ The data is stored in CSV files. File names follow the pattern `<content_type>-<
 - `group`: `full`, `precompiles`, `mem`, `create`, `stop`, etc
 - `client`: `evmone`, `geth`, `erigon`, `ethereumjs`, `nethermind`, `revm`, `besu`
 
-For example the file `pg_arguments_precompiles.csv` contains program generated using arguments method for precompiles. And `results_marginal_full_geth.csv` contains results of the marginal benchmark for the full group using the Geth client. Finally `estimated_cost_marginal_mem_evmone.csv` would contain calculated estimated cost for the EvmOne client.
+For example, the file `pg_arguments_precompiles.csv` contains a program generated using the arguments method for precompiles. And `results_marginal_full_geth.csv` contains results of the marginal benchmark for the full group using the Geth client. Finally `estimated_cost_marginal_mem_evmone.csv` would contain the calculated estimated cost for the EvmOne client.
 
 The columns in the CSV files are as follows:
 - `pg_marginal`: program_id,opcode,op_count,bytecode
@@ -38,7 +38,7 @@ The columns in the CSV files are as follows:
 - `results`: program_id,sample_id,total_time_ns + optional columns like mem_allocs, mem_alloc_bytes, iterations_count, std_dev_time_ns, depending on a client
 - `estimated_cost`: op,estimate_marginal_ns,estimate_marginal_ns_stderr,env
 
-Keeping the same conventions will allow you to use the provided scripts to generate reports and easier shareing with other researchers.
+Keeping the same conventions will allow you to use the provided scripts to generate reports and easier sharing with other researchers.
 
 ### Gas Cost Estimator Releases
 
@@ -112,7 +112,7 @@ First, build the Docker image:
 docker build ./src/analysis -f Dockerfile.reports -t imapp-pl/gas-cost-estimator/reports:4.0
 ```
 
-> TODO: LG provide correct scripts
+> TODO: LG to provide the correct scripts
 
 Then you can generate reports:
 ```shell

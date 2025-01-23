@@ -192,7 +192,7 @@ The measurements show that the cost of transient storage is lower than the nomin
 #### Creates
 Included OPCODEs: `CREATE`, `CREATE2`
 
-The main factors in the cost of creating a contract are the network storage cost. Thus it is difficult to measure the computational cost of these opcodes. The cost of `CREATE` and `CREATE2` should remain at the current level.
+The main factor in the cost of creating a contract is the network storage cost. Thus it is difficult to measure the computational cost of these opcodes. The cost of `CREATE` and `CREATE2` should remain at the current level.
 
 #### Other
 Included OPCODEs: `SELFBALANCE`, `KECCAK256`
