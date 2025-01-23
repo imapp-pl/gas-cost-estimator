@@ -154,7 +154,7 @@ q = c("SELECT ")
 for (env in all_envs) {
   df = estimated_cost[which(estimated_cost$env==env),]
   eligible_opcodes = df[,'op'] # TODO limit opcodes for scale
-  reference_df = current_gas_cost[which(current_gas_cost$groups == 0),]
+  reference_df = current_gas_cost[which(current_gas_cost$base > 0),]
   scale = calculate_scale(df, reference_df)
   q <- append(q, paste0(env, ".estimate_marginal_ns/", scale, " as ", env, "_gas,"))
   q <- append(q, paste0(env, ".estimate_marginal_ns_stderr/", scale, " as ", env, "_gas_stderr,"))
