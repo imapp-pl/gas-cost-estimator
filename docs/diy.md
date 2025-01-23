@@ -100,23 +100,88 @@ Edit the file `measurements.py` to add more clients or change client-specific op
 
 ## Report generation
 
-For each client, we have two kinds of reports: marginal and arguments. Then there is a final report that combines all the data. The reports are generated using R notebooks. The notebooks are located in the `src/analysis` folder. You can run them in RStudio.
+For each client, we have two kinds of reports: marginal and arguments. Then there is a final report that combines all the data. The reports are generated using R notebooks. The notebooks are located in the `src/analysis` folder. You can run them in RStudio but it is recommended to use the scripts.
 
 ### Automated report generation
 
 For your convenience, we have provided scripts that generate the reports automatically. This requires Docker to run.
 
-First, build the Docker image:
+First, build the Docker image in the repo root:
 
 ```shell
 docker build ./src/analysis -f Dockerfile.reports -t imapp-pl/gas-cost-estimator/reports:4.0
 ```
 
-> TODO: LG to provide the correct scripts
+The scripts are in the `./src/analysis` folder. 
+They merely invoke the Docker image so they do not need to be located in the repo.
+The scripts to generate the marginal, arguments and final reports in that order.
 
-Then you can generate reports:
 ```shell
-generate_marginal.sh ../local/results_marginal_full_evmone.csv
-generate_arguments.sh ../local/results_arguments_full_evmone.csv
-generate_final.sh ../local/results*.csv
+generate_marginal_report.sh
+generate_arguments_report.sh
+generate_final_report.sh
 ```
+
+For detailed info run the script with the option `-h` or `--help`
+
+### Generate the marginal report
+
+First you need to provide the input file with the measurement results in the csv format
+and the program file in the csv format.
+The program file should be the one that was used to run benchmarks.
+Note that the programs' bytecode are not relevant, but other parameters are.
+
+It is the best to follow the convention for input file
+```shell
+results_marginal_<MEASUREMENT_TYPE>_<EVM>.csv
+pg_marginal_<MEASUREMENT_TYPE>.csv
+```
+for instance
+```shell
+results_marginal_full_geth.csv
+pg_marginal_full.csv
+```
+then you can simply execute in a folder with those files
+```shell
+./generate_marginal_report.sh -r results_marginal_full_geth.csv
+```
+and get the report and estimation cost file
+```shell
+report_marginal_full_geth.html
+estimated_cost_marginal_full_geth.csv
+```
+
+For further info check the help from the script.
+
+### Generate the arguments report
+
+First you need to provide the input file with the measurement results in the csv format
+and the program file in the csv format.
+The program file should be the one that was used to run benchmarks.
+Note that the programs' bytecode are not relevant, but other parameters are.
+It is not required to run the corresponding marginal benchmarks and generate the marginal reports beforehand.
+But this unlocks additional verifications.
+
+It is the best to follow the convention for input file
+```shell
+results_arguments_<MEASUREMENT_TYPE>_<EVM>.csv
+pg_arguments_<MEASUREMENT_TYPE>.csv
+```
+for instance
+```shell
+results_arguments_arithmetic_geth.csv
+pg_arguments_arithmetic.csv
+```
+then you can simply execute in a folder with those files
+```shell
+./generate_arguments_report.sh -r results_arguments_arithmetic_geth.csv
+```
+and get the report and estimation cost file
+```shell
+report_arguments_arithmetic_geth.html
+estimated_cost_arguments_arithmetic_geth.csv
+```
+
+For further info check the help from the script.
+
+
