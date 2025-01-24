@@ -97,10 +97,11 @@ The full list of bytecode instructions used for the measurements is available in
 - [arithmetic and others](../src/stage4/pg_marginal_full_step5.csv)
 - [memory](../src/stage4/pg_marginal_mem.csv)
 - [create](../src/stage4/pg_marginal_create.csv)
+- [stop](../src/stage4/pg_marginal_stop.csv)
 - [transient](../src/stage4/pg_marginal_t.csv)
 - [precompiles](../src/stage4/pg_precompiles_full_step5.csv)
 
-The full results of the measurements are available in the [stage4](../src/stage4/results/) directory.
+The full results of the measurements are available in the [reports](reports/) directory.
 
 **Figure: All Clients arithmetic OPCODEs comparison**
 
