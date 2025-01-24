@@ -1,0 +1,23 @@
+# running full test for all clients
+echo Running full measurements for all clients. This might take several days:
+echo running EvmOne...
+python3 gas-cost-estimator/src/instrumentation_measurement/measurements.py measure --input_file gas-cost-estimator/src/stage4/pg_marginal_full5_c50_step5_shuffle.csv --evm evmone --sample_size 10 > results_evmone.csv
+
+echo running Geth...
+python3 gas-cost-estimator/src/instrumentation_measurement/measurements.py measure --input_file gas-cost-estimator/src/stage4/pg_marginal_full5_c50_step5_shuffle.csv --evm geth --sample_size 10 > results_geth.csv
+
+echo running Nethermind...
+python3 gas-cost-estimator/src/instrumentation_measurement/measurements.py measure --input_file gas-cost-estimator/src/stage4/pg_marginal_full5_c50_step5_shuffle.csv --evm nethermind --sample_size 10 > results_nethermind.csv
+
+echo running EthereumJS...
+python3 gas-cost-estimator/src/instrumentation_measurement/measurements.py measure --input_file gas-cost-estimator/src/stage4/pg_marginal_full5_c50_step5_shuffle.csv --evm ethereumjs --sample_size 10 > results_ethereumjs.csv
+
+echo running Erigon...
+python3 gas-cost-estimator/src/instrumentation_measurement/measurements.py measure --input_file gas-cost-estimator/src/stage4/pg_marginal_full5_c50_step5_shuffle.csv --evm erigon --sample_size 10 > results_erigon.csv
+
+echo running Besu...
+python3 gas-cost-estimator/src/instrumentation_measurement/measurements.py measure --input_file gas-cost-estimator/src/stage4/pg_marginal_full5_c50_step5_shuffle.csv --evm besu --sample_size 10 > results_besu.csv
+
+echo running Revm...
+python3 gas-cost-estimator/src/instrumentation_measurement/measurements.py measure --input_file gas-cost-estimator/src/stage4/pg_marginal_full5_c50_step5_shuffle.csv --evm revm --sample_size 10 > results_revm.csv
+

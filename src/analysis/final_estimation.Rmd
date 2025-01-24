@@ -2,7 +2,7 @@
 title: "Gas Cost Estimator: comparison of obtained estimates, alternative gas cost schedule"
 output: html_document
 params:
-  estimate_files: ""
+  estimate_files: "/data/reports-12.01.2025/estimate_marginal*.csv,/data/reports-12.01.2025/estimate_arguments*.csv"
   current_gas_cost: "/reports/current_gas_cost.csv"
   output_comparison_file: "final_gas_schedule_comparison.csv"
   metric: "l1"
