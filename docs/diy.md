@@ -184,4 +184,48 @@ estimated_cost_arguments_arithmetic_geth.csv
 
 For further info check the help from the script.
 
+### Generate the final report
+
+**The final report generation is loosly coupled with the marginal and arguments processing.
+It is only required that the input files, the estimation cost files, are the required format.
+You are free to try out estimation data from other source with this tool.**
+
+The final report combines the estimation costs obtained in the marginal and arguments processing,
+compares in the technology agnostic manner 
+and composes an alternative gas cost schedule based on provided estimates.
+
+You need to provide any number of csv files with marginal and arguments estimation costs.
+These files are the output from the marginal and arguments processing.
+It is advised to provide data from various EVMs but a single EVM client data works as well.
+The arguments estimation cost files are not required. 
+And in an extreme case, the final report can be rendered only with the arguments estimation cost files.
+
+The simplest invocation is for instance
+```shell
+./generate_final_report.sh -r "estimated_cost_marginal_*,estimated_cost_arguments_*"
+```
+this will generate
+```shell
+final_estimation.html
+final_gas_schedule_comparison.csv
+```
+
+For further info check the help from the script.
+
+The final report is driven by the `current_gas_cost.csv` configuration file.
+It can be overridden in order to adjust the report to specific requirements.
+Simply execute
+```shell
+./generate_final_report.sh -r "estimated_cost_marginal_*,estimated_cost_arguments_*" -g my_current_gas_cost.csv
+```
+
+The `current_gas_cost.csv` is of the format
+```shell
+opcode,constant_current_gas,groups,base
+```
+
+- `opcode`, they must match to opcodes in the marginal estimation cost files and/or to opcodes in the arguments estimation cost files with the suffix `_ARG0`, `_ARG1` or `_ARG2`. Only opcodes included in the file are processed by the final report generation.
+- `constant_current_gas`, the reference gas cost schedule, note that these values can be alternative to the official gas cost schedule.
+- `groups`, assignes the opcode to a graph, opcodes should be grouped in graphs by revelance, similarity and/or visual aspects. Negative groups are hidden in the report.
+- `base`, whether or not (1 or 0) the opcode is used to calculate the scale - each EVM estimated costs are scaled in order to get the best fit and accurate alternative gas cost schedule. It is not advised to select all opcodes.
 
