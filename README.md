@@ -6,28 +6,20 @@ The result of the analysis is a proposal for the new gas cost schedule.
 
 ## Overview
 
-> Our results are still being verified and improved. In the meantime please check out the latest [research report](docs/report_stage_iv.md), [gas schedule proposal document](docs/gas-schedule-proposal.md) and all the [raw results](src/stage4/results/).
+The [Gas Cost Schedule Proposal](docs/gas-schedule-proposal.md) document is ready! 
 
-**Figure: All Clients arithmetic OPCODEs comparison**
+You can learn more about how we have conducted the research and put forward the proposal from this [document](docs/report_stage_iv.md). For the detailed analysis, head to the [reports](docs/reports/) directory, where you can find the results reports for each EVM implementation.
 
-<img src="docs/report_stage_iv_assets/all_clients_arithmetic.png" width="700"/>&nbsp;
-
-**Figure: All Clients stack OPCODEs comparison**
-
-<img src="docs/report_stage_iv_assets/all_clients_stack.png" width="700"/>&nbsp;
-
+The reproducibility is the key! See our [guide](docs/diy.md) to learn how to run the benchmarks on your own and generate the reports.
 
 ## Research progress
-
 
 The project is divided into stages. The progress of each stage is described in the corresponding document:
  - [Stage I](docs/report_stage_i.md) - Initial research and methodology proposal
  - [Stage II](docs/report_stage_ii.md) - Benchmarking and data collection
  - [Stage III](docs/report_stage_iii.md) - Data analysis and report generation
- - [Stage IV](docs/report_stage_iv.md) - Comprehensive analysis of the gas cost and reproducibility (work in progress)
+ - [Stage IV](docs/report_stage_iv.md) - Comprehensive analysis of the gas cost and reproducibility
  - Stage V - Improved tooling and report generation (planned)
-
-
 
 ## Introduction and project scope
 
