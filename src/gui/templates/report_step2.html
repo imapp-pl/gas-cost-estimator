@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Step 2</title>
+</head>
+<body>
+    <h3>Select files with bytecodes</h3>
+    <form method="POST" action="/{{ report_type }}">
+        <input type="hidden" name="step" value="2">
+        <select id="selected_bytecodes_paths" name="selected_bytecodes_paths" multiple>
+            {% for path in bytecodes_paths %}
+                <option value="{{ path }}">
+                    {{ path }}
+                </option>
+            {% endfor %}
+        </select>
+        <input type="hidden" name="env" value="{{ env }}">
+        <button type="submit">Next</button>
+    </form>
+</body>
+</html>

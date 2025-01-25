@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Select raport type and EVM implementation</title>
+</head>
+<body>
+    <form method="POST" action="/{{ report_type }}">
+        <input type="hidden" name="step" value="1">
+        <label for="env">Select EVM implementation:</label>
+        <select id="env" name="env">
+            <option value="geth">geth</option>
+            <option value="erigon">erigon</option>
+            <option value="ethereumjs">ethereumjs</option>
+            <option value="netheremind">netheremind</option>
+            <option value="besu">besu</option>
+            <option value="revm">revm</option>
+        </select>
+        <br><br>
+        <input type="submit" value="Next">
+    </form>
+</body>
+</html>
