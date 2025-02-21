@@ -1,0 +1,15 @@
+The Gas Cost Estimator project does not favour or promote any EVM implementation.
+And there is no intention to do so in any sense.
+In particular, in terms of benchmarks.
+Any results or data included in the project do not favour and should not be interpreted as a recommendation towards any EVM implementation.
+Note that the final report operates with scaled/relative values rather than absolute measurements results in ms.
+The goal is to detect common patterns and relations in an agnostic manner.
+
+EVM implementations picked for the final report included in the project and directly supported by the project
+are of an arbitrary choice, without excluding personal preferences.
+We believe they are representative of the network and the state of the art.
+You are encouraged to integrate with other EVM implementations. 
+Feel free to provide necessary changes.
+
+Although, the project may be used to detect areas of potential optimizations
+or to track progress between versions etc for a specific EVM implementation.

@@ -12,6 +12,8 @@ You can learn more about how we have conducted the research and put forward the 
 
 The reproducibility is the key! See our [guide](docs/diy.md) to learn how to run the benchmarks on your own and generate the reports.
 
+[License](LICENSE), [Terms of Use](TOU), [Disclaimer](DISCLAIMER)
+
 ## Research progress
 
 The project is divided into stages. The progress of each stage is described in the corresponding document:
