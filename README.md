@@ -73,7 +73,7 @@ Where `evm_name` is the name of the EVM implementation you want to measure.
 In order to build locally the docker image execute in the repository root
 
 ```shell
-docker build ./src/analysis -f Dockerfile.reports -t imapp-pl/gas-cost-estimator/reports:4.0
+docker build ./src/analysis -f Dockerfile.reports -t imapp-pl/gas-cost-estimator/reports:4.1
 ```
 
 Note that the context is `./src/analysis` in order to decrease the data size. 
@@ -84,17 +84,48 @@ For now, use `/data` volume to pass input files and retrieve an output report.
 To render `measure_marginal` report provide your params and an output file and execute the command:
 
 ```shell
-docker run -it -v /your/path/to/data:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e "rmarkdown::render('/reports/measure_marginal_single.Rmd', params = list(env = 'erigon', programs='pg_marginal_full5_c50_step1_shuffle.csv', results='erigon_pg_marginal_full5_c50_step1_shuffle_size_10.csv', output_estimated_cost='erigon_marginal_estimated_cost.csv'), output_file = '/data/erigon_measure_marginal_single.html')"
+docker run -it -v /your/path/to/data:/data --rm imapp-pl/gas-cost-estimator/reports:4.1 Rscript -e "rmarkdown::render('/reports/measure_marginal_single.Rmd', params = list(env = 'erigon', programs='pg_marginal_full5_c50_step1_shuffle.csv', results='erigon_pg_marginal_full5_c50_step1_shuffle_size_10.csv', output_estimated_cost='erigon_marginal_estimated_cost.csv'), output_file = '/data/erigon_measure_marginal_single.html')"
 ```
 
 To render `measure_arguments` report provide your params and an output file and execute the command:
 
 ```shell
-docker run -it -v /your/path/to/data:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e "rmarkdown::render('/reports/measure_arguments_single.Rmd', params = list(env = 'erigon', programs='pg_arguments_full5_c200_opc15x2.csv', results='erigon_pg_arguments_full5_c200_opc15x2_.csv', marginal_estimated_cost='erigon_marginal_estimated_cost.csv', output_estimated_cost='erigon_arguments_estimated_cost.csv'), output_file = '/data/erigon_measure_arguments_single.html')"
+docker run -it -v /your/path/to/data:/data --rm imapp-pl/gas-cost-estimator/reports:4.1 Rscript -e "rmarkdown::render('/reports/measure_arguments_single.Rmd', params = list(env = 'erigon', programs='pg_arguments_full5_c200_opc15x2.csv', results='erigon_pg_arguments_full5_c200_opc15x2_.csv', marginal_estimated_cost='erigon_marginal_estimated_cost.csv', output_estimated_cost='erigon_arguments_estimated_cost.csv'), output_file = '/data/erigon_measure_arguments_single.html')"
 ```
 
 To render `final_estimate` report provide your params and an output file and execute the command:
 
 ```shell
-docker run -it -v /your/path/to/data:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e "rmarkdown::render('/reports/final_estimation.Rmd', params = list(estimate_files='besu_marginal_estimated_cost.csv, erigon_marginal_estimated_cost.csv, ethereumjs_marginal_estimated_cost.csv, geth_marginal_estimated_cost.csv, nethermind_marginal_estimated_cost.csv, revm_marginal_estimated_cost.csv', current_gas_cost='current_gas_cost.csv'), output_file = '/data/final_estimation.html')"
+docker run -it -v /your/path/to/data:/data --rm imapp-pl/gas-cost-estimator/reports:4.1 Rscript -e "rmarkdown::render('/reports/final_estimation.Rmd', params = list(estimate_files='besu_marginal_estimated_cost.csv, erigon_marginal_estimated_cost.csv, ethereumjs_marginal_estimated_cost.csv, geth_marginal_estimated_cost.csv, nethermind_marginal_estimated_cost.csv, revm_marginal_estimated_cost.csv', current_gas_cost='current_gas_cost.csv'), output_file = '/data/final_estimation.html')"
 ```
+
+## Docker - REST API
+
+You can run REST API within the same report Docker image. 
+The service interactively generates reports.
+
+In order to build locally the docker image execute in the repository root
+
+```shell
+docker build ./src/analysis -f Dockerfile.reports -t imapp-pl/gas-cost-estimator/reports:4.1
+```
+
+Then run the service 
+
+```shell
+docker run -d --name gas-cost-estimator-rest-api -p 5000:5000 -v /your/path/to/data:/data --rm imapp-pl/gas-cost-estimator/reports:4.1 /rest-api/gas-cost-estimator-rest-api.sh
+```
+
+The logs are in locations:
+- `/your/path/to/data/uwsgi.log`
+- `/your/path/to/data/uwsgi.stdout`
+- `/your/path/to/data/uwsgi.stderr`
+
+The welcome page is available at [http://localhost:5000/](http://localhost:5000/).
+
+To stop the service run
+
+```shell
+docker stop gas-cost-estimator-rest-api
+```
+
