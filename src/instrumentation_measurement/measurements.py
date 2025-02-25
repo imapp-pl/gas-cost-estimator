@@ -152,16 +152,14 @@ class Measurements(object):
             csv_chunk = '\n'.join(result_row)
             print(csv_chunk)
 
-    def _parse_geth_benchmark_output(self, stdout, stderr):
-        text = stderr
-
+    def _parse_geth_benchmark_output(self, output):
         execution_time_pattern = r"execution time:\s*([\d\.]+)(µs|ms)"
         allocations_pattern = r"allocations:\s*([\d\.]+)"
         allocated_bytes_pattern = r"allocated bytes:\s*([\d\.]+)"
 
-        execution_time_match = re.search(execution_time_pattern, text)
-        allocations = re.search(allocations_pattern, text)
-        allocated_bytes = re.search(allocated_bytes_pattern, text)
+        execution_time_match = re.search(execution_time_pattern, output)
+        allocations = re.search(allocations_pattern, output)
+        allocated_bytes = re.search(allocated_bytes_pattern, output)
 
         if execution_time_match:
             execution_time = float(execution_time_match.group(1))
@@ -185,17 +183,16 @@ class Measurements(object):
         else:
             exec_path = os.path.abspath(exec_path)
 
-        args = ['--code', program.bytecode, '--bench', 'run']
+        args = ['run', '--bench', program.bytecode]
         invocation = [exec_path] + args
 
         results = []
         for run_id in range(1, sample_size + 1):
             pro = subprocess.Popen(
                 invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-            stdout, stderr = pro.communicate()
+            _, stderr = pro.communicate()
 
-            instrumenter_result = self._parse_geth_benchmark_output(
-                stdout, stderr)
+            instrumenter_result = self._parse_geth_benchmark_output(stderr)
 
             results.append(str(run_id) + "," + instrumenter_result)
         return results
@@ -266,10 +263,9 @@ class Measurements(object):
         for run_id in range(1, sample_size + 1):
             pro = subprocess.Popen(
                 invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-            stdout, stderr = pro.communicate()
+            _, stderr = pro.communicate()
 
-            instrumenter_result = self._parse_geth_benchmark_output(
-                stdout, stderr)
+            instrumenter_result = self._parse_geth_benchmark_output(stderr)
 
             results.append(str(run_id) + "," + instrumenter_result)
         return results
