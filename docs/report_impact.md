@@ -49,4 +49,23 @@ Even if some coefficients are absent for older hard forks,
 the common denominator is feasible.
 For instance the gas cost of (CALL, COLD_ACCOUNT_ACCESS_COST, WARM_ACCOUNT_ACCESS_COST)
 is (700, 0, 0) for Spurious Dragon and (0, 2600, 100) for Berlin hard fork.
+Note that CALL is the static gas cost for CALL opcode.
+
+#### Development notes
+
+The current implementation does not provide a full decomposition into Gas Usage Vector.
+It is enough to satisfy the set goal. 
+This section describes deficiencies.
+
+SLOAD and SSTORE opcodes are not decomposed into coefficients.
+Raw gas cost is reported instead. 
+This is the case for some other complex situations that are not covered by EIP-7904.
+If in the future there will be a need to cover broader scope,
+the implementation should be improved.
+
+EOF and EIP-7702 and not supported fully.
+
+The best approach to test gas cost schedule updates is to calculate deltas.
+For instance, if a transaction executes ADD ten times and gas cost is lowered
+from 3 to 1, then the trasaction gas cost is to be lowered by 20 gas.
 
