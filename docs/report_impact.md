@@ -25,10 +25,16 @@ Any changes in EIP-7904 can be easily applied for this assessment.
 Similar assessments can be provided for other gas cost modifications
 and data exploration on gas usage.
 
+Low level data are collected for each call (subcall)
+because some gas cost factors are not additive,
+for instance memory expansion cost has quadratic dependence.
+Gas cost is calculated for the calls, then they are aggregated
+to obtain gas cost for transactions and for the blocks.
+
 Finally, we compare two figures: the original gas usage of a transaction,
 and the calculated gas usage assuming EIP-7904.
-So the tx throughput increment assessment is based on the block gas usage decrement
-as this is the raw non-experimental data.
+So the assessment of tx throughput increment is based on the calculated block gas usage decrement
+as this is the raw non-experimental data available.
 
 #### Gas Usage Vector
 
