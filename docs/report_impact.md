@@ -104,3 +104,28 @@ The best approach to test gas cost schedule updates is to calculate deltas.
 For instance, if a transaction executes ADD ten times and gas cost is lowered
 from 3 to 1, then the trasaction gas cost is to be lowered by 20 gas.
 
+### Backwards Compatibility
+
+Backwards Compatibility for this work means that
+changes provided by EIP-7904 will not break any existing contract.
+It needs to be defined: what is positive/negative result of verification, 
+what are means to examine contracts.
+The task requires some heuristics.
+
+Instead of smartcontract analysis, including static analysis, 
+another approach is adopted, based on empiric data.
+Each transaction is re-executed in the same context but with modified gasometering
+according to EIP-7904.
+So we have the original execution of transaction and the simulation with modified gasometer.
+Re-exucution in the same context means that at the beginning the simulation has 
+the same blockchain state as the original transaction.
+Then the execution outcomes are compared.
+
+Note that different outcomes does not mean automatically that the contract is broken.
+Further investigation may be require to diagnose a cause.
+This is another work to be done and it requires case by case approach - 
+it is not covered by this report.
+
+#### Methodology
+
+
