@@ -2,7 +2,8 @@
 ### Gas Cost Changes Impact
 
 The goal is to assess the impact of changes provided by EIP-7904 on gas usage.
-
+In particular, transactions would be less gas consuming so tx throughput would increase
+as more transactions could be included in a block preserving the block gas limit.
 
 #### Methodology
 
@@ -26,6 +27,8 @@ and data exploration on gas usage.
 
 Finally, we compare two figures: the original gas usage of a transaction,
 and the calculated gas usage assuming EIP-7904.
+So the tx throughput increment assessment is based on the block gas usage decrement
+as this is the raw non-experimental data.
 
 #### Gas Usage Vector
 
