@@ -1,14 +1,40 @@
 
-## Gas Cost Changes Impact
+### Gas Cost Changes Impact
 
-### Methodology
+The goal is to assess the impact of changes provided by EIP-7904 on gas usage.
+
+
+#### Methodology
+
+Past blocks are considered as test data. 
+Transactions and blocks are executed and information on executed opcodes and other operations
+are collected.
+Check the Gas Usage Vector section for details on the structure that holds that data.
+With the collected data,
+we calculate the total gas cost of a transaction or a block with updated gas cost schedule
+according to changes provided by EIP-7904.
+Note that the past transactions are not re-executed with updated gasometering
+as it would affect the transactions results in terms of blockchain state updates.
+The calculations are rather performed aposteriori,
+they are based only on the collected data,
+so it is assumed that the execution sequences are exactly the same.
+
+This approach provides greater flexibility. 
+Any changes in EIP-7904 can be easily applied for this assessment.
+Similar assessments can be provided for other gas cost modifications
+and data exploration on gas usage.
+
+Finally, we compare two figures: the original gas usage of a transaction,
+and the calculated gas usage assuming EIP-7904.
 
 #### Gas Usage Vector
 
-Gas Usage Vector is a decomposition of the gas usage to elementary coefficients.
+Gas Usage Vector is a fine grained decomposition of the gas usage to elementary coefficients.
 Each coefficient refers to a quantity of a given component that increments gas usage.
 Anything that increases gas usage should be reflected as one or more coefficients in Gas Usage Vector,
 including calldata, opcodes, precompiles, access lists, contract creation etc.
+This allows to modify gas cost of opcodes and other operations and 
+immediately check the results.
 
 To get a better feeling what is Gas Usage Vector, we give examples.
 Each simple opcode, for instance ADD, PUSH, ADDRESS, etc, refers to one coefficient. 
