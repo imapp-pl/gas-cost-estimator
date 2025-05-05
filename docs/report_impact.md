@@ -145,3 +145,22 @@ The procedure is as follows;
 Note that these two blockchain state updates are different because 
 the account balances are different at the end of transaction.
 So more subtle approach is required.
+
+#### Development notes
+
+Comparison of blockchain state updates is difficult.
+A simplified heuristic is implemented.
+We start with the transaction status:
+
+- If the simulation tx status is SUCCESS and the original tx status is SUCCESS,
+then the comparison is GOOD.
+- If the simulation tx status is FAILED and the original tx status is FAILED,
+then the comparison is GOOD.
+- If the simulation tx status is SUCCESS and the original tx status is FAILED,
+then the comparison is UNKNOWN.
+- If the simulation tx status is FAILED and the original tx status is SUCCESS,
+then the comparison is BAD.
+
+The outcome BAD indicates that the transaction must be verified against
+EIP-7904 changes.
+The outcome UNKNOWN seems to be an improvement, but in some cases may need verification.
