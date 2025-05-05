@@ -128,4 +128,20 @@ it is not covered by this report.
 
 #### Methodology
 
+The existing blocks are re-executed and included transactions are re-executed
+in parallel with two gasometers: the original and simulation.
+The simulation applies the changes defined by EIP-7904.
+The procedure is as follows;
 
+1. The next transaction is read.
+2. The transaction is executed with the simulation gasometer.
+3. The blockchain state update is recorded.
+4. The blockchain state is reset. The transaction receipt is not included. Used gas is not accounted.
+5. The transaction is executed with the original gasometer.
+6. The blockchain state update is recorded.
+7. The blockchain state update is commited.
+8. Two blockchain state updates are compared.
+
+Note that these two blockchain state updates are different because 
+the account balances are different at the end of transaction.
+So more subtle approach is required.
