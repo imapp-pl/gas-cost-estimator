@@ -146,9 +146,9 @@ Note that these two blockchain state updates are different because
 the account balances are different at the end of transaction.
 So more subtle approach is required.
 
-#### Development notes
-
 Comparison of blockchain state updates is difficult.
+Two executions, the original and simulation, almost certainly result
+with two different states.
 A simplified heuristic is implemented.
 We start with the transaction status:
 
@@ -164,3 +164,9 @@ then the comparison is BAD.
 The outcome BAD indicates that the transaction must be verified against
 EIP-7904 changes.
 The outcome UNKNOWN seems to be an improvement, but in some cases may need verification.
+
+There are cases that a transaction almost always results with SUCCESS.
+For instance, so called gasless transaction performs an actually wrapped transaction internally
+and the status of internal call is just recorded in a log instead of being propagated.
+For that reason our heuristic is extended to validate subcalls also.
+So the whole tree of subcalls is actually compared.
