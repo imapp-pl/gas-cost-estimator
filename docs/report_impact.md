@@ -154,7 +154,8 @@ The table below list is top coefficients that incurred the greatest total gas us
 | PRECOMPILED_EC_MUL |    560,673,300 |       169,901 |
 |      PUSH20 |    501,783,876 |   250,891,938 |
 
-Some blocks with significant block gas usage diff were studied in details.
+Blocks with significant block gas usage diff were studied in details.
+Additionally, some transactions were verified against transaction traces.
 
 The block 22382018 has 51.93% of gas usage difference. 
 It includes four eligible transactions, all of them are propagateRoot() of OpStateBridge contract.
