@@ -107,12 +107,12 @@ from 3 to 1, then the trasaction gas cost is to be lowered by 20 gas.
 #### Results
 
 The examination was performed on the recent blocks, ~50k. 
-We calculate the block gas usage decrement if EIP-7904 would be applied (`block_gas_diff`)
-and refer it to the actual gas usage (`block_gas_usage`).
+We calculated the block gas usage decrement if EIP-7904 would be applied (`block_gas_diff`)
+and compare it to the actual gas usage (`block_gas_usage`).
 
 The average block gas usage dropped by ~10.51% , this is `sum(block_gas_diff)/sum(block_gas_usage)`.
-The lowest observed gas usage % difference is 0.71%, the greatest is 51.93% .
-Only 1.6% of examined block has gas usage % differenct greater than 20% .
+The lowest observed gas usage % difference (block_gas_diff/block_gas_usage) is 0.71%, the greatest is 51.93% .
+Only 1.6% of examined blocks have gas usage % difference greater than 20% .
 
 The table below list top coefficients that incurred the greatest total gas usage decrement. 
 
@@ -153,6 +153,39 @@ The table below list top coefficients that incurred the greatest total gas usage
 |        DUP6 |    563,799,750 |   281,899,875 |
 | PRECOMPILED_EC_MUL |    560,673,300 |       169,901 |
 |      PUSH20 |    501,783,876 |   250,891,938 |
+
+Some blocks with significant block gas usage diff were studied in details.
+
+The block 22382018 has 51.93% of gas usage difference. 
+It includes four eligible transactions, all of them are propagateRoot() of OpStateBridge contract.
+
+| tx hash | gas used | gas diff | % gas diff |
+|---------|----------|----------|------------|
+| 0xb12f17c3c898063c913876ea10a0c36a846400126abc750da878ad5bc8bc9c41 | 1,209,332 | 803,942 | 66.4% |
+| 0x9293eb3dfaacdf9d58e5d7fec8e937c966a18d7ef7bc720cbffa58a8cff5e155 | 1,187,242 | 788,053 | 66.3% |
+| 0x0c924a77d95d8b0d50af6b8e295c5131d41ab0988e4d1a66a1666e677e6b1e5d | 1,209,243 | 804,258 | 66.5% |
+| 0x7b56d49a9c8bff40b997c6a3d26271d6d5165cf4a4cb4e60a4046f6aa2888da1 | 1,187,325 | 788,493 | 66.4% |
+
+Below is the list of opcodes that have top gas usage difference 
+for the transaction 0xb12f17c3c898063c913876ea10a0c36a846400126abc750da878ad5bc8bc9c41 .
+
+| coefficient | gas_diff | quantity   |
+|-------------|----------|------------|
+|          JUMP |   224,511 |    32,073 |
+|          JUMPI |   173,943 |    19,327 |
+|          PUSH2 |   102,818 |    51,409 |
+|         DUP3 |    64,074 |    32,037 |
+|          PUSH1 |    39,318 |    19,659 |
+|         SWAP1 |    38,700 |    19,350 |
+|          ISZERO |    25,806 |    12,903 |
+|          LT |    25,606 |    12,803 |
+|           SUB |    25,592 |    12,796 |
+|          POP |    19,481 |    19,481 |
+|           ADD |    13,432 |     6,716 |
+|         DUP4 |    13,140 |     6,570 |
+|         SWAP2 |    12,976 |     6,488 |
+|         PUSH32 |    12,866 |     6,433 |
+
 
 ### Backwards Compatibility
 
