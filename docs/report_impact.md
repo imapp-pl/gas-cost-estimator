@@ -111,7 +111,7 @@ We calculated the block gas usage decrement if EIP-7904 would be applied (`block
 and compare it to the actual gas usage (`block_gas_usage`).
 
 The average block gas usage dropped by ~10.51% , this is `sum(block_gas_diff)/sum(block_gas_usage)`.
-The lowest observed gas usage % difference (block_gas_diff/block_gas_usage) is 0.71%, the greatest is 51.93% .
+The lowest observed gas usage % difference (`block_gas_diff/block_gas_usage`) is 0.71%, the greatest is 51.93% .
 Only 1.6% of examined blocks have gas usage % difference greater than 20% .
 
 The table below list is top coefficients that incurred the greatest total gas usage decrement. 
