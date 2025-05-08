@@ -114,7 +114,7 @@ The average block gas usage dropped by ~10.51% , this is `sum(block_gas_diff)/su
 The lowest observed gas usage % difference (block_gas_diff/block_gas_usage) is 0.71%, the greatest is 51.93% .
 Only 1.6% of examined blocks have gas usage % difference greater than 20% .
 
-The table below list top coefficients that incurred the greatest total gas usage decrement. 
+The table below list is top coefficients that incurred the greatest total gas usage decrement. 
 
 | coefficient |  gas_diff   |  quantity   |
 |-------------|-------------|-------------|
