@@ -104,6 +104,56 @@ The best approach to test gas cost schedule updates is to calculate deltas.
 For instance, if a transaction executes ADD ten times and gas cost is lowered
 from 3 to 1, then the trasaction gas cost is to be lowered by 20 gas.
 
+#### Results
+
+The examination was performed on the recent blocks, ~50k. 
+We calculate the block gas usage decrement if EIP-7904 would be applied (`block_gas_diff`)
+and refer it to the actual gas usage (`block_gas_usage`).
+
+The average block gas usage dropped by ~10.51% , this is `sum(block_gas_diff)/sum(block_gas_usage)`.
+The lowest observed gas usage % difference is 0.71%, the greatest is 51.93% .
+Only 1.6% of examined block has gas usage % differenct greater than 20% .
+
+The table below list top coefficients that incurred the greatest total gas usage decrement. 
+
+| coefficient |  gas_diff   |  quantity   |
+|-------------|-------------|-------------|
+|       JUMPI | 17,575,400,880 | 1,952,822,320 |
+|        JUMP | 12,533,484,698 | 1,790,497,814 |
+|       PUSH1 |  9,133,930,312 | 4,566,965,156 |
+|       PUSH2 |  8,021,974,936 | 4,010,987,468 |
+| WARM_ACCOUNT_ACCESS_COST |  5,039,345,585 |    53,045,743 |
+|       SWAP1 |  4,533,386,998 | 2,266,693,499 |
+|        DUP2 |  3,913,028,646 | 1,956,514,323 |
+|         ADD |  3,466,653,000 | 1,733,326,500 |
+|        DUP1 |  2,998,253,260 | 1,499,126,630 |
+|        DUP3 |  2,952,426,624 | 1,476,213,312 |
+|         POP |  2,442,509,113 | 2,442,509,113 |
+| MEMORY_WORD_GAS_COST |  2,347,206,540 |   782,402,180 |
+|      ISZERO |  2,241,865,852 | 1,120,932,926 |
+|       SWAP2 |  2,109,683,478 | 1,054,841,739 |
+|      MSTORE |  2,016,333,432 | 1,008,166,716 |
+|         AND |  1,796,827,030 |   898,413,515 |
+|       MLOAD |  1,687,732,210 |   843,866,105 |
+|        DUP4 |  1,607,537,108 |   803,768,554 |
+|         SUB |  1,317,892,654 |   658,946,327 |
+|         MUL |  1,267,239,396 |   316,809,849 |
+|       SWAP3 |  1,141,415,996 |   570,707,998 |
+|          EQ |  1,046,211,858 |   523,105,929 |
+|       PUSH4 |    986,790,438 |   493,395,219 |
+|        DUP5 |    980,694,670 |   490,347,335 |
+| PRECOMPILED_EC_PAIRING_PARAMETERS |    930,231,000 |        34,453 |
+|          LT |    916,069,664 |   458,034,832 |
+| EXP_OPERATION_BYTE_GAS_COST |    885,628,662 |    19,252,797 |
+|       SWAP4 |    720,757,430 |   360,378,715 |
+|         SHL |    706,087,098 |   353,043,549 |
+|          GT |    667,116,384 |   333,558,192 |
+|         DIV |    664,867,680 |   166,216,920 |
+|         SHR |    634,539,262 |   317,269,631 |
+|        DUP6 |    563,799,750 |   281,899,875 |
+| PRECOMPILED_EC_MUL |    560,673,300 |       169,901 |
+|      PUSH20 |    501,783,876 |   250,891,938 |
+
 ### Backwards Compatibility
 
 Backwards Compatibility for this work means that
