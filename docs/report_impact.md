@@ -155,6 +155,7 @@ The table below list is top coefficients that incurred the greatest total gas us
 |      PUSH20 |    501,783,876 |   250,891,938 |
 
 Blocks with significant block gas usage diff were studied in details.
+Interesting findings are presented.
 Additionally, some transactions were verified against transaction traces.
 
 The block 22382018 has 51.93% of gas usage difference. 
@@ -187,6 +188,49 @@ for the transaction 0xb12f17c3c898063c913876ea10a0c36a846400126abc750da878ad5bc8
 |         SWAP2 |    12,976 |     6,488 |
 |         PUSH32 |    12,866 |     6,433 |
 
+The block 22391630 has 41.66%  of gas usage difference.
+It has one significant transaction - 32,9 Mgas out of 35,98 Mgas block usage -
+0x310909437b77352ce160a8585dcab413146b5b312d25b32336a3fee53e0062c0 .
+The transaction's gas usage diff is 44.93%.
+The transaction transfers 186 NFTs, and acutally executes 
+enormous number of subcalls - 7074.
+
+| coefficient | gas_diff | quantity | 
+|-------------|----------|----------|
+|          JUMPI |  2,167,821 |   240,869 | 
+|          JUMP |  2,055,256 |   293,608 | 
+|          PUSH1 |  1,201,706 |   600,853 | 
+|          PUSH2 |  1,125,150 |   562,575 | 
+|         WARM_ACCOUNT_ACCESS_COST |    723,710 |     7,618 | 
+|           ADD |    598,738 |   299,369 | 
+|         DUP2 |    576,302 |   288,151 | 
+|          POP |    505,698 |   505,698 | 
+|         SWAP1 |    479,950 |   239,975 | 
+|         DUP1 |    465,124 |   232,562 | 
+|         DUP3 |    370,344 |   185,172 | 
+|         MEMORY_WORD_GAS_COST |    352,236 |   117,412 | 
+|         SWAP2 |    349,168 |   174,584 | 
+|          MSTORE |    327,636 |   163,818 | 
+|          AND |    298,970 |   149,485 | 
+|          ISZERO |    282,642 |   141,321 | 
+|         SWAP3 |    218,532 |   109,266 | 
+|         DUP5 |    208,508 |   104,254 | 
+|          MLOAD |    205,560 |   102,780 | 
+|         DUP4 |    202,548 |   101,274 | 
+|           SUB |    146,314 |    73,157 | 
+|          PUSH4 |    140,298 |    70,149 | 
+|          EQ |    132,558 |    66,279 | 
+|         SWAP4 |    130,250 |    65,125 | 
+|         DUP6 |    114,340 |    57,170 | 
+|          CALLDATALOAD |    100,902 |    50,451 | 
+|          GT |    100,204 |    50,102 | 
+
+Typical transactions were insvestigated.
+
+| Transaction | gas used | gas diff | % gas diff |
+|-------------|----------|----------|------------|
+| USDC transfer | 45,160 | 1,438 | |
+| USDT transferFrom | 48,518 | 1,332 | |
 
 ### Backwards Compatibility
 
