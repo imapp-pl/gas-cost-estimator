@@ -225,12 +225,17 @@ enormous number of subcalls - 7074.
 |          CALLDATALOAD |    100,902 |    50,451 | 
 |          GT |    100,204 |    50,102 | 
 
-Typical transactions were insvestigated.
+Typical transactions were insvestigated to illustrate
+impact on regular user activity.
 
 | Transaction | gas used | gas diff | % gas diff |
 |-------------|----------|----------|------------|
-| USDC transfer | 45,160 | 1,438 | |
-| USDT transferFrom | 48,518 | 1,332 | |
+| USDC transfer | 45,160 | 1,438 | 3.18% |
+| USDT transferFrom | 48,518 | 1,332 | 2.74% |
+| Uniswap V2 swap | 112,478 | 12,235 | 10.87% |
+| Contract Creation | 1,284,635 | 2,557 | 0.19% |
+| Ethena Stake | 69,793 | 4,206 | 6.02% |
+| Commit Verification Layer Zero | 76,844 | 5,743 | 7.47% |
 
 ### Backwards Compatibility
 
