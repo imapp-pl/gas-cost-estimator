@@ -233,7 +233,6 @@ impact on regular user activity.
 | USDC transfer | 45,160 | 1,438 | 3.18% |
 | USDT transferFrom | 48,518 | 1,332 | 2.74% |
 | Uniswap V2 swap | 112,478 | 12,235 | 10.87% |
-| Contract Creation | 1,284,635 | 2,557 | 0.19% |
 | Ethena Stake | 69,793 | 4,206 | 6.02% |
 | Commit Verification Layer Zero | 76,844 | 5,743 | 7.47% |
 
