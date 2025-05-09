@@ -1,11 +1,14 @@
+## Gas Cost Changes Impact
 
-### Gas Cost Changes Impact
+The goal of this study is to assess the impact of changes provided by [EIP-7904.](https://github.com/ethereum/EIPs/pull/9454) .
 
-The goal of this study is to assess the impact of changes provided by EIP-7904 on gas usage.
+### Gas Usage Impact
+
+EIP-7904 decreases gas cost of a number of opcodes and operations.
 Specifically, transactions would consume less gas,
 allowing more transactions to be included in a block while preserving the block gas limit, thereby increasing transaction
 throughput.
-
+This section investigates gas usage changes in terms of quantity.
 
 #### Methodology
 
