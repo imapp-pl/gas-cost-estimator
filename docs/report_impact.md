@@ -2,6 +2,13 @@
 
 The goal of this study is to assess the impact of changes provided by [EIP-7904.](https://github.com/ethereum/EIPs/pull/9454) .
 
+### Tools
+
+The work was performed by re-executing past blocks with modified EVM client that collects required data.
+The choice of EVM solely depended on personal preferences,
+it should not be considered as any recommendation.
+Modified EVM code can be find [here](https://github.com/lukasz-glen/besu/tree/eip-7904) .
+
 ### Gas Usage Impact
 
 EIP-7904 decreases gas cost of a number of opcodes and operations.
