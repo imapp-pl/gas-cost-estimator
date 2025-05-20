@@ -55,11 +55,11 @@ If you plan to compile and run benchmarks on your own, you need the following to
 - .NET 9.0.2+
 - Java 21.0.0+
 
-You can use [setup_tools.sh](src/instrumentation_measurement/setup_tools.sh) script to install the required tools on Linux. The best is to edit the script according to your needs and run it.
+You can use [setup_tools.sh](scripts/setup_tools.sh) script to install the required tools on Linux. The best is to edit the script according to your needs and run it.
 
 To download and compile the EVM implementations, run the following commands:
 ```bash
-./src/instrumentation_measurement/setup_clients.sh
+./scripts/setup_clients.sh
 ```
 
 If your configuration is different, follow the steps in the script. The end results should be the same - you should have all the EVM implementations compiled and copied to the `../gas-cost-estimator-clients/build` directory.
