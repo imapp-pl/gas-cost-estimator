@@ -68,7 +68,7 @@ fi
 if [ ! -d "$working_path/revm" ]; then
     cd $working_path
     mkdir -p build/revm
-    git clone -b benchmark-bytecode-execution https://github.com/imapp-pl/revm.git --depth 1
+    git clone -b main https://github.com/bluealloy/revm.git --depth 1
     cd revm
     cargo build -p revme --profile release
     cp -f target/release/revme ../build/revm/

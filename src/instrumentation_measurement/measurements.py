@@ -171,11 +171,11 @@ class Measurements(object):
             if time_unit == 'ms':  # convert milliseconds to nanoseconds
                 execution_time *= 1000000
         else:
-            execution_time = None
+            execution_time = -1
 
-        allocations = allocations.group(1) if allocations else None
+        allocations = allocations.group(1) if allocations else -1
 
-        allocated_bytes = allocated_bytes.group(1) if allocated_bytes else None
+        allocated_bytes = allocated_bytes.group(1) if allocated_bytes else -1
 
         return "{},{},{}".format(int(execution_time), int(allocations), int(allocated_bytes))
 
@@ -185,7 +185,7 @@ class Measurements(object):
         else:
             exec_path = os.path.abspath(exec_path)
 
-        args = ['--code', program.bytecode, '--bench', 'run']
+        args = ['run', '--bench', program.bytecode]
         invocation = [exec_path] + args
 
         results = []
@@ -338,7 +338,7 @@ class Measurements(object):
 
     def _create_revm_result_line(self, sample_id):
         results_base_folder = os.path.abspath(
-            os.getcwd() + '/target/criterion/revme/bytecode')
+            os.getcwd() + '/target/criterion/revme/evm')
         base_benchmark_data = json.load(
             open(results_base_folder+'/new/estimates.json'))
         base_benchmark_samples_data = json.load(
