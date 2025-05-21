@@ -12,6 +12,8 @@ You can learn more about how we have conducted the research and put forward the 
 
 The reproducibility is the key! See our [guide](docs/diy.md) to learn how to run the benchmarks on your own and generate the reports.
 
+[License](LICENSE), [Terms of Use](TOU), [Disclaimer](DISCLAIMER)
+
 ## Research progress
 
 The project is divided into stages. The progress of each stage is described in the corresponding document:
@@ -19,7 +21,7 @@ The project is divided into stages. The progress of each stage is described in t
  - [Stage II](docs/report_stage_ii.md) - Benchmarking and data collection
  - [Stage III](docs/report_stage_iii.md) - Data analysis and report generation
  - [Stage IV](docs/report_stage_iv.md) - Comprehensive analysis of the gas cost and reproducibility
- - Stage V - Improved tooling and report generation (planned)
+ - [Stage V](docs/report_impact.md) - Impact report
 
 ## Introduction and project scope
 
@@ -47,13 +49,13 @@ Additionally, we provide a complete setup guide to compile the EVM implementatio
 
 If you plan to compile and run benchmarks on your own, you need the following tools installed:
 - Python 3.8+
-- Go 1.22.8+
-- Rust 1.80.0+
+- Go 1.24+
+- Rust 1.87+
 - Node.js 18.0.0+
-- .NET 7.0+
+- .NET 9.0.2+
 - Java 21.0.0+
 
-You can use [setup_tools.sh](src/instrumentation_measurement/setup_tools.sh) script to install the required tools on Linux.
+You can use [setup_tools.sh](src/instrumentation_measurement/setup_tools.sh) script to install the required tools on Linux. The best is to edit the script according to your needs and run it.
 
 To download and compile the EVM implementations, run the following commands:
 ```bash
