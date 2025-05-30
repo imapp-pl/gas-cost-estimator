@@ -373,7 +373,7 @@ class Measurements(object):
         else:
             exec_path = os.path.abspath(exec_path)
 
-        args = [ '--code=' + program.bytecode, '--repeat=1000', '--samples=1000' ]
+        args = [ '--code=' + program.bytecode, '--repeat=100', '--samples=1000' ]
         invocation = [exec_path] + args
 
         results = []

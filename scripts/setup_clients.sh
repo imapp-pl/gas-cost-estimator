@@ -61,7 +61,7 @@ if [ ! -d "$working_path/nethermind" ]; then
     mkdir -p build/nethermind
     git clone -b benchmark-bytecode-execution https://github.com/imapp-pl/nethermind.git --depth 1
     cd nethermind/src/Nethermind/
-    dotnet build -c Release ./Benchmarks.sln -o out/
+    dotnet build -c Release ./Benchmarks.slnx -o out/
     cp -fr out/* ../../../build/nethermind/
 fi
 
@@ -77,7 +77,7 @@ fi
 if [ ! -d "$working_path/besu" ]; then
     cd $working_path
     mkdir -p build/besu
-    git clone -b evmtoolAddSamplesOption https://github.com/lukasz-glen/besu.git --depth 1
+    git clone -b benchmark-bytecode-execution https://github.com/lukasz-glen/besu.git --depth 1
     cd besu
     ./gradlew :ethereum:evmTool:installDist
     cp -fr ethereum/evmtool/build/install/evmtool ../build/besu/
