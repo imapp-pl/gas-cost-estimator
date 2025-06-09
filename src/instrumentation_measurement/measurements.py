@@ -404,7 +404,13 @@ class Measurements(object):
 
     def csv_row_append_info(self, instrumenter_result, program):
         # append program_id which are not known to the instrumenter tool
-        to_append = "{},".format(program.id)
+        program_id = program.id
+        if '\'' in program_id or '"' in program_id:
+            print('Unsupported character in program id {}'.format(program_id))
+        if ',' in program_id:
+            to_append = "\"{},\"".format(program_id)
+        else:
+            to_append = "{},".format(program_id)
         return [to_append + row for row in instrumenter_result]
 
 
