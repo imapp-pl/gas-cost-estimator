@@ -227,6 +227,14 @@ measurements[which(measurements$opcode == 'MULMOD'), ]$expensive =
 ```
 
 ```{r, include=FALSE}
+# special constants for BLS to calculate gas cost - there is no linear dependency on arg0
+    bls_g1msm_discount <- as.data.frame(t(matrix(c(1, 1000, 2, 949, 3, 848, 4, 797, 5, 764, 6, 750, 7, 738, 8, 728, 9, 719, 10, 712, 11, 705, 12, 698, 13, 692, 14, 687, 15, 682, 16, 677, 17, 673, 18, 669, 19, 665, 20, 661, 21, 658, 22, 654, 23, 651, 24, 648, 25, 645, 26, 642, 27, 640, 28, 637, 29, 635, 30, 632, 31, 630, 32, 627, 33, 625, 34, 623, 35, 621, 36, 619, 37, 617, 38, 615, 39, 613, 40, 611, 41, 609, 42, 608, 43, 606, 44, 604, 45, 603, 46, 601, 47, 599, 48, 598, 49, 596, 50, 595, 51, 593, 52, 592, 53, 591, 54, 589, 55, 588, 56, 586, 57, 585, 58, 584, 59, 582, 60, 581, 61, 580, 62, 579, 63, 577, 64, 576, 65, 575, 66, 574, 67, 573, 68, 572, 69, 570, 70, 569, 71, 568, 72, 567, 73, 566, 74, 565, 75, 564, 76, 563, 77, 562, 78, 561, 79, 560, 80, 559, 81, 558, 82, 557, 83, 556, 84, 555, 85, 554, 86, 553, 87, 552, 88, 551, 89, 550, 90, 549, 91, 548, 92, 547, 93, 547, 94, 546, 95, 545, 96, 544, 97, 543, 98, 542, 99, 541, 100, 540, 101, 540, 102, 539, 103, 538, 104, 537, 105, 536, 106, 536, 107, 535, 108, 534, 109, 533, 110, 532, 111, 532, 112, 531, 113, 530, 114, 529, 115, 528, 116, 528, 117, 527, 118, 526, 119, 525, 120, 525, 121, 524, 122, 523, 123, 522, 124, 522, 125, 521, 126, 520, 127, 520, 128, 519), nrow=2)))
+    colnames(bls_g1msm_discount) <- c('k', 'discount')
+    bls_g2msm_discount <- as.data.frame(t(matrix(c(1, 1000, 2, 1000, 3, 923, 4, 884, 5, 855, 6, 832, 7, 812, 8, 796, 9, 782, 10, 770, 11, 759, 12, 749, 13, 740, 14, 732, 15, 724, 16, 717, 17, 711, 18, 704, 19, 699, 20, 693, 21, 688, 22, 683, 23, 679, 24, 674, 25, 670, 26, 666, 27, 663, 28, 659, 29, 655, 30, 652, 31, 649, 32, 646, 33, 643, 34, 640, 35, 637, 36, 634, 37, 632, 38, 629, 39, 627, 40, 624, 41, 622, 42, 620, 43, 618, 44, 615, 45, 613, 46, 611, 47, 609, 48, 607, 49, 606, 50, 604, 51, 602, 52, 600, 53, 598, 54, 597, 55, 595, 56, 593, 57, 592, 58, 590, 59, 589, 60, 587, 61, 586, 62, 584, 63, 583, 64, 582, 65, 580, 66, 579, 67, 578, 68, 576, 69, 575, 70, 574, 71, 573, 72, 571, 73, 570, 74, 569, 75, 568, 76, 567, 77, 566, 78, 565, 79, 563, 80, 562, 81, 561, 82, 560, 83, 559, 84, 558, 85, 557, 86, 556, 87, 555, 88, 554, 89, 553, 90, 552, 91, 552, 92, 551, 93, 550, 94, 549, 95, 548, 96, 547, 97, 546, 98, 545, 99, 545, 100, 544, 101, 543, 102, 542, 103, 541, 104, 541, 105, 540, 106, 539, 107, 538, 108, 537, 109, 537, 110, 536, 111, 535, 112, 535, 113, 534, 114, 533, 115, 532, 116, 532, 117, 531, 118, 530, 119, 530, 120, 529, 121, 528, 122, 528, 123, 527, 124, 526, 125, 526, 126, 525, 127, 524, 128, 524), nrow=2)))
+    colnames(bls_g2msm_discount) <- c('k', 'discount')
+```
+
+```{r, include=FALSE}
 # Every `arg` coefficient represents the impact of the argument's byte size growing by 1.
 # We treat as impactful the arguments where p-value is effectively zero. The previous approach was:
 # Treat as impactful the arguments, where:
@@ -257,6 +265,18 @@ for(i in 1:nrow(opcode_arity_df)) {
     next
   }
   arity <- opcode_arity[["arity"]]
+  if (opcode == 'BLS12_G1MSM' || opcode == 'BLS12_G1MSM_S') {
+    measurements_bls <- measurements[which(measurements$opcode==opcode), c('op_count', 'arg0', 'measure_total_time_ns')]
+    measurements_bls <- merge(x = measurements_bls, y = bls_g1msm_discount, by.x = 'arg0', by.y = 'k')
+    measurements_bls$arg0 <- measurements_bls$arg0 * measurements_bls$discount
+    model = lm(measure_total_time_ns ~ op_count + arg0 + arg0:op_count, data=measurements_bls)
+  } else 
+  if (opcode == 'BLS12_G2MSM' || opcode == 'BLS12_G2MSM_S') {
+    measurements_bls <- measurements[which(measurements$opcode==opcode), c('op_count', 'arg0', 'measure_total_time_ns')]
+    measurements_bls <- merge(x = measurements_bls, y = bls_g2msm_discount, by.x = 'arg0', by.y = 'k')
+    measurements_bls$arg0 <- measurements_bls$arg0 * measurements_bls$discount
+    model = lm(measure_total_time_ns ~ op_count + arg0 + arg0:op_count, data=measurements_bls)
+  } else 
   if (arity == 0) {
     if (opcode %in% expensive_opcodes) {
       stop("expensive not supported for null arity")
@@ -264,21 +284,21 @@ for(i in 1:nrow(opcode_arity_df)) {
       # TODO is it good?
       model = lm(measure_total_time_ns ~ op_count, data=measurements[which(measurements$opcode==opcode), ])
     }
-  }
+  } else 
   if (arity == 1) {
     if (opcode %in% expensive_opcodes) {
       stop("expensive not supported for unary arity")
     } else {
       model = lm(measure_total_time_ns ~ op_count + arg0 + arg0:op_count, data=measurements[which(measurements$opcode==opcode), ])
     }
-  }
+  } else 
   if (arity == 2) {
     if (opcode %in% expensive_opcodes) {
       model = lm(measure_total_time_ns ~ op_count + arg0 + arg1 + expensive + arg0:op_count + arg1:op_count + expensive:op_count, data=measurements[which(measurements$opcode==opcode), ])
     } else {
       model = lm(measure_total_time_ns ~ op_count + arg0 + arg1 + arg0:op_count + arg1:op_count, data=measurements[which(measurements$opcode==opcode), ])
     }
-  }
+  } else 
   if (arity == 3) {
     if (opcode %in% expensive_opcodes) {
       model = lm(measure_total_time_ns ~ op_count + arg0 + arg1 + arg2 + expensive + arg0:op_count + arg1:op_count + arg2:op_count + expensive:op_count, data=measurements[which(measurements$opcode==opcode), ])
@@ -289,6 +309,8 @@ for(i in 1:nrow(opcode_arity_df)) {
   all_coefficients = summary(model)$coefficients
   arg_coefficients = all_coefficients[!(row.names(all_coefficients) %in% c("op_count", "(Intercept)", "arg0", "arg1", "arg2")), , drop = FALSE]
   arg_coefficients_names = row.names(arg_coefficients)
+  print(opcode)
+  print(summary((model)))
 
   intercept = all_coefficients["(Intercept)", 1]
   intercept_p = all_coefficients["(Intercept)", 4]
@@ -345,6 +367,11 @@ first_pass[which(first_pass$opcode == "CREATE"), "has_impacting_arg2"] = TRUE
 first_pass[which(first_pass$opcode == "RETURN"), "has_impacting_arg1"] = TRUE
 first_pass[which(first_pass$opcode == "CREATE2"), "has_impacting_arg2"] = TRUE
 first_pass[which(first_pass$opcode == "REVERT"), "has_impacting_arg1"] = TRUE
+first_pass[which(first_pass$opcode == "BLS12_G1MSM"), "has_impacting_arg0"] = TRUE
+first_pass[which(first_pass$opcode == "BLS12_G2MSM"), "has_impacting_arg0"] = TRUE
+first_pass[which(first_pass$opcode == "BLS12_G1MSM_S"), "has_impacting_arg0"] = TRUE
+first_pass[which(first_pass$opcode == "BLS12_G2MSM_S"), "has_impacting_arg0"] = TRUE
+first_pass[which(first_pass$opcode == "BLS12_PAIRING_CHECK"), "has_impacting_arg0"] = TRUE
 
 first_pass$has_impacting <- first_pass$has_impacting_arg0 | first_pass$has_impacting_arg1 | first_pass$has_impacting_arg2
 ```
@@ -390,6 +417,11 @@ included in the current gas cost calculation.
 - RETURN, arg1
 - CREATE2, arg2
 - REVERT, arg1
+- BLS12_G1MSM, arg0
+- BLS12_G2MSM, arg0
+- BLS12_G1MSM_S, arg0
+- BLS12_G2MSM_S, arg0
+- BLS12_PAIRING_CHECK, arg0
 
 Below is the listing of arguments impact.
 
@@ -398,6 +430,14 @@ if (details) {
   args_estimates
 } else {
   args_estimates[which(args_estimates$has_impacting), ]
+}
+```
+
+```{r}
+if (details) {
+  first_pass[, c('opcode', 'estimate_marginal_ns', 'estimate_marginal_ns_p', 'intercept', 'intercept_p', 'has_impacting')]
+} else {
+  first_pass[which(first_pass$has_impacting), c('opcode', 'estimate_marginal_ns', 'estimate_marginal_ns_p', 'has_impacting')]
 }
 ```
 
@@ -411,7 +451,7 @@ for(opcode in proceed_with_opcodes) {
     stop(paste("measurements for ", opcode, "are invalid, there are no measurements for op_count==30"))
   }
   opcode_estimates <- first_pass[which(first_pass$opcode == opcode),]
-  if (opcode_estimates[["has_impacting_arg0"]]) {
+  if (opcode_estimates[["has_impacting_arg0"]] && !(opcode %in% c('BLS12_G1MSM', 'BLS12_G1MSM_S', 'BLS12_G2MSM', 'BLS12_G2MSM_S'))) {
     slope = opcode_estimates[["arg0_ns_raw"]] * 30
     intercept = opcode_estimates[["intercept"]] + opcode_estimates[["estimate_marginal_ns"]] * 30
     xmax = max(measurements[which(measurements$opcode == opcode & measurements$op_count == 30), "arg0"])
@@ -440,6 +480,30 @@ for(opcode in proceed_with_opcodes) {
     plot(measure_total_time_ns ~ arg2, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 30), ], pch=5, col='blue', ylim=c(ymin*0.95, ymax*1.05))
     title(main = paste(env, opcode, 'arg2', 'opcount 30'))
     abline(a=intercept, b=slope, col="red")
+  }
+  if (opcode == 'BLS12_G1MSM' || opcode == 'BLS12_G1MSM_S') {
+    arg0_ns_raw = opcode_estimates[["arg0_ns_raw"]]
+    intercept = opcode_estimates[["intercept"]] + opcode_estimates[["estimate_marginal_ns"]] * 30
+    measurements_bls_ref = data.frame(bls_g1msm_discount$k, bls_g1msm_discount$discount * bls_g1msm_discount$k * 30 * arg0_ns_raw + intercept)
+    colnames(measurements_bls_ref) <- c('arg0', 'estimated_time_ns')
+    xmax = max(measurements[which(measurements$opcode == opcode & measurements$op_count == 30), "arg0"])
+    ymin = min(measurements[which(measurements$opcode == opcode & measurements$op_count == 30), "measure_total_time_ns"], measurements_bls_ref[which(measurements_bls_ref$arg0 == 1), 'estimated_time_ns'])
+    ymax = max(measurements[which(measurements$opcode == opcode & measurements$op_count == 30), "measure_total_time_ns"], measurements_bls_ref[which(measurements_bls_ref$arg0 == xmax), 'estimated_time_ns'])
+    plot(measure_total_time_ns ~ arg0, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 30), ], pch=5, col='blue', ylim=c(ymin*0.95, ymax*1.05))
+    title(main = paste(env, opcode, 'arg0', 'opcount 30'))
+    points(estimated_time_ns ~ arg0, data=measurements_bls_ref, col='red')
+  }
+  if (opcode == 'BLS12_G2MSM' || opcode == 'BLS12_G2MSM_S') {
+    arg0_ns_raw = opcode_estimates[["arg0_ns_raw"]]
+    intercept = opcode_estimates[["intercept"]] + opcode_estimates[["estimate_marginal_ns"]] * 30
+    measurements_bls_ref = data.frame(bls_g2msm_discount$k, bls_g2msm_discount$discount * bls_g2msm_discount$k * 30 * arg0_ns_raw + intercept)
+    colnames(measurements_bls_ref) <- c('arg0', 'estimated_time_ns')
+    xmax = max(measurements[which(measurements$opcode == opcode & measurements$op_count == 30), "arg0"])
+    ymin = min(measurements[which(measurements$opcode == opcode & measurements$op_count == 30), "measure_total_time_ns"], measurements_bls_ref[which(measurements_bls_ref$arg0 == 1), 'estimated_time_ns'])
+    ymax = max(measurements[which(measurements$opcode == opcode & measurements$op_count == 30), "measure_total_time_ns"], measurements_bls_ref[which(measurements_bls_ref$arg0 == xmax), 'estimated_time_ns'])
+    plot(measure_total_time_ns ~ arg0, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 30), ], pch=5, col='blue', ylim=c(ymin*0.95, ymax*1.05))
+    title(main = paste(env, opcode, 'arg0', 'opcount 30'))
+    points(estimated_time_ns ~ arg0, data=measurements_bls_ref, col='red')
   }
 }
 ```
