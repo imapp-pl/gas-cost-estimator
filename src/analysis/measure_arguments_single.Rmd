@@ -560,6 +560,28 @@ plot_args_dependency_2 <- function(df, opcode, use_args) {
   title(main=paste(opcode, paste0(rev(paste0('arg', use_args)), collapse="~")))
 }
 
+plot_expensive_dependency <- function(df, opcode) {
+  plot_data = df[which(df$opcode == opcode), ]
+  plot_data_cheap = df[which(df$opcode == opcode & df$expensive == FALSE), ]
+  plot_data_expensive = df[which(df$opcode == opcode & df$expensive == TRUE), ]
+  min_lim = min(plot_data$measure_total_time_ns)
+  max_lim = max(plot_data$measure_total_time_ns)
+  plot(plot_data_expensive[, 'measure_total_time_ns'] ~ plot_data_expensive[, 'op_count'], col='red', pch=21, ylim=c(min_lim, max_lim))
+  points(plot_data_cheap[, 'measure_total_time_ns'] ~ plot_data_cheap[, 'op_count'], col='blue', pch=21)
+  title(main=opcode)
+  
+  plot_data_aggr_cheap <- aggregate(measure_total_time_ns ~ op_count, plot_data_cheap, mean)
+  plot_data_aggr_expensive <- aggregate(measure_total_time_ns ~ op_count, plot_data_expensive, mean)
+  plot(plot_data_aggr_expensive[, 'measure_total_time_ns'] ~ plot_data_aggr_expensive[, 'op_count'], col='red', pch=19, ylim=c(min_lim, max_lim))
+  points(plot_data_aggr_cheap[, 'measure_total_time_ns'] ~ plot_data_aggr_cheap[, 'op_count'], col='blue', pch=19)
+  title(main=opcode)
+  
+  cost_cheap = ( plot_data_aggr_cheap[which(plot_data_aggr_cheap$op_count == 30), 'measure_total_time_ns']  - plot_data_aggr_cheap[which(plot_data_aggr_cheap$op_count == 0), 'measure_total_time_ns'] ) / 30
+  cost_expensive = ( plot_data_aggr_expensive[which(plot_data_aggr_expensive$op_count == 30), 'measure_total_time_ns']  - plot_data_aggr_expensive[which(plot_data_aggr_expensive$op_count == 0), 'measure_total_time_ns'] ) / 30
+  cost_spread = (cost_expensive - cost_cheap) / (cost_expensive + cost_cheap)
+  return(cost_spread)
+}
+
 if (details) {
   proceed_with_opcodes <- first_pass[, "opcode"]
 } else {
@@ -576,6 +598,15 @@ for(opcode in proceed_with_opcodes) {
     plot_args_dependency_2(measurements, opcode, working_args)
   }
 }
+```
+
+```{r fig.width=12}
+expensive_spread_df = data.frame(opcode=character(0),spread=numeric(0),env=character(0))
+for(opcode in expensive_opcodes) {
+  expensive_spread = plot_expensive_dependency(measurements, opcode)
+  expensive_spread_df[nrow(expensive_spread_df) + 1, ] = list(opcode, expensive_spread, env)
+}
+print(expensive_spread_df)
 ```
 
 # Verification against marginal estimations
