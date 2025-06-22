@@ -150,10 +150,12 @@ def _generate_bls12_g1add_programs(op_counts, max_op_count):
     with open(TESTS_DIR + 'eip-2537/add_G1_bls.json') as f:
         tests = json.load(f)
     for test in tests:
+        # print(precompile + '_' + test['Name'] + ',' + str(test['Gas']) + ',1,0')
         programs = programs + _generate_from_json(op_counts, max_op_count, test, precompile, address, 128)
     with open(TESTS_DIR + 'eip-2537/fail-add_G1_bls.json') as f:
         tests = json.load(f)
     for test in tests:
+        # print(precompile + '_' + test['Name'] + ',375,2,0')
         programs = programs + _generate_from_json(op_counts, max_op_count, test, precompile, address, 128)
     return programs
 
@@ -164,10 +166,12 @@ def _generate_bls12_g2add_programs(op_counts, max_op_count):
     with open(TESTS_DIR + 'eip-2537/add_G2_bls.json') as f:
         tests = json.load(f)
     for test in tests:
+        # print(precompile + '_' + test['Name'] + ',' + str(test['Gas']) + ',3,0')
         programs = programs + _generate_from_json(op_counts, max_op_count, test, precompile, address, 256)
     with open(TESTS_DIR + 'eip-2537/fail-add_G2_bls.json') as f:
         tests = json.load(f)
     for test in tests:
+        # print(precompile + '_' + test['Name'] + ',600,4,0')
         programs = programs + _generate_from_json(op_counts, max_op_count, test, precompile, address, 256)
     return programs
 
@@ -179,10 +183,12 @@ def _generate_bls12_g1msm_programs(op_counts, max_op_count):
         tests = json.load(f)
     for test in tests:
         if 'discount_table' not in test['Name']:
+            # print(precompile + '_' + test['Name'] + ',' + str(test['Gas']) + ',5,0')
             programs = programs + _generate_from_json(op_counts, max_op_count, test, precompile, address, 128)
     with open(TESTS_DIR + 'eip-2537/fail-msm_G1_bls.json') as f:
         tests = json.load(f)
     for test in tests:
+        # print(precompile + '_' + test['Name'] + ',12000,6,0')
         programs = programs + _generate_from_json(op_counts, max_op_count, test, precompile, address, 128)
     return programs
 
@@ -194,10 +200,12 @@ def _generate_bls12_g2msm_programs(op_counts, max_op_count):
         tests = json.load(f)
     for test in tests:
         if 'discount_table' not in test['Name']:
+            # print(precompile + '_' + test['Name'] + ',' + str(test['Gas']) + ',7,0')
             programs = programs + _generate_from_json(op_counts, max_op_count, test, precompile, address, 256)
     with open(TESTS_DIR + 'eip-2537/fail-msm_G2_bls.json') as f:
         tests = json.load(f)
     for test in tests:
+        # print(precompile + '_' + test['Name'] + ',22500,8,0')
         programs = programs + _generate_from_json(op_counts, max_op_count, test, precompile, address, 256)
     return programs
 
@@ -208,10 +216,12 @@ def _generate_bls12_pairing_check_programs(op_counts, max_op_count):
     with open(TESTS_DIR + 'eip-2537/pairing_check_bls.json') as f:
         tests = json.load(f)
     for test in tests:
+        # print('"' + precompile + '_' + test['Name'] + '",' + str(test['Gas']) + ',9,0')
         programs = programs + _generate_from_json(op_counts, max_op_count, test, precompile, address, 32)
     with open(TESTS_DIR + 'eip-2537/fail-pairing_check_bls.json') as f:
         tests = json.load(f)
     for test in tests:
+        # print('"' + precompile + '_' + test['Name'] + '",70300,10,0')
         programs = programs + _generate_from_json(op_counts, max_op_count, test, precompile, address, 32)
     return programs
 
@@ -222,10 +232,12 @@ def _generate_bls12_map_fp_to_g1_programs(op_counts, max_op_count):
     with open(TESTS_DIR + 'eip-2537/map_fp_to_G1_bls.json') as f:
         tests = json.load(f)
     for test in tests:
+        # print(precompile + '_' + test['Name'] + ',' + str(test['Gas']) + ',11,0')
         programs = programs + _generate_from_json(op_counts, max_op_count, test, precompile, address, 128)
     with open(TESTS_DIR + 'eip-2537/fail-map_fp_to_G1_bls.json') as f:
         tests = json.load(f)
     for test in tests:
+        # print(precompile + '_' + test['Name'] + ',5500,12,0')
         programs = programs + _generate_from_json(op_counts, max_op_count, test, precompile, address, 128)
     return programs
 
@@ -236,10 +248,12 @@ def _generate_bls12_map_fp_to_g2_programs(op_counts, max_op_count):
     with open(TESTS_DIR + 'eip-2537/map_fp2_to_G2_bls.json') as f:
         tests = json.load(f)
     for test in tests:
+        # print(precompile + '_' + test['Name'] + ',' + str(test['Gas']) + ',13,0')
         programs = programs + _generate_from_json(op_counts, max_op_count, test, precompile, address, 128)
     with open(TESTS_DIR + 'eip-2537/fail-map_fp2_to_G2_bls.json') as f:
         tests = json.load(f)
     for test in tests:
+        # print(precompile + '_' + test['Name'] + ',23800,14,0')
         programs = programs + _generate_from_json(op_counts, max_op_count, test, precompile, address, 128)
     return programs
 
