@@ -150,7 +150,17 @@ where
 
 >`k` is a number of pairs
 
-There are two measurements courses: the marginal and the arguments. The marginal programs assume the argument `k=2` so the reference gas cost is 102300. The arguments course investigates dependence on `k` only. Note that the gas cost formula consists of the constant cost and the argument cost. Finally the marginal and arguments results are compared. The results are scaled to the argument cost in the table below.  
+There are two measurements courses: the marginal and the arguments. The marginal programs assume the argument `k=2` so the reference gas cost is 102300. The arguments course investigates the dependence on `k` only. Note that the gas cost formula consists of the constant cost and the argument cost. Finally, the marginal and arguments results are compared. 
+
+In all cases of the argument course a strong regression is obtained with a low relative standard deviation. That means that the estimated computational times of the constant and argument components are very reliable. Below is an example of analysed results with a strong regression line, see the arguments reports for further details.
+
+<img src="./report_stage_v_assets/evmone_pairing_check_arguments.png" width="600" alt="EVMONE PAIRNG CHECK ARGUMENTS">
+
+<img src="./report_stage_v_assets/evmone_pairing_check_all_arguments.png" width="600" alt="EVMONE PAIRNG CHECK ALL ARGUMENTS">
+
+The latter image presents the series of programs with 0 operations per program (wheat color), 15 operations per program (green color) and 30 operations per program (blue program).
+
+The results are scaled relatively to the argument cost in the table below.  
 
 | EVM        | the argument cost (ref 32600) | the constant cost (ref 37700) | % | the marginal estimation (ref 102300) | % |
 |------------|-------------------------------|-------------------------------|---|--------------------------------------|---|
@@ -161,9 +171,7 @@ There are two measurements courses: the marginal and the arguments. The marginal
 | nethermind | 32600                         | 	29808.5                      | 20.9	                      | 95525.8                              |	6.6       |
 | revm       | 32600                         | 	44145.6                      | -17.1	                     | 99246.3                              |	3.0      |
 
-If the argument cost is the reference value, then the calculated constant cost diverges &#177; 20% from the expected value, and the estimated cost of precompile in the marginal course diverges &#177; 6% from the expected value. The latter proves methodology and the great consistency between these two courses.
-
-<img src="./report_stage_v_assets/all_pairing_check.png" width="600" alt="BLS12_PAIRING_CHECK">
+Assuming the argument cost is the reference value, the calculated constant cost diverges &#177; 20% from the expected value, and the estimated cost of precompile in the marginal course diverges &#177; 6% from the expected value. The latter proves methodology and the great consistency between these two courses. The former indicates quite good balance between the constant cost and the arguments cost.
 
 ### Mapping (BLS12\_MAP\_FP\_TO\_G1, BLS12\_MAP\_FP2\_TO\_G2)
 
