@@ -6,7 +6,7 @@ The result of the analysis is a proposal for the new gas cost schedule.
 
 ## Overview
 
-The [Gas Cost Schedule Proposal](docs/gas-schedule-proposal.md) document is ready! 
+The [Gas Cost Schedule Proposal](docs/gas-schedule-proposal.md) document is ready!
 
 You can learn more about how we have conducted the research and put forward the proposal from this [document](docs/report_stage_iv.md). For the detailed analysis, head to the [reports](docs/reports/) directory, where you can find the results reports for each EVM implementation.
 
@@ -17,16 +17,19 @@ The reproducibility is the key! See our [guide](docs/diy.md) to learn how to run
 ## Research progress
 
 The project is divided into stages. The progress of each stage is described in the corresponding document:
- - [Stage I](docs/report_stage_i.md) - Initial research and methodology proposal
- - [Stage II](docs/report_stage_ii.md) - Benchmarking and data collection
- - [Stage III](docs/report_stage_iii.md) - Data analysis and report generation
- - [Stage IV](docs/report_stage_iv.md) - Comprehensive analysis of the gas cost and reproducibility
- - [Stage V](docs/report_impact.md) - Impact report
+
+- [Stage I](docs/report_stage_i.md) - Initial research and methodology proposal
+- [Stage II](docs/report_stage_ii.md) - Benchmarking and data collection
+- [Stage III](docs/report_stage_iii.md) - Data analysis and report generation
+- [Stage IV](docs/report_stage_iv.md) - Comprehensive analysis of the gas cost and reproducibility
+- Stage V - [BLS12-381 analysis](docs/report_stage_v_bls.md) and [Impact report](docs/report_stage_v_impact.md)
 
 ## Introduction and project scope
 
 ### EVM Implementations
+
 We have included the following EVM implementations in the research:
+
 - EvmOne
 - Go Ethereum
 - Erigon
@@ -38,9 +41,11 @@ We have included the following EVM implementations in the research:
 More implementations can be added in the future, depending on the community feedback, implementation maturity and availability of the resources.
 
 ### Measured OPCODEs and precompiles
+
 We measure all OPCODEs together with the precompiles as of hard fork Cancun.
 
 ### Tooling and automation
+
 The release contains precompiled binaries for easy execution. The binaries are available for Linux x64, MacOS x64 and Windows.
 
 Additionally, we provide a complete setup guide to compile the EVM implementations and run the benchmarks.
@@ -48,6 +53,7 @@ Additionally, we provide a complete setup guide to compile the EVM implementatio
 ## Quick start
 
 If you plan to compile and run benchmarks on your own, you need the following tools installed:
+
 - Python 3.8+
 - Go 1.24+
 - Rust 1.87+
@@ -58,6 +64,7 @@ If you plan to compile and run benchmarks on your own, you need the following to
 You can use [setup_tools.sh](scripts/setup_tools.sh) script to install the required tools on Linux. The best is to edit the script according to your needs and run it.
 
 To download and compile the EVM implementations, run the following commands:
+
 ```bash
 ./scripts/setup_clients.sh
 ```
@@ -65,9 +72,11 @@ To download and compile the EVM implementations, run the following commands:
 If your configuration is different, follow the steps in the script. The end results should be the same - you should have all the EVM implementations compiled and copied to the `../gas-cost-estimator-clients/build` directory.
 
 To run the benchmarks, use the provided Python script:
+
 ```bash
 python3 ./src/instrumentation_measurement/measurements.py measure --input_file ./src/stage4/pg_marginal_full5_c50_step5_shuffle.csv --evm evm_name --sample_size 10
 ```
+
 Where `evm_name` is the name of the EVM implementation you want to measure.
 
 ## Docker - reports
@@ -78,8 +87,8 @@ In order to build locally the docker image execute in the repository root
 docker build ./src/analysis -f Dockerfile.reports -t imapp-pl/gas-cost-estimator/reports:4.1
 ```
 
-Note that the context is `./src/analysis` in order to decrease the data size. 
-The image includes the report notebooks -- files. 
+Note that the context is `./src/analysis` in order to decrease the data size.
+The image includes the report notebooks -- files.
 But the bytecode programs and measurement resutls need to be provided.
 For now, use `/data` volume to pass input files and retrieve an output report.
 
@@ -103,7 +112,7 @@ docker run -it -v /your/path/to/data:/data --rm imapp-pl/gas-cost-estimator/repo
 
 ## Docker - REST API
 
-You can run REST API within the same report Docker image. 
+You can run REST API within the same report Docker image.
 The service interactively generates reports.
 
 In order to build locally the docker image execute in the repository root
@@ -112,13 +121,14 @@ In order to build locally the docker image execute in the repository root
 docker build ./src/analysis -f Dockerfile.reports -t imapp-pl/gas-cost-estimator/reports:4.1
 ```
 
-Then run the service 
+Then run the service
 
 ```shell
 docker run -d --name gas-cost-estimator-rest-api -p 5000:5000 -v /your/path/to/data:/data --rm imapp-pl/gas-cost-estimator/reports:4.1 /rest-api/gas-cost-estimator-rest-api.sh
 ```
 
 The logs are in locations:
+
 - `/your/path/to/data/uwsgi.log`
 - `/your/path/to/data/uwsgi.stdout`
 - `/your/path/to/data/uwsgi.stderr`
@@ -130,4 +140,3 @@ To stop the service run
 ```shell
 docker stop gas-cost-estimator-rest-api
 ```
-
