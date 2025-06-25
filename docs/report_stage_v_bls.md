@@ -86,7 +86,7 @@ BLS12_G1MSM_ARG0 and BLS12_G2MSM_ARG0 are G1 and G2 multiplications - 12000 and 
 
 The main outcome is that EIP-2537 gas cost is well-balanced. Most values are within &#177; 20%. This means that if a gas cost of one precompile would be adjusted, the others should be changed proportionally.
 
-The remark worth to be noted are that BLS12_MAP_FP_TO_G2 is slightly overpriced and BLS12_G1MSM_ARG0 is slightly overpriced.
+The remark worth to be noted are that BLS12_MAP_FP_TO_G2 is slightly overpriced and BLS12_G1MSM_ARG0 is slightly underpriced.
 
 Please recall these values are not referred to ECRECOVER, they are self referred. Please note investigation on MSM below also for the full picture.
 
@@ -94,12 +94,6 @@ Please recall these values are not referred to ECRECOVER, they are self referred
 
 ECRecover precompile is the pivot operation with 3100 gas cost. ECRecovery and BLS precompiles are executed in the set. The pivot operation measurements are a reference to determine gas cost for BLS precompiles.  
 The choice of the pivot operation is based on its stability.
-
-### Add (BLS12\_G1ADD, BLS12\_G2ADD)
-
-The addition operations in the G1 and G2 groups of the BLS12-381 curve involve adding two points on their respective curves. The operations are priced at 375 and 600 gas respectively. As shown on the graph below, the EVM client implementations are actually slightly better than this.  
-Still the differences are not large enough to call for a change in the pricing.  
-<img src="./report_stage_v_assets/all_add.png" width="600" alt="BLS12_G1ADD, BLS12_G2ADD">
 
 ### Multi-scalar Multiplication (BLS12\_G1MSM, BLS12\_G2MSM)
 
@@ -158,7 +152,7 @@ In all cases of the argument course a strong regression is obtained with a low r
 
 <img src="./report_stage_v_assets/evmone_pairing_check_all_arguments.png" width="600" alt="EVMONE PAIRNG CHECK ALL ARGUMENTS">
 
-The latter image presents the series of programs with 0 operations per program (wheat color), 15 operations per program (green color) and 30 operations per program (blue program).
+The latter image presents the series of programs with 0 operations per program (wheat color), 15 operations per program (green color) and 30 operations per program (blue program). A proportional linear distance between the series is expected.
 
 The results are scaled relatively to the argument cost in the table below.  
 
@@ -172,14 +166,6 @@ The results are scaled relatively to the argument cost in the table below.
 | revm       | 32600                         | 	44145.6                      | -17.1	                     | 99246.3                              |	3.0      |
 
 Assuming the argument cost is the reference value, the calculated constant cost diverges &#177; 20% from the expected value, and the estimated cost of precompile in the marginal course diverges &#177; 6% from the expected value. The latter proves methodology and the great consistency between these two courses. The former indicates quite good balance between the constant cost and the arguments cost.
-
-### Mapping (BLS12\_MAP\_FP\_TO\_G1, BLS12\_MAP\_FP2\_TO\_G2)
-
-Mapping field elements to points on the G1 and G2 curves is essential for utilizing the BLS12-381 curve in cryptographic applications. The gas cost is 5500 for Fp-to-G1 mapping and 23800 for Fp-to-G2.
-
-Our analysis shows that the actual implementations fall not far from the nominal costs:
-
-<img src="./report_stage_v_assets/all_map.png" width="600" alt="BLS12_MAP_FP_TO_G1, BLS12_MAP_FP2_TO_G2">
 
 ### Proposal
 
