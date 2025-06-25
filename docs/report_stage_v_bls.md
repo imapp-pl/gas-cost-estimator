@@ -38,6 +38,58 @@ TODO: add ECRecover scales for individual clients
 
 The analysis is structured into subsections corresponding to the key BLS12-381 operations evaluated in this stage. Each subsection discusses the nature of the operation and the approach to measuring its gas cost.
 
+### Marginal course
+
+The marginal course uses a set of programs that differs with the number of examined operations and estimates the computation time of operations based on statistic methods as the result. The examination is performed thoroughly but no other dependencies are considered, in particular arguments are fixed.
+
+In all cases a strong regression is obtained with a low relative standard deviation - BLS12\_G1MSM\_K0 and BLS12\_G2MSM\_K0 are special and discussed separately. That means that the estimated computational times of operations are very reliable. Below is an example of analysed results with a strong regression line, see the marginal reports for further details.
+
+<img src="./report_stage_v_assets/evmone_g2add_marginal.png" width="600" alt="EVMONE G2ADD MARGINAL">
+
+The operations BLS12_G1MSM, BLS12_G2MSM and BLS12_PAIRING_CHECK depend on input size, expressed by the argument k. In all cases the argument is set to k=2 as it includes both multiplication and addition. For BLS12_G1MSM, BLS12_G2MSM examinations with k=1 and k=0 are provided also but for further analysis the case k=2 is selected.
+
+For the operations BLS12_G1MSM, BLS12_G2MSM the case k=1 is provided to compare the cases with and without addition. See the MSM section below for further investigation. 
+
+The case k=0 is provided to investigate a potential attack vector. The formula for the gas cost states clearly that such precompile invocation costs zero gas. The standard states (citation) "Also, the case when k = 0 is safe: CALL or STATICCALL cost is non-zero, and the case with formal zero gas cost is already used in Blake2f precompile". The CALL or STATICCALL cost 100 gas. But EIP-7904 proposes a significant drop of the cost to 5 so the network security assumptions may change. The tables below summarize the results for k=0 in two views: relatively to k=1 and k=2 cases, and expressed as gas having cases k=1 and k=2 as the base.
+
+| EVM BLS12_G1MSM | K0/K1 % | K0/K2 % | K0/K1 gas | K0/K2 gas |
+|-----------------|---------|---------|-----------|-----------|
+| besu            | -0.28   | 	-0.14  | -33.9     | 	-32.4    |
+| erigon          | 0.03    | 	0.02   | 3.2       | 	4.8      |      
+| evmone          | 0.00    | 	0.00   | -0.5      | 	-0.7     |     
+| geth            | 0.21    | 	0.16   | 25.5      | 	37.0     |     
+| nethermind      | 1.56    | 	1.19   | 187.7     | 	270.7    |    
+| revm            | 0.02    | 	0.00   | 2.4       | 	0.5      |      
+
+| EVM BLS12_G2MSM | K0/K1 % | K0/K2 %  | K0/K1 gas | K0/K2 gas |
+|-----------------|---------|----------|-----------|-----------|
+| besu            | -0.25   | 	-0.13   | -56.6     | 	-57.5    |
+| erigon          | 0.02    | 0.01     | 3.5       | 	5.1      |      
+| evmone          | 0.00    | 	0.00    | -0.5      | 	-0.7     |     
+| geth            | 0.12    | 	0.10    | 26.4      | 	42.8     |     
+| nethermind      | 0.82    | 	0.61    | 183.5     | 	273.0    |    
+| revm            | 0.01    | 	0.00    | 2.3       | 	0.6      |
+
+Note that negative values are valid - it means that an operation last less than invoking a warm empty non-precompile address.
+
+### Relative cost to the EIP-2537 gas cost
+
+The graph below presents the estimated computational time relatively to the EIP-2537 gas cost for each EVM. 
+That is computational time per 1 gas unit related to the evm's average.
+The exact formula is 
+`\text{ect_per_gas}=\frac{\text{ect}}{\text{EIP2537_gas_cost}}`
+`\text{relative_ect_per_gas}=\frac{\text{ect_per_gas}}{AVG_{\text{each_evm}}\text{ect_per_gas}}`
+
+<img src="./report_stage_v_assets/relative_ct_bls.png" width="600" alt="Relative Computational Time">
+
+BLS12_G1MSM_ARG0 and BLS12_G2MSM_ARG0 are G1 and G2 multiplications - 12000 and 22500. BLS12_PAIRING_CHECK_ARGC is the constant of the pairing check - 37700 gas. The reference value is always 1 as the calculation is performed relatively to 1 gas unit.
+
+The main outcome is that EIP-2537 gas cost is well-balanced. Most values are within &#177; 20%. This means that if a gas cost of one precompile would be adjusted, the others should be changed proportionally.
+
+The remark worth to be noted are that BLS12_MAP_FP_TO_G2 is slightly overpriced and BLS12_G1MSM_ARG0 is slightly overpriced.
+
+Please recall these values are not referred to ECRECOVER, they are self referred. Please note investigation on MSM below also for the full picture.
+
 ### Pivot
 
 ECRecover precompile is the pivot operation with 3100 gas cost. ECRecovery and BLS precompiles are executed in the set. The pivot operation measurements are a reference to determine gas cost for BLS precompiles.  
@@ -65,7 +117,7 @@ where
 
 Note that this is not a linear formula. Thus a semi-linear regression is employed. That is defined as the problem of finding the best fit of the curve determined by the discount table to measurements.
 
-The measurements significantly depend on the argument k \- the number of multiplications. Thus the arguments course is examined in details. There are two sets, 1-128 multiplications and 1-8 multiplications. The first gives a broad overview, as the discount table defined in EIP-2357 ranges to 128\. The latter is a closer look at a specific area \- the choice is based on experimental data.
+The measurements significantly depend on the argument k \- the number of multiplications. Thus the arguments course is examined in details. There are two sets, 1-128 multiplications and 1-8 multiplications. The first gives a broad overview, as the discount table defined in EIP-2537 ranges to 128\. The latter is a closer look at a specific area \- the choice is based on experimental data.
 
 Below are graphs for 1-128 arguments. The red dotted line is the fitted cost curve.
 
@@ -97,6 +149,19 @@ The pairing check operation verifies whether a set of pairings on the BLS12-381 
 where  
 
 >`k` is a number of pairs
+
+There are two measurements courses: the marginal and the arguments. The marginal programs assume the argument `k=2` so the reference gas cost is 102300. The arguments course investigates dependence on `k` only. Note that the gas cost formula consists of the constant cost and the argument cost. Finally the marginal and arguments results are compared. The results are scaled to the argument cost in the table below.  
+
+| EVM        | the argument cost (ref 32600) | the constant cost (ref 37700) | % | the marginal estimation (ref 102300) | % |
+|------------|-------------------------------|-------------------------------|---|--------------------------------------|---|
+| besu       | 32600                         | 	42691.3                      | -13.2	                     | 107315.5                             |	-4.9    |
+| erigon     | 32600                         | 	41980.8                      | -11.4	                     | 107820.0                             |	-5.4    |
+| evmone     | 32600                         | 	30650.8                      | 18.7	                      | 95716.7                              |	6.4       |
+| geth       | 32600                         | 	42210.4                      | -12.0	                     | 106310.6                             |	-3.9    |
+| nethermind | 32600                         | 	29808.5                      | 20.9	                      | 95525.8                              |	6.6       |
+| revm       | 32600                         | 	44145.6                      | -17.1	                     | 99246.3                              |	3.0      |
+
+If the argument cost is the reference value, then the calculated constant cost diverges &#177; 20% from the expected value, and the estimated cost of precompile in the marginal course diverges &#177; 6% from the expected value. The latter proves methodology and the great consistency between these two courses.
 
 <img src="./report_stage_v_assets/all_pairing_check.png" width="600" alt="BLS12_PAIRING_CHECK">
 
