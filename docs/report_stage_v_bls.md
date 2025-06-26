@@ -29,7 +29,9 @@ Additionally, we created test cases that measure how various argument sizes affe
 A cornerstone of this methodology is the scaling of all measured gas costs for BLS12-381 operations relative to the `ECRecover` precompile (address 0x01). This established precompile is assigned a fixed cost of 3000 gas units, serving as a consistent benchmark. This scaling approach is a well-precedented practice within Ethereum's gas schedule adjustments.
 
 The conversion from execution time to gas cost was calculated using the following formula:  
-`\text{gas} = \left( \frac{\text{execution time}}{\text{base time}} \right) \times \text{base gas}`  
+
+>`gas = (execution_time / base_time) × base_gas`
+
 Here, base time represents the execution time of the ECRecover precompile, and base gas is set at 3000 gas. This methodology ensures that the gas costs reflect the relative computational effort required by each operation.
 
 TODO: add ECRecover scales for individual clients
@@ -40,17 +42,17 @@ The analysis is structured into subsections corresponding to the key BLS12-381 o
 
 ### Marginal course
 
-The marginal course uses a set of programs that differs with the number of examined operations and estimates the computation time of operations based on statistic methods as the result. The examination is performed thoroughly but no other dependencies are considered, in particular arguments are fixed.
+The marginal course uses a set of programs that differs with the number of examined operations and estimates the computation time of operations based on statistical methods as the result. The examination is performed thoroughly but no other dependencies are considered, in particular, arguments are fixed.
 
-In all cases a strong regression is obtained with a low relative standard deviation - BLS12\_G1MSM\_K0 and BLS12\_G2MSM\_K0 are special and discussed separately. That means that the estimated computational times of operations are very reliable. Below is an example of analysed results with a strong regression line, see the marginal reports for further details.
+In all cases, a strong regression is obtained with a low relative standard deviation - BLS12\_G1MSM\_K0 and BLS12\_G2MSM\_K0 are special and discussed separately. That means that the estimated computational times of operations are very reliable. Below is an example of analysed results with a strong regression line, see the marginal reports for further details.
 
 <img src="./report_stage_v_assets/evmone_g2add_marginal.png" width="600" alt="EVMONE G2ADD MARGINAL">
 
-The operations BLS12_G1MSM, BLS12_G2MSM and BLS12_PAIRING_CHECK depend on input size, expressed by the argument k. In all cases the argument is set to k=2 as it includes both multiplication and addition. For BLS12_G1MSM, BLS12_G2MSM examinations with k=1 and k=0 are provided also but for further analysis the case k=2 is selected.
+The operations BLS12_G1MSM, BLS12_G2MSM and BLS12_PAIRING_CHECK depend on input size, expressed by the argument k. In all cases the argument is set to k=2 as it includes both multiplication and addition. For BLS12_G1MSM, BLS12_G2MSM examinations with k=1 and k=0 are also provided but for further analysis the case k=2 is selected.
 
-For the operations BLS12_G1MSM, BLS12_G2MSM the case k=1 is provided to compare the cases with and without addition. See the MSM section below for further investigation. 
+For the operations BLS12_G1MSM, BLS12_G2MSM the case k=1 is provided to compare the cases with and without addition. See the MSM section below for further investigation.
 
-The case k=0 is provided to investigate a potential attack vector. The formula for the gas cost states clearly that such precompile invocation costs zero gas. The standard states (citation) "Also, the case when k = 0 is safe: CALL or STATICCALL cost is non-zero, and the case with formal zero gas cost is already used in Blake2f precompile". The CALL or STATICCALL cost 100 gas. But EIP-7904 proposes a significant drop of the cost to 5 so the network security assumptions may change. The tables below summarize the results for k=0 in two views: relatively to k=1 and k=2 cases, and expressed as gas having cases k=1 and k=2 as the base.
+The case k=0 is provided to investigate a potential attack vector. The formula for the gas cost states clearly that such precompile invocation costs zero gas. The standard states (citation) "Also, the case when k = 0 is safe: CALL or STATICCALL cost is non-zero, and the case with formal zero gas cost is already used in Blake2f precompile". The CALL or STATICCALL costs 100 gas. But EIP-7904 proposes a significant drop of the cost to 5 so the network security assumptions may change. The tables below summarize the results for k=0 in two views: relative to k=1 and k=2 cases, and expressed as gas having cases k=1 and k=2 as the base.
 
 | EVM BLS12_G1MSM | K0/K1 % | K0/K2 % | K0/K1 gas | K0/K2 gas |
 |-----------------|---------|---------|-----------|-----------|
@@ -75,16 +77,18 @@ Note that negative values are valid - it means that an operation last less than 
 ### Relative cost to the EIP-2537 gas cost
 
 The graph below presents the estimated computational time relatively to the EIP-2537 gas cost for each EVM. 
-That is computational time per 1 gas unit related to the evm's average.
-The exact formula is 
-`\text{ect_per_gas}=\frac{\text{ect}}{\text{EIP2537_gas_cost}}`
-`\text{relative_ect_per_gas}=\frac{\text{ect_per_gas}}{AVG_{\text{each_evm}}\text{ect_per_gas}}`
+That is the computational time per 1 gas unit related to the evm's average.
+The exact formula is
+
+>`ect_per_gas = ect / EIP2537_gas_cost`
+
+>`relative_ect_per_gas = ect_per_gas / AVG(each_evm.ect_per_gas)`
 
 <img src="./report_stage_v_assets/relative_ct_bls.png" width="600" alt="Relative Computational Time">
 
 BLS12_G1MSM_ARG0 and BLS12_G2MSM_ARG0 are G1 and G2 multiplications - 12000 and 22500. BLS12_PAIRING_CHECK_ARGC is the constant of the pairing check - 37700 gas. The reference value is always 1 as the calculation is performed relatively to 1 gas unit.
 
-The main outcome is that EIP-2537 gas cost is well-balanced. Most values are within &#177; 20%. This means that if a gas cost of one precompile would be adjusted, the others should be changed proportionally.
+The main outcome is that EIP-2537 gas cost is well-balanced. Most values are within &#177; 20%. This means that if the gas cost of one precompile would be adjusted, the others should be changed proportionally.
 
 The remark worth to be noted are that BLS12_MAP_FP_TO_G2 is slightly overpriced and BLS12_G1MSM_ARG0 is slightly underpriced.
 
