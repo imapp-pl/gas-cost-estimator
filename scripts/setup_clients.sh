@@ -56,6 +56,7 @@ if [ ! -d "$working_path/ethereumjs-monorepo" ]; then
     ncc build benchmarks/run.js -o ../../../build/ethereumjs/
 fi
 
+# Nethermind
 if [ ! -d "$working_path/nethermind" ]; then
     cd $working_path
     mkdir -p build/nethermind
@@ -65,6 +66,7 @@ if [ ! -d "$working_path/nethermind" ]; then
     cp -fr out/* ../../../build/nethermind/
 fi
 
+# Revm
 if [ ! -d "$working_path/revm" ]; then
     cd $working_path
     mkdir -p build/revm
@@ -74,6 +76,7 @@ if [ ! -d "$working_path/revm" ]; then
     cp -f target/release/revme ../build/revm/
 fi
 
+# Besu
 if [ ! -d "$working_path/besu" ]; then
     cd $working_path
     mkdir -p build/besu

@@ -196,6 +196,6 @@ The results are exported to `r params$output_estimated_cost`.
 
 ```{r, incude = FALSE}
 if (params$output_estimated_cost != "") {
-  write.csv(estimates, params$output_estimated_cost, quote=FALSE, row.names=FALSE)
+  write.csv(estimates, params$output_estimated_cost, quote=TRUE, row.names=FALSE)
 }
 ```
