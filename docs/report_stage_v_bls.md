@@ -90,17 +90,12 @@ The remark worth to be noted are that BLS12_MAP_FP_TO_G2 is slightly overpriced 
 
 Please recall these values are not referred to ECRECOVER, they are self referred. Please note investigation on MSM below also for the full picture.
 
-### Pivot
-
-ECRecover precompile is the pivot operation with 3100 gas cost. ECRecovery and BLS precompiles are executed in the set. The pivot operation measurements are a reference to determine gas cost for BLS precompiles.  
-The choice of the pivot operation is based on its stability.
-
 ### Multi-scalar Multiplication (BLS12\_G1MSM, BLS12\_G2MSM)
 
-Multi-scalar multiplication computes the sum of multiple scalar multiplications of points on the G1 or G2 curves. The EIP-2537 expects the implementation of Pippenger’s algorithm, and prices the operations accordingly.  
+Multi-scalar multiplication computes the sum of multiple scalar multiplications of points on the G1 or G2 curves. The EIP-2537 expects the implementation of Pippenger’s algorithm, and prices the operations accordingly. 
 The general formula is  
 
->`cost = (k * multiplication_cost * discount) / multiplier`
+>`cost = (k * multiplication_cost * discount[k]) / multiplier`
 
 where  
 
@@ -109,11 +104,27 @@ where
 >`discount` is a value from the discount table and depends on k  
 >`multiplier` is always 1000  
 
-Note that this is not a linear formula. Thus a semi-linear regression is employed. That is defined as the problem of finding the best fit of the curve determined by the discount table to measurements.
+Note a sublinear dependency. Thus a semi-linear regression is employed in analysis. That is defined as the problem of finding the best fit of the curve determined by the discount table to measurements.
 
-The measurements significantly depend on the argument k \- the number of multiplications. Thus the arguments course is examined in details. There are two sets, 1-128 multiplications and 1-8 multiplications. The first gives a broad overview, as the discount table defined in EIP-2537 ranges to 128\. The latter is a closer look at a specific area \- the choice is based on experimental data.
+There are two measurements courses: the marginal and the arguments. The marginal course is more accurate, the arguments course investigate the dependency on the argument k - the number of pairs/multiplications. Finally, the results of marginal and arguments courses are compared. 
 
-Below are graphs for 1-128 arguments. The red dotted line is the fitted cost curve.
+The marginal course consists of three cases: k=0, k=1 and k=2. The case k=0 is discussed above, and it is omitted in this section. The main difference between the cases k=1 and k=2 is that the latter requires addition. The reference gas cost of G1 MSM operation is 12000 for k=1 and 22776 for k=2, the reference gas cost of G2 MSM operation is 22500 for k=1 and 45000 for k=2. So the ratio is 1.898 and 2.0 for G1 MSM and G2 MSM operations respectively.
+
+| EVM        | G1 reference ratio | G1 estimated ratio | G2 reference ratio | G2 estimated ratio |
+|------------|--------------------|--------------------|--------------------|--------------------|
+| besu       | 	1.898             | 	1.99              | 	2                 | 	1.97              |
+| erigon     | 	1.898             | 	1.27              | 	2                 | 	1.36              |              
+| evmone     | 	1.898             | 	1.49              | 	2                 | 	1.43              |              
+| geth       | 	1.898             | 	1.31              | 	2                 | 	1.23              |              
+| nethermind | 	1.898             | 	1.32              | 	2                 | 	1.34              |              
+| revm       | 	1.898             | 	8.72              | 	2                 | 	7.43              |              
+
+Note that EVMs are warmed up before measurements so it not the case that some software required initialization.
+
+The measurements significantly depend on the argument k \- the number of multiplications. The gas cost formula includes discount factor which is non-linear and needs examination also.
+There are two sets within the arguments course, 1-128 multiplications and 1-8 multiplications - in short the large and small arguments. Note that the discount table defined in EIP-2537 ranges to 128. The reason to investigate small arguments is the observation that most EVMs have different behaviour than for the large arguments. It may because of optimizations available for small arguments.
+
+Below are graphs for large arguments. The red dotted line is the fitted cost curve according to the discount table - semi-linear regression.
 
 <img src="./report_stage_v_assets/besu_msm_g1.png" width="600" alt="Besu BLS12_G1MSM">
 <img src="./report_stage_v_assets/besu_msm_g2.png" width="600" alt="Besu BLS12_G2MSM">
@@ -123,16 +134,20 @@ Below are graphs for 1-128 arguments. The red dotted line is the fitted cost cur
 <img src="./report_stage_v_assets/erigon_msm_g2.png" width="600" alt="Erigon BLS12_G2MSM">
 <img src="./report_stage_v_assets/geth_msm_g1.png" width="600" alt="Geth BLS12_G1MSM">
 <img src="./report_stage_v_assets/geth_msm_g2.png" width="600" alt="Geth BLS12_G2MSM">
+<img src="./report_stage_v_assets/nethermind_msm_g1.png" width="600" alt="Nethermind BLS12_G1MSM">
+<img src="./report_stage_v_assets/nethermind_msm_g2.png" width="600" alt="Nethermind BLS12_G2MSM">
 <img src="./report_stage_v_assets/revm_msm_g1.png" width="600" alt="Revm BLS12_G1MSM">
 <img src="./report_stage_v_assets/revm_msm_g2.png" width="600" alt="Revm BLS12_G2MSM">
 
-The client EvmOne has almost perfect match.  
-The clients besu, erigon and geth have two modes: for low arguments and large arguments. Note that besu BLS12\_G2MSM has clearly lower measurements for k=1,2. For the low arguments optimizations are possible other than Pippenger’s algorithm and this is a reason for these two modes.  
-The client Revm has unexpected measurements. Further investigation is needed to explain the phenomena.
+The first observation is: revm results look chaotic. But repeated measurements yield similar shapes. So it is specific for the evm. There are three segments: 1-16, 16-32, 32-128. The point is that estimations are not reliable with such data. Although results G1 MSM in the segment 32-128 are in the line of expectation. Further investigation is needed to explain the phenomena.
 
-The dilemma is whether the estimations from the low arguments mode or the estimations from the large arguments mode should be eligible for the gas cost proposal. The answer is not obvious and not final but from the network security perspective the latter is better. Of course operations with low arguments would be overpriced, and that is a drawback.
+The second observation is: besu, erigon and geth results have two modes. For small arguments the results are significantly lower. For erigon and geth it is 1-20 arguments, for besu it is 1-4 arguments. These results are visibly below estimated regression. For the small arguments optimizations are possible other than Pippenger’s algorithm and this is a reason for these two modes. Note that low results for small arguments affects the regression line - it would fit better to large arguments only. And that would confirm the discount table. 
 
-The side note is that the programs in the marginal course uses precompiles invocations with k=2 (BLS12\_G1MSM, BLS12\_G2MSM, BLS12\_PAIRING\_CHECK). It is not an issue for the pairing check, but for MSMs it is. The conclusion is that the argument’s gas cost estimation has greater importance in these cases.
+This raises the dilemma: whether the results for small arguments should be taken into account for the gas cost estimations or not. The results for large arguments cannot be neglected as this could make the gas cost for large arguments underpriced and undermine the network security. Of course operations with low arguments would be overpriced, and that is a drawback. The decision is to use all arguments for the estimation. But it is not obvious and possibly not final.
+
+The third observation is: evmone and nethermind have almost perfect match to the estimated regression. This confirms the discount table. Note that the two evms have higher results for 32-64 arguments. The reason for that is uncertain.
+
+
 
 ### Pairing Check (BLS12\_PAIRING\_CHECK)
 
@@ -144,7 +159,7 @@ where
 
 >`k` is a number of pairs
 
-There are two measurements courses: the marginal and the arguments. The marginal programs assume the argument `k=2` so the reference gas cost is 102300. The arguments course investigates the dependence on `k` only. Note that the gas cost formula consists of the constant cost and the argument cost. Finally, the marginal and arguments results are compared. 
+There are two measurements courses: the marginal and the arguments. The marginal programs assume the argument `k=2` so the reference gas cost is 102300. The arguments course investigates the dependence on `k` only. Note that the gas cost formula consists of the constant cost and the argument cost. Finally, the results of marginal and arguments courses are compared. 
 
 In all cases of the argument course a strong regression is obtained with a low relative standard deviation. That means that the estimated computational times of the constant and argument components are very reliable. Below is an example of analysed results with a strong regression line, see the arguments reports for further details.
 
@@ -166,6 +181,12 @@ The results are scaled relatively to the argument cost in the table below.
 | revm       | 32600                         | 	44145.6                      | -17.1	                     | 99246.3                              |	3.0      |
 
 Assuming the argument cost is the reference value, the calculated constant cost diverges &#177; 20% from the expected value, and the estimated cost of precompile in the marginal course diverges &#177; 6% from the expected value. The latter proves methodology and the great consistency between these two courses. The former indicates quite good balance between the constant cost and the arguments cost.
+
+### Pivot
+
+ECRecover precompile was selected as the pivot operation for this research. The pivot operation is the reference to verify the gas cost for BLS precompiles against to. Literally, 3100 gas is considered as the cost for ECRecovery operation. So, ECRecovery and BLS precompiles are executed in the set.
+
+ECRecovery precompile was analysed in the stage 4 of the Gas Cost Estimator project and is discussed in EIP-7904.
 
 ### Proposal
 
