@@ -8,7 +8,7 @@ Building on the methodologies and insights from previous stages (e.g., [Stage II
 
 ## Scope
 
-This report focuses specifically on the seven distinct precompile addresses introduced by EIP-2537, each corresponding to a fundamental operation over the BLS12-381 elliptic curve. These operations are:   
+This report focuses specifically on the seven distinct precompile addresses introduced by EIP-2537, each corresponding to a fundamental operation over the BLS12-381 elliptic curve. These operations are:
 
 * `BLS12_G1ADD`: Point addition on the G1 curve.  
 * `BLS12_G2ADD`: Point addition on the G2 curve.  
@@ -18,12 +18,12 @@ This report focuses specifically on the seven distinct precompile addresses intr
 * `BLS12_MAP_FP_TO_G1`: Mapping a field element (from Fp) to a point on the G1 curve.  
 * `BLS12_MAP_FP2_TO_G2`: Mapping a field element (from Fp2) to a point on the G2 curve.
 
-The scope of this analysis is strictly limited to the intrinsic computational cost of these cryptographic operations on various EVM clients. This implies that the evaluation deliberately abstracts away external factors and network-related overheads, such as the costs associated with state persistence or data storage. The primary objective is to ensure that the proposed gas costs accurately reflect the actual processing effort and CPU cycles consumed by EVM clients when executing these precompiled functions, providing a clear and direct measure of their computational intensity.   
+The scope of this analysis is strictly limited to the intrinsic computational cost of these cryptographic operations on various EVM clients. This implies that the evaluation deliberately abstracts away external factors and network-related overheads, such as the costs associated with state persistence or data storage. The primary objective is to ensure that the proposed gas costs accurately reflect the actual processing effort and CPU cycles consumed by EVM clients when executing these precompiled functions, providing a clear and direct measure of their computational intensity.
 
 ## Methodology
 
 The gas cost measurements for this stage were conducted using a benchmarking approach consistent with prior stages of the project. Each BLS12-381 operation was executed multiple times under controlled conditions, with execution times recorded to ensure reliability and repeatability.  
-The benchmark programs were composed using test vectors from EIP-2537 as well as Ethereum test cases.   
+The benchmark programs were composed using test vectors from EIP-2537 as well as Ethereum test cases.
 Additionally, we created test cases that measure how various argument sizes affect the execution time. This is done in a similar manner as the previous research.
 
 A cornerstone of this methodology is the scaling of all measured gas costs for BLS12-381 operations relative to the `ECRecover` precompile (address 0x01). This established precompile is assigned a fixed cost of 3000 gas units, serving as a consistent benchmark. This scaling approach is a well-precedented practice within Ethereum's gas schedule adjustments.
@@ -33,8 +33,6 @@ The conversion from execution time to gas cost was calculated using the followin
 >`gas = (execution_time / base_time) × base_gas`
 
 Here, base time represents the execution time of the ECRecover precompile, and base gas is set at 3000 gas. This methodology ensures that the gas costs reflect the relative computational effort required by each operation.
-
-TODO: add ECRecover scales for individual clients
 
 ## Analysis
 
@@ -56,27 +54,27 @@ The case k=0 is provided to investigate a potential attack vector. The formula f
 
 | EVM BLS12_G1MSM | K0/K1 % | K0/K2 % | K0/K1 gas | K0/K2 gas |
 |-----------------|---------|---------|-----------|-----------|
-| besu            | -0.28   | 	-0.14  | -33.9     | 	-32.4    |
-| erigon          | 0.03    | 	0.02   | 3.2       | 	4.8      |      
-| evmone          | 0.00    | 	0.00   | -0.5      | 	-0.7     |     
-| geth            | 0.21    | 	0.16   | 25.5      | 	37.0     |     
-| nethermind      | 1.56    | 	1.19   | 187.7     | 	270.7    |    
-| revm            | 0.02    | 	0.00   | 2.4       | 	0.5      |      
+| besu            | -0.28   |  -0.14  | -33.9     |  -32.4    |
+| erigon          | 0.03    |  0.02   | 3.2       |  4.8      |
+| evmone          | 0.00    |  0.00   | -0.5      |  -0.7     |
+| geth            | 0.21    |  0.16   | 25.5      |  37.0     |
+| nethermind      | 1.56    |  1.19   | 187.7     |  270.7    |
+| revm            | 0.02    |  0.00   | 2.4       |  0.5      |
 
 | EVM BLS12_G2MSM | K0/K1 % | K0/K2 %  | K0/K1 gas | K0/K2 gas |
 |-----------------|---------|----------|-----------|-----------|
-| besu            | -0.25   | 	-0.13   | -56.6     | 	-57.5    |
-| erigon          | 0.02    | 0.01     | 3.5       | 	5.1      |      
-| evmone          | 0.00    | 	0.00    | -0.5      | 	-0.7     |     
-| geth            | 0.12    | 	0.10    | 26.4      | 	42.8     |     
-| nethermind      | 0.82    | 	0.61    | 183.5     | 	273.0    |    
-| revm            | 0.01    | 	0.00    | 2.3       | 	0.6      |
+| besu            | -0.25   |  -0.13   | -56.6     |  -57.5    |
+| erigon          | 0.02    | 0.01     | 3.5       |  5.1      |
+| evmone          | 0.00    |  0.00    | -0.5      |  -0.7     |
+| geth            | 0.12    |  0.10    | 26.4      |  42.8     |
+| nethermind      | 0.82    |  0.61    | 183.5     |  273.0    |
+| revm            | 0.01    |  0.00    | 2.3       |  0.6      |
 
 Note that negative values are valid - it means that an operation last less than invoking a warm empty non-precompile address.
 
 ### Relative cost to the EIP-2537 gas cost
 
-The graph below presents the estimated computational time relatively to the EIP-2537 gas cost for each EVM. 
+The graph below presents the estimated computational time relatively to the EIP-2537 gas cost for each EVM.
 That is the computational time per 1 gas unit related to the evm's average.
 The exact formula is
 
@@ -96,7 +94,7 @@ Please recall these values are not referred to ECRECOVER, they are self referred
 
 ### Multi-scalar Multiplication (BLS12\_G1MSM, BLS12\_G2MSM)
 
-Multi-scalar multiplication computes the sum of multiple scalar multiplications of points on the G1 or G2 curves. The EIP-2537 expects the implementation of Pippenger’s algorithm, and prices the operations accordingly. 
+Multi-scalar multiplication computes the sum of multiple scalar multiplications of points on the G1 or G2 curves. The EIP-2537 expects the implementation of Pippenger’s algorithm, and prices the operations accordingly.
 The general formula is  
 
 >`cost = (k * multiplication_cost * discount[k]) / multiplier`
@@ -110,18 +108,18 @@ where
 
 Note a sublinear dependency. Thus a semi-linear regression is employed in analysis. That is defined as the problem of finding the best fit of the curve determined by the discount table to measurements.
 
-There are two measurements courses: the marginal and the arguments. The marginal course is more accurate, the arguments course investigate the dependency on the argument k - the number of pairs/multiplications. Finally, the results of marginal and arguments courses are compared. 
+There are two measurements courses: the marginal and the arguments. The marginal course is more accurate, the arguments course investigate the dependency on the argument k - the number of pairs/multiplications. Finally, the results of marginal and arguments courses are compared.
 
 The marginal course consists of three cases: k=0, k=1 and k=2. The case k=0 is discussed above, and it is omitted in this section. The main difference between the cases k=1 and k=2 is that the latter requires addition. The reference gas cost of G1 MSM operation is 12000 for k=1 and 22776 for k=2, the reference gas cost of G2 MSM operation is 22500 for k=1 and 45000 for k=2. So the ratio is 1.898 and 2.0 for G1 MSM and G2 MSM operations respectively.
 
 | EVM        | G1 reference ratio | G1 estimated ratio | G2 reference ratio | G2 estimated ratio |
 |------------|--------------------|--------------------|--------------------|--------------------|
-| besu       | 	1.898             | 	1.99              | 	2                 | 	1.97              |
-| erigon     | 	1.898             | 	1.27              | 	2                 | 	1.36              |              
-| evmone     | 	1.898             | 	1.49              | 	2                 | 	1.43              |              
-| geth       | 	1.898             | 	1.31              | 	2                 | 	1.23              |              
-| nethermind | 	1.898             | 	1.32              | 	2                 | 	1.34              |              
-| revm       | 	1.898             | 	8.72              | 	2                 | 	7.43              |              
+| besu       |  1.898             |  1.99              |  2                 |  1.97              |
+| erigon     |  1.898             |  1.27              |  2                 |  1.36              |
+| evmone     |  1.898             |  1.49              |  2                 |  1.43              |
+| geth       |  1.898             |  1.31              |  2                 |  1.23              |
+| nethermind |  1.898             |  1.32              |  2                 |  1.34              |
+| revm       |  1.898             |  8.72              |  2                 |  7.43              |
 
 Note that EVMs are warmed up before measurements so it not the case that some software required initialization.
 
@@ -145,7 +143,7 @@ Below are graphs for large arguments. The red dotted line is the fitted cost cur
 
 The first observation is: revm results look chaotic. But repeated measurements yield similar shapes. So it is specific for the evm. There are three segments: 1-16, 16-32, 32-128. The point is that estimations are not reliable with such data. Although results G1 MSM in the segment 32-128 are in the line of expectation. Further investigation is needed to explain the phenomena.
 
-The second observation is: besu, erigon and geth results have two modes. For small arguments the results are significantly lower. For erigon and geth it is 1-20 arguments, for besu it is 1-4 arguments. These results are visibly below estimated regression. For the small arguments optimizations are possible other than Pippenger’s algorithm and this is a reason for these two modes. Note that low results for small arguments affects the regression line - it would fit better to large arguments only. And that would confirm the discount table. 
+The second observation is: besu, erigon and geth results have two modes. For small arguments the results are significantly lower. For erigon and geth it is 1-20 arguments, for besu it is 1-4 arguments. These results are visibly below estimated regression. For the small arguments optimizations are possible other than Pippenger’s algorithm and this is a reason for these two modes. Note that low results for small arguments affects the regression line - it would fit better to large arguments only. And that would confirm the discount table.
 
 This raises the dilemma: whether the results for small arguments should be taken into account for the gas cost estimations or not. The results for large arguments cannot be neglected as this could make the gas cost for large arguments underpriced and undermine the network security. Of course operations with low arguments would be overpriced, and that is a drawback. The decision is to use all arguments for the estimation. But it is not obvious and possibly not final.
 
@@ -255,7 +253,7 @@ where
 
 >`k` is a number of pairs
 
-There are two measurements courses: the marginal and the arguments. The marginal programs assume the argument `k=2` so the reference gas cost is 102300. The arguments course investigates the dependence on `k` only. Note that the gas cost formula consists of the constant cost and the argument cost. Finally, the results of marginal and arguments courses are compared. 
+There are two measurements courses: the marginal and the arguments. The marginal programs assume the argument `k=2` so the reference gas cost is 102300. The arguments course investigates the dependence on `k` only. Note that the gas cost formula consists of the constant cost and the argument cost. Finally, the results of marginal and arguments courses are compared.
 
 In all cases of the argument course a strong regression is obtained with a low relative standard deviation. That means that the estimated computational times of the constant and argument components are very reliable. Below is an example of analysed results with a strong regression line, see the arguments reports for further details.
 
@@ -267,14 +265,14 @@ The latter image presents the series of programs with 0 operations per program (
 
 The results are scaled relatively to the argument cost in the table below.  
 
-| EVM        | the argument cost (ref 32600) | the constant cost (ref 37700) | % | the marginal estimation (ref 102300) | % |
-|------------|-------------------------------|-------------------------------|---|--------------------------------------|---|
-| besu       | 32600                         | 	42691.3                      | -13.2	                     | 107315.5                             |	-4.9    |
-| erigon     | 32600                         | 	41980.8                      | -11.4	                     | 107820.0                             |	-5.4    |
-| evmone     | 32600                         | 	30650.8                      | 18.7	                      | 95716.7                              |	6.4       |
-| geth       | 32600                         | 	42210.4                      | -12.0	                     | 106310.6                             |	-3.9    |
-| nethermind | 32600                         | 	29808.5                      | 20.9	                      | 95525.8                              |	6.6       |
-| revm       | 32600                         | 	44145.6                      | -17.1	                     | 99246.3                              |	3.0      |
+| EVM        | the argument cost (ref 32600) | the constant cost (ref 37700) | %      | the marginal estimation (ref 102300) | % |
+|------------|-------------------------------|-------------------------------|--------|--------------------------------------|---|
+| besu       | 32600                         |  42691.3                      | -13.2  | 107315.5                             | -4.9    |
+| erigon     | 32600                         |  41980.8                      | -11.4  | 107820.0                             | -5.4    |
+| evmone     | 32600                         |  30650.8                      | 18.7   | 95716.7                              | 6.4       |
+| geth       | 32600                         |  42210.4                      | -12.0  | 106310.6                             | -3.9    |
+| nethermind | 32600                         |  29808.5                      | 20.9   | 95525.8                              | 6.6       |
+| revm       | 32600                         |  44145.6                      | -17.1  | 99246.3                              | 3.0      |
 
 Assuming the argument cost is the reference value, the calculated constant cost diverges &#177; 20% from the expected value, and the estimated cost of precompile in the marginal course diverges &#177; 6% from the expected value. The latter proves methodology and the great consistency between these two courses. The former indicates quite good balance between the constant cost and the arguments cost.
 
@@ -284,26 +282,32 @@ ECRecover precompile was selected as the pivot operation for this research. The 
 
 ECRecovery precompile was analysed in the stage 4 of the Gas Cost Estimator project and is discussed in EIP-7904.
 
-### Proposal
-
-The table below summarizes the current gas costs for each BLS12-381 operation, and proposed gas cost based on our analysis.
-
->> TODO: provide proposed calculations including Nethermind results
-
-| Operation | Current Gas | Proposed Gas |
-| ----- | :---: | :---: |
-| BLS12\_G1ADD | 375 |  |
-| BLS12\_G2ADD | 600 |  |
-| BLS12\_G1MSM | k\*12000\*discountG1(k) |  |
-| BLS12\_G2MSM | k\*22500\*discountG2(k) |  |
-| BLS12\_PAIRING\_CHECK | 37700+k\*32600 |  |
-| BLS12\_MAP\_FP\_TO\_G1 | 5500 |  |
-| BLS12\_MAP\_FP2\_TO\_G2 | 23800 |  |
-
 ## Conclusions
 
-Stage 5 of the Gas Cost Estimator project has successfully measured the gas costs of key BLS12-381 curve operations within the EVM, as defined in EIP-2537. By scaling these costs relative to the ECRecover precompile, this report establishes a consistent framework for evaluating their computational demands. The findings highlight the varying resource requirements of operations such as addition, multi-scalar multiplication, pairing checks, and field element mappings, providing a foundation for potential gas cost adjustments.
+Our analysis confirms three things:
+
+* The team responsible for the EIP-2537 has done a great job in defining the gas costs for BLS12-381 operations. The gas costs are well-balanced and consistent across different EVM clients.
+* The current gas cost schedule does not pose any significant security risks to the Ethereum network.
+* The methodology used in the Gas Cost Estimator project is sound and can be applied to any other operations.
+
+### Proposal
+
+The table below summarizes the proposed gas cost based on our analysis:
+
+| Operation | Current Gas | Proposed Gas |
+| ------------ | :---: | :---: |
+| BLS12\_G1ADD | 375   | 375   |
+| BLS12\_G2ADD | 600   | 600   |
+| BLS12\_G1MSM | k \* 12000 \* discountG1(k) | k \* 12000 \* discountG1(k) `*`|
+| BLS12\_G2MSM | k \* 22500 \* discountG2(k) | k \* 22500 \* discountG2(k) `*`|
+| BLS12\_PAIRING\_CHECK | 37700 + k \* 32600 | 37700 + k \* 32600 |
+| BLS12\_MAP\_FP\_TO\_G1 | 5500 | 5500 |
+| BLS12\_MAP\_FP2\_TO\_G2 | 23800 | 16300 |
+
+`*` Both multiplication methods could be revised as described in the MSM section below.
 
 ### Recommendations
 
-It is strongly recommended that the Revm team revises their MSM implementation. It has very good optimization for large k, but for k \< 32 some edge cases are exceeding the expected costs significantly.  
+Discuss whether the introduction of a base cost for the BLS12_G1MSM and BLS12_G2MSM operations is necessary. This could be paired with the reduction of the `k` cost or adjusting the discount factor for small `k` values.
+
+The Revm team to revise their MSM implementation. It has very good optimization for large k, but for k \< 32 some edge cases are exceeding the expected costs significantly.

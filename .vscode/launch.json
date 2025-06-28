@@ -11,8 +11,8 @@
       "program": "${file}",
       "console": "integratedTerminal",
       "justMyCode": true,
-      "args": ["generate"]    },
-      // "args": ["measure", "--input_file", "./src/stage3/test.csv", "--evm", "evmone", "--sample_size", "2"]    },
+      // "args": ["generate"]    },
+      "args": ["measure", "--input_file", "../pg_precompiles_EC.csv", "--evm", "geth", "--sample_size", "1"]    },
     {
       "name": "Python: Current File",
       "type": "python",
