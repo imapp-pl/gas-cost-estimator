@@ -2,7 +2,7 @@
 title: "Gas Cost Estimator: estimation of impact of arguments on gas costs"
 output: html_document
 params:
-  env: "besu"
+  env: "nethermind"
   programs: "/home/lukaszglen/sources/imapp5/local2/pg_arguments_bls.csv"
   results: "/home/lukaszglen/sources/imapp5/local2/results_arguments_bls_nethermind.csv"
   marginal_estimated_cost: "/home/lukaszglen/sources/imapp5/local2/reports-2025.06.09/estimated_cost_marginal_bls_nethermind.csv"
@@ -514,6 +514,40 @@ for(opcode in proceed_with_opcodes) {
     title(main = paste(env, opcode, 'arg0', 'opcount 30'))
     points(estimated_time_ns ~ arg0, data=measurements_bls_ref, col='red')
   }
+  if (opcode == 'BLS12_G1MSM' || opcode == 'BLS12_G2MSM') {
+    if (opcode == 'BLS12_G1MSM') {
+      bls_gXmsm_discount = bls_g1msm_discount
+    } else {
+      bls_gXmsm_discount = bls_g2msm_discount
+    }
+    measurements_bls <- measurements[which(measurements$opcode==opcode), c('op_count', 'arg0', 'measure_total_time_ns')]
+    measurements_bls <- merge(x = measurements_bls, y = bls_gXmsm_discount, by.x = 'arg0', by.y = 'k')
+    measurements_bls <- measurements_bls[which(measurements_bls$arg0 > 32), ]
+    measurements_bls$arg0 <- measurements_bls$arg0 * measurements_bls$discount
+    model = lm(measure_total_time_ns ~ op_count + arg0 + arg0:op_count, data=measurements_bls)
+    all_coefficients = summary(model)$coefficients
+    arg_coefficients = all_coefficients[!(row.names(all_coefficients) %in% c("op_count", "(Intercept)", "arg0", "arg1", "arg2")), , drop = FALSE]
+    
+    intercept = all_coefficients["(Intercept)", 1]
+    opcode_estimate_marginal_ns = all_coefficients["op_count", 1]
+    arg0_ns_raw = arg_coefficients["op_count:arg0", 1]
+
+    measurements_bls_ref = data.frame(bls_gXmsm_discount$k, bls_gXmsm_discount$discount * bls_gXmsm_discount$k * 30 * arg0_ns_raw + intercept, bls_gXmsm_discount$discount * bls_gXmsm_discount$k * 30 * arg0_ns_raw + opcode_estimate_marginal_ns * 30 + intercept)
+    colnames(measurements_bls_ref) <- c('arg0', 'estimated_time_ns', 'estimated_trans_time_ns')
+    measurements_ref <- measurements[which(measurements$opcode == opcode & measurements$op_count == 30), c("arg0", "measure_total_time_ns")]
+    xmax = max(measurements_ref$arg0)
+    ymin = min(measurements_ref$measure_total_time_ns, measurements_bls_ref[which(measurements_bls_ref$arg0 == 1), 'estimated_time_ns'])
+    ymax = max(measurements_ref$measure_total_time_ns, measurements_bls_ref[which(measurements_bls_ref$arg0 == xmax), 'estimated_trans_time_ns'])
+    plot(measure_total_time_ns ~ arg0, data=measurements_ref, pch=5, col='blue', ylim=c(ymin*0.95, ymax*1.05))
+    title(main = paste(env, opcode, 'pv', 'arg0', 'opcount 30')) # pv - proposal verification
+    points(estimated_time_ns ~ arg0, data=measurements_bls_ref, col='red')
+    points(estimated_trans_time_ns ~ arg0, data=measurements_bls_ref, col='pink')
+    
+    measurements_ref <- merge(x = measurements_ref, y = measurements_bls_ref, by = 'arg0')
+    measurements_ref$ratio <- (measurements_ref$measure_total_time_ns - intercept) / (measurements_ref$estimated_time_ns - intercept)
+    plot(ratio ~ arg0, data=measurements_ref, pch=5, col='black')
+    title(main = paste(env, opcode, 'pv - ratio', 'arg0')) # pv - proposal verification
+  }
 }
 ```
 
@@ -603,8 +637,10 @@ for(opcode in proceed_with_opcodes) {
 ```{r fig.width=12}
 expensive_spread_df = data.frame(opcode=character(0),spread=numeric(0),env=character(0))
 for(opcode in expensive_opcodes) {
-  expensive_spread = plot_expensive_dependency(measurements, opcode)
-  expensive_spread_df[nrow(expensive_spread_df) + 1, ] = list(opcode, expensive_spread, env)
+  if (opcode %in% opcode_arity_df$opcode) {
+    expensive_spread = plot_expensive_dependency(measurements, opcode)
+    expensive_spread_df[nrow(expensive_spread_df) + 1, ] = list(opcode, expensive_spread, env)
+  }
 }
 print(expensive_spread_df)
 ```

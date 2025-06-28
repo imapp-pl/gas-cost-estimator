@@ -149,6 +149,100 @@ This raises the dilemma: whether the results for small arguments should be taken
 
 The third observation is: evmone and nethermind have almost perfect match to the estimated regression. This confirms the discount table. Note that the two evms have higher results for 32-64 arguments. The reason for that is uncertain.
 
+The standard enforces Pippenger’s algorithm. For small arguments, in particular k=1 and k=2, more effective optimisations are possible. Below are graphs for small arguments.
+
+<img src="./report_stage_v_assets/besu_msm_g1_s.png" width="600" alt="Besu BLS12_G1MSM S">
+<img src="./report_stage_v_assets/besu_msm_g2_s.png" width="600" alt="Besu BLS12_G2MSM S">
+<img src="./report_stage_v_assets/evmone_msm_g1_s.png" width="600" alt="Evmone BLS12_G1MSM S">
+<img src="./report_stage_v_assets/evmone_msm_g2_s.png" width="600" alt="Evmone BLS12_G2MSM S">
+<img src="./report_stage_v_assets/erigon_msm_g1_s.png" width="600" alt="Erigon BLS12_G1MSM S">
+<img src="./report_stage_v_assets/erigon_msm_g2_s.png" width="600" alt="Erigon BLS12_G2MSM S">
+<img src="./report_stage_v_assets/geth_msm_g1_s.png" width="600" alt="Geth BLS12_G1MSM S">
+<img src="./report_stage_v_assets/geth_msm_g2_s.png" width="600" alt="Geth BLS12_G2MSM S">
+<img src="./report_stage_v_assets/nethermind_msm_g1_s.png" width="600" alt="Nethermind BLS12_G1MSM S">
+<img src="./report_stage_v_assets/nethermind_msm_g2_s.png" width="600" alt="Nethermind BLS12_G2MSM S">
+<img src="./report_stage_v_assets/revm_msm_g1_s.png" width="600" alt="Revm BLS12_G1MSM S">
+<img src="./report_stage_v_assets/revm_msm_g2_s.png" width="600" alt="Revm BLS12_G2MSM S">
+
+Besu and revm have visible steps. As is stated above, revm requires further investigation. Besu provides optimisations for arguments k=1 and k=2. But other evms have the results in line with the expected curve based on the discount table. Thus, erigon and geth results fit the expected curve independently for the two modes described above.
+
+To verify consistency of the marginal and arguments courses, the results for the small arguments investigation is preferred because they yields better estimations for the arguments k=1 and k=2. Note, that for the further analysis the estimates based on the large arguments are eligible, but at this paragraph it is checked if two applied courses do not diverge.
+We compare the estimated computation time obtained from the arguments course (red dotted line) with the results obtained from the marginal cost.
+
+| EVM | G1MSM k=1 | G1MSM k=2 | G2MSM k=1 | G2MSM k=2 |
+|-----|-----------|-----------|-----------|-----------|
+| besu       | 0.07      | 	1.04     | 	1.59     |	2.09 |
+| erigon     | 0.91      | 	1.01     | 	1.08     |	0.99 |
+| evmone     | 0.80      | 	1.00     | 	0.73     |	0.95 |
+| geth       | 0.96      | 	1.00     | 	1.01     |	1.01 |
+| nethermind | 0.80      | 	0.96     | 	0.72     |	0.93 |
+| revm       | 0.04      | 	0.60     | 	1.48     |	0.61 |
+
+The desired value is 1. The results for k=1 and k=2 in the case of besu and revm are not well estimated by the regression curve even for the small arguments. 
+
+Statistic methods employed to analysis calculate a match to `a+b*k` regression. The point is that the constant cost `a` is assumed and calculated to find the best match, but EIP-2537 formula does not contain the constant cost. For the record, `b` is the argument cost.
+We verify if the constant cost that comes from estimation, can be neglected. For the reference value the argument estimated computation time is picked as it is relatively stable what is discussed above. Note that the argument cost is G1/G2 multiplication cost. The argument gas cost is set according to EIP-2537 gas cost, i.e. 12000 for G1 and 22500 for G2, and the expected gas cost for the constant component is calculated.
+
+| EVM | G1 multiplication | G1 constant | G2 multiplication | G2 constant |
+|-----|-------------------|-------------|-------------------|-------------|
+| besu       | 12000             | 	75825.0    | 	22500            | 	224673.0   |
+| erigon     | 12000             | 	516587.4   | 	22500            | 	989540.0   |   
+| evmone     | 12000             | 	-1197.1    | 	22500            | 	-9092.3    |    
+| geth       | 12000             | 	514251.5   | 	22500            | 	1076676.9  |  
+| nethermind | 12000             | 	49205.8    | 	22500            | 	53870.9    |    
+| revm       | 12000             | 	366227.3   | 	22500            | 	650921.1   |   
+
+For evmone the constant gas cost can be neglected, even -9k gas at the G2 side. For other evms, the G1 side seems to be consistent: except revm, the constant gas cost is around 55k. But as is discussed above, revm needs further investigations. The G2 side is not consistent. The estimated gas cost for the constant component is large or even huge. But note that large arguments means arithmetic of large gas amount. 1M gas (estimated gas cost of the constant component) is relatively small comparing to 10M gas (reference gas cost of BLS12_G2MSM operations with 50 pairs).
+Nevertheless, these gas estimations enforced by the large arguments are unacceptable for the small arguments - a single multiplication, k=1, cannot cost 1M gas. This formulates the dilemma.
+
+The table below presents estimation of the constant component based on the results for the small arguments. The estimated argument computation time for the large arguments is still the reference value. 
+
+| EVM | G1 multiplication (large) | G1 multiplication (small) | G1 constant (small) | G2 multiplication (large) | G2 multiplication (small) | G2 constant (small) |
+|-----|---------------------------|---------------------------|---------------------|---------------------------|---------------------------|---------------------|
+| besu       | 12000                    | 25771.0                  | -25015.7           | 22500                     | 56786.8                  | -21036.8           |
+| erigon     | 12000                    | 52785.1                  | 60600.9            | 22500                     | 95971.9                  | 288404.3           |           
+| evmone     | 12000                    | 11580.0                  | 527.9              | 22500                     | 20396.0                  | 3240.5             |             
+| geth       | 12000                    | 50694.0                  | 77827.8            | 22500                     | 96969.2                  | 318655.9           |           
+| nethermind | 12000                    | 15126.0                  | 7862.5             | 22500                     | 25549.2                  | 9075.7             |             
+| revm       | 12000                    | 138882.1                 | -137938.9          | 22500                     | 152872.2                 | -78966.0           |           
+
+For evmone and nethermind the examination for the small arguments is consistent with the large arguments. For erigon and geth the ratio of the argument cost to the constant cost dropped, it is 1:1 for G1 and 1:3 for G2. But the argument cost increases significantly, it is around 5 times as the reference.
+
+To summarize this part. We can follow the investigation of small arguments or the investigation of large arguments to determine the gas cost of MSM precompiles. Picking any direction may lead to dangerous overpirce or underprice of the other arguments.
+There are consistent estimations of gas cost for the argument component based on the large arguments. But there is no consistency for the constant component of operations.
+For now, it would be best to investigate the cause of the constant cost for some emvs, but it is out of scope of this report.
+It seems that the gas cost should be based on the large arguments from the perspective of network security.
+
+Finally, we verify the approach to the gas cost: the arguments cost is based on the large arguments and the constant cost is nullified. Specifically, we consider only 32-128 arguments and remove the constant cost. The light red dotted line is the calculated regression curve, the red dotted line is the estimated computational time - the regression curve with the constant component subtracted.
+
+<img src="./report_stage_v_assets/besu_msm_g1_pv.png" width="600" alt="Besu BLS12_G1MSM">
+<img src="./report_stage_v_assets/besu_msm_g2_pv.png" width="600" alt="Besu BLS12_G2MSM">
+<img src="./report_stage_v_assets/evmone_msm_g1_pv.png" width="600" alt="Evmone BLS12_G1MSM">
+<img src="./report_stage_v_assets/evmone_msm_g2_pv.png" width="600" alt="Evmone BLS12_G2MSM">
+<img src="./report_stage_v_assets/erigon_msm_g1_pv.png" width="600" alt="Erigon BLS12_G1MSM">
+<img src="./report_stage_v_assets/erigon_msm_g2_pv.png" width="600" alt="Erigon BLS12_G2MSM">
+<img src="./report_stage_v_assets/geth_msm_g1_pv.png" width="600" alt="Geth BLS12_G1MSM">
+<img src="./report_stage_v_assets/geth_msm_g2_pv.png" width="600" alt="Geth BLS12_G2MSM">
+<img src="./report_stage_v_assets/nethermind_msm_g1_pv.png" width="600" alt="Nethermind BLS12_G1MSM">
+<img src="./report_stage_v_assets/nethermind_msm_g2_pv.png" width="600" alt="Nethermind BLS12_G2MSM">
+<img src="./report_stage_v_assets/revm_msm_g1_pv.png" width="600" alt="Revm BLS12_G1MSM">
+<img src="./report_stage_v_assets/revm_msm_g2_pv.png" width="600" alt="Revm BLS12_G2MSM">
+
+To visualize the deviation we calculate the proportion of the measurements and the estimated computation time. This is an assessment of how MSM precompiles are underpriced because of the constant cost nullification.
+
+<img src="./report_stage_v_assets/besu_msm_g1_pv_ratio.png" width="600" alt="Besu BLS12_G1MSM">
+<img src="./report_stage_v_assets/besu_msm_g2_pv_ratio.png" width="600" alt="Besu BLS12_G2MSM">
+<img src="./report_stage_v_assets/evmone_msm_g1_pv_ratio.png" width="600" alt="Evmone BLS12_G1MSM">
+<img src="./report_stage_v_assets/evmone_msm_g2_pv_ratio.png" width="600" alt="Evmone BLS12_G2MSM">
+<img src="./report_stage_v_assets/erigon_msm_g1_pv_ratio.png" width="600" alt="Erigon BLS12_G1MSM">
+<img src="./report_stage_v_assets/erigon_msm_g2_pv_ratio.png" width="600" alt="Erigon BLS12_G2MSM">
+<img src="./report_stage_v_assets/geth_msm_g1_pv_ratio.png" width="600" alt="Geth BLS12_G1MSM">
+<img src="./report_stage_v_assets/geth_msm_g2_pv_ratio.png" width="600" alt="Geth BLS12_G2MSM">
+<img src="./report_stage_v_assets/nethermind_msm_g1_pv_ratio.png" width="600" alt="Nethermind BLS12_G1MSM">
+<img src="./report_stage_v_assets/nethermind_msm_g2_pv_ratio.png" width="600" alt="Nethermind BLS12_G2MSM">
+<img src="./report_stage_v_assets/revm_msm_g1_pv_ratio.png" width="600" alt="Revm BLS12_G1MSM">
+<img src="./report_stage_v_assets/revm_msm_g2_pv_ratio.png" width="600" alt="Revm BLS12_G2MSM">
+
 ### Pairing Check (BLS12\_PAIRING\_CHECK)
 
 The pairing check operation verifies whether a set of pairings on the BLS12-381 curve satisfies a specific condition. The nominal cost formula is:  
