@@ -282,6 +282,48 @@ ECRecover precompile was selected as the pivot operation for this research. The 
 
 ECRecovery precompile was analysed in the stage 4 of the Gas Cost Estimator project and is discussed in EIP-7904.
 
+### BLS Tests
+
+Together with the marginal and the arguments courses, a tests driven programs are investigated. Test input data are fetched from [EIP-2537 test vectors](https://github.com/ethereum/EIPs/tree/master/assets/eip-2537). For each test there are provided programs that execute input data in the marginal course favor. Note that each procompile is associated with multiple tests. Then the computation time of invoking the precompile with provided input data is estimated. The goal is to verify if any special or edge cases do not impose a threat. This research is supplementary to the work described above.
+
+Estimated computation time of precompile invocation associated with a test is calculated with the methods provided by the marginal course. The benchmarks are the results obtained in the marginal course. Thus, it is expected then the tests results are comparable to the marginal results.
+
+The vector tests are positive and negative. The estimated computation time may be relatively very low in the case of negative tests. This is expected and sometimes desired. For instance an invocation with an empty input should be very quick. The negative tests have zero gas cost assigned as a reference.
+
+In the graphs below data are scaled so 1.0 is a benchmark - the marginal course results. The interpretation is: if the result is below the reference, it is good, if the result is somewhat above, it is worth to check but not alarming, if it is much above, it is a risk.
+
+<img src="./report_stage_v_assets/relative_ct_bls_tests_g1msm.png" width="600" alt="BLS12_G1MSM">
+<img src="./report_stage_v_assets/relative_ct_bls_tests_g2msm.png" width="600" alt="BLS12_G2MSM">
+<img src="./report_stage_v_assets/relative_ct_bls_tests_pairing_check.png" width="600" alt="BLS12_PAIRNG_CHECK">
+<img src="./report_stage_v_assets/relative_ct_bls_tests_g1map_fp.png" width="600" alt="BLS12_MAP_FP_TO_G1">
+<img src="./report_stage_v_assets/relative_ct_bls_tests_g2map_fp.png" width="600" alt="BLS12_MAP_FP_TO_G2">
+
+The tests: BLS12_G1MSM_bls_g1msm_multiple, BLS12_G1MSM_bls_g1msm_multiple_with_point_at_infinity, BLS12_G2MSM_bls_g2msm_multiple, BLS12_G2MSM_bls_g2msm_multiple_with_point_at_infinity - seem to have very high results for besu. But it is not the case. Please see the MSMs section above. For the arguments k > 2, besu yields super-linear estimated computation time compared to k=2 case. And that is consistent with the results for these test. So any other discussion is directed to the MSMs part.
+Other tests worth to be noted are: BLS12_G1MSM_bls_g1msm_random\*g1_unnormalized_scalar, BLS12_G1MSM_bls_g1msm_random\*p1_unnormalized_scalar, BLS12_G2MSM_bls_g2msm_random\*g2_unnormalized_scalar, BLS12_G2MSM_bls_g2msm_random\*p2_unnormalized_scalar. Most evms report higher than expected results when multiplying by an unnormalized scalar. But the excess is moderate and in the opinion of authors it is safe. Still worth to be verified by teams.
+
+<img src="./report_stage_v_assets/relative_ct_bls_tests_g1add.png" width="600" alt="BLS12_G1ADD">
+<img src="./report_stage_v_assets/relative_ct_bls_tests_g2add.png" width="600" alt="BLS12_G2ADD">
+
+For BLS12_G1ADD and BLS12_G2ADD two evms have high results, they are besu and geth. 
+
+Check the detailed tests report to explain why besu has excessive results. This is an example graph that present the regression analysis for the test BLS12_G1ADD_bls_g1add_g1+p1.
+
+<img src="./report_stage_v_assets/besu_g1add_g1_p1.png" width="600" alt="besu BLS12_G1ADD_bls_g1add_g1+p1">
+
+The correlation is visible but for the purpose of this work it is quite weak. Please check graphs for other tests. The measurements for op_count=0 impact on the estimated computation time - the regression - make it higher. Recall that the reference value is the estimated computation time for G1ADD and G2ADD respectively obtained in the marginal course. So here is the graph for the regression analysis of the reference value.
+
+<img src="./report_stage_v_assets/besu_g1add.png" width="600" alt="besu BLS12_G1ADD">
+
+Here is the step for op_count=0. But the impact of the measurement for op_count=1 on the regression is lesser since there is much more measurements for op_count>0. Note that even for op_count=0 an evm instance is warmed up, and it is not the case that for op_count>0 an evm instance bears additional computation cost related to some initialization.
+
+Conclusion: in case of besu, the high results for tests are caused by the step at op_count=0, and this step needs an explanation, not the tests.
+
+The correlation is strong enough in the case of geth, so the results are reliable. See the graph below as an example.
+
+<img src="./report_stage_v_assets/geth_g1add_g1_p1.png" width="600" alt="geth BLS12_G1ADD_bls_g1add_g1+p1">
+
+Conclusion: in case of geth and BLS12_G1ADD, the results for some tests are 2 times higher than the reference value. For instance BLS12_G1ADD_bls_g1add_empty_input - this one is quite interesting because other evms have very low results. It is advised to investigate the situation.
+
 ## Conclusions
 
 Our analysis confirms three things:
