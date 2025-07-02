@@ -2,12 +2,12 @@
 title: "Gas Cost Estimator: estimation of impact of arguments on gas costs"
 output: html_document
 params:
-  env: ""
-  programs: ""
-  results: ""
-  marginal_estimated_cost: ""
+  env: "nethermind"
+  programs: "/home/lukaszglen/sources/imapp5/local2/pg_arguments_bls.csv"
+  results: "/home/lukaszglen/sources/imapp5/local2/results_arguments_bls_nethermind.csv"
+  marginal_estimated_cost: "/home/lukaszglen/sources/imapp5/local2/reports-2025.06.09/estimated_cost_marginal_bls_nethermind.csv"
   output_estimated_cost: ""
-  details: ""
+  details: "1"
 ---
 
 ```{r, setup, include=FALSE}
@@ -184,17 +184,26 @@ for(i in 1:nrow(opcode_arity_df)) {
     next
   }
   arity <- opcode_arity[["arity"]]
+  ymin = min(measurements[which(measurements$opcode == opcode), "measure_total_time_ns"])
+  ymax = max(measurements[which(measurements$opcode == opcode), "measure_total_time_ns"])
   if (arity >= 1) {
-    plot(measure_total_time_ns ~ arg0, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 30), ], pch=5, col='blue')
-    title(main = paste(env, opcode, 'arg0', 'opcount 30'))
+    measurements[which(measurements$opcode == opcode), "measure_total_time_ns"]
+    plot(measure_total_time_ns ~ arg0, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 0), ], pch=5, col='wheat', ylim=c(ymin*0.95, ymax*1.05))
+    title(main = paste(env, opcode, 'arg0'))
+    points(measure_total_time_ns ~ arg0, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 15), ], pch=5, col='green')
+    points(measure_total_time_ns ~ arg0, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 30), ], pch=5, col='blue')
   }
   if (arity >= 2) {
-    plot(measure_total_time_ns ~ arg1, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 30), ], pch=5, col='blue')
-    title(main = paste(env, opcode, 'arg1', 'opcount 30'))
+    plot(measure_total_time_ns ~ arg1, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 0), ], pch=5, col='wheat', ylim=c(ymin*0.95, ymax*1.05))
+    title(main = paste(env, opcode, 'arg1'))
+    points(measure_total_time_ns ~ arg1, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 15), ], pch=5, col='green')
+    points(measure_total_time_ns ~ arg1, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 30), ], pch=5, col='blue')
   }
   if (arity >= 3) {
-    plot(measure_total_time_ns ~ arg2, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 30), ], pch=5, col='blue')
-    title(main = paste(env, opcode, 'arg2', 'opcount 30'))
+    plot(measure_total_time_ns ~ arg2, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 0), ], pch=5, col='wheat', ylim=c(ymin*0.95, ymax*1.05))
+    title(main = paste(env, opcode, 'arg2'))
+    points(measure_total_time_ns ~ arg2, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 15), ], pch=5, col='green')
+    points(measure_total_time_ns ~ arg2, data=measurements[which(measurements$opcode == opcode & measurements$op_count == 30), ], pch=5, col='blue')
   }
 }
 ```
@@ -505,6 +514,40 @@ for(opcode in proceed_with_opcodes) {
     title(main = paste(env, opcode, 'arg0', 'opcount 30'))
     points(estimated_time_ns ~ arg0, data=measurements_bls_ref, col='red')
   }
+  if (opcode == 'BLS12_G1MSM' || opcode == 'BLS12_G2MSM') {
+    if (opcode == 'BLS12_G1MSM') {
+      bls_gXmsm_discount = bls_g1msm_discount
+    } else {
+      bls_gXmsm_discount = bls_g2msm_discount
+    }
+    measurements_bls <- measurements[which(measurements$opcode==opcode), c('op_count', 'arg0', 'measure_total_time_ns')]
+    measurements_bls <- merge(x = measurements_bls, y = bls_gXmsm_discount, by.x = 'arg0', by.y = 'k')
+    measurements_bls <- measurements_bls[which(measurements_bls$arg0 > 32), ]
+    measurements_bls$arg0 <- measurements_bls$arg0 * measurements_bls$discount
+    model = lm(measure_total_time_ns ~ op_count + arg0 + arg0:op_count, data=measurements_bls)
+    all_coefficients = summary(model)$coefficients
+    arg_coefficients = all_coefficients[!(row.names(all_coefficients) %in% c("op_count", "(Intercept)", "arg0", "arg1", "arg2")), , drop = FALSE]
+    
+    intercept = all_coefficients["(Intercept)", 1]
+    opcode_estimate_marginal_ns = all_coefficients["op_count", 1]
+    arg0_ns_raw = arg_coefficients["op_count:arg0", 1]
+
+    measurements_bls_ref = data.frame(bls_gXmsm_discount$k, bls_gXmsm_discount$discount * bls_gXmsm_discount$k * 30 * arg0_ns_raw + intercept, bls_gXmsm_discount$discount * bls_gXmsm_discount$k * 30 * arg0_ns_raw + opcode_estimate_marginal_ns * 30 + intercept)
+    colnames(measurements_bls_ref) <- c('arg0', 'estimated_time_ns', 'estimated_trans_time_ns')
+    measurements_ref <- measurements[which(measurements$opcode == opcode & measurements$op_count == 30), c("arg0", "measure_total_time_ns")]
+    xmax = max(measurements_ref$arg0)
+    ymin = min(measurements_ref$measure_total_time_ns, measurements_bls_ref[which(measurements_bls_ref$arg0 == 1), 'estimated_time_ns'])
+    ymax = max(measurements_ref$measure_total_time_ns, measurements_bls_ref[which(measurements_bls_ref$arg0 == xmax), 'estimated_trans_time_ns'])
+    plot(measure_total_time_ns ~ arg0, data=measurements_ref, pch=5, col='blue', ylim=c(ymin*0.95, ymax*1.05))
+    title(main = paste(env, opcode, 'pv', 'arg0', 'opcount 30')) # pv - proposal verification
+    points(estimated_time_ns ~ arg0, data=measurements_bls_ref, col='red')
+    points(estimated_trans_time_ns ~ arg0, data=measurements_bls_ref, col='pink')
+    
+    measurements_ref <- merge(x = measurements_ref, y = measurements_bls_ref, by = 'arg0')
+    measurements_ref$ratio <- (measurements_ref$measure_total_time_ns - intercept) / (measurements_ref$estimated_time_ns - intercept)
+    plot(ratio ~ arg0, data=measurements_ref, pch=5, col='black')
+    title(main = paste(env, opcode, 'pv - ratio', 'arg0')) # pv - proposal verification
+  }
 }
 ```
 
@@ -594,8 +637,10 @@ for(opcode in proceed_with_opcodes) {
 ```{r fig.width=12}
 expensive_spread_df = data.frame(opcode=character(0),spread=numeric(0),env=character(0))
 for(opcode in expensive_opcodes) {
-  expensive_spread = plot_expensive_dependency(measurements, opcode)
-  expensive_spread_df[nrow(expensive_spread_df) + 1, ] = list(opcode, expensive_spread, env)
+  if (opcode %in% opcode_arity_df$opcode) {
+    expensive_spread = plot_expensive_dependency(measurements, opcode)
+    expensive_spread_df[nrow(expensive_spread_df) + 1, ] = list(opcode, expensive_spread, env)
+  }
 }
 print(expensive_spread_df)
 ```
@@ -605,12 +650,44 @@ print(expensive_spread_df)
 
 In this section we compare opcodes cost obtained in the arguments course with previous estimations obtained in the marginal procedure.
 
+The estimated cost calculated in this examination in details.
+
+```{r, include=FALSE}
+# because they calculated per tick
+first_pass[first_pass$opcode=='BLS12_G1MSM', 'arg0_ns_raw'] <- first_pass[first_pass$opcode=='BLS12_G1MSM', 'arg0_ns_raw'] * 1000
+first_pass[first_pass$opcode=='BLS12_G1MSM_S', 'arg0_ns_raw'] <- first_pass[first_pass$opcode=='BLS12_G1MSM_S', 'arg0_ns_raw'] * 1000
+first_pass[first_pass$opcode=='BLS12_G2MSM', 'arg0_ns_raw'] <- first_pass[first_pass$opcode=='BLS12_G2MSM', 'arg0_ns_raw'] * 1000
+first_pass[first_pass$opcode=='BLS12_G2MSM_S', 'arg0_ns_raw'] <- first_pass[first_pass$opcode=='BLS12_G2MSM_S', 'arg0_ns_raw'] * 1000
+```
+
+```{r, include=TRUE}
+first_pass[,c('opcode', 'estimate_marginal_ns', 'expensive_ns_raw', 'arg0_ns_raw', 'arg1_ns_raw', 'arg2_ns_raw')]
+```
+
 `r if(marginal_estimated_cost_empty){"No marginal estimated cost files given."}`
 
 ```{r, include = FALSE}
-q <- "SELECT first_pass.opcode, first_pass.estimate_marginal_ns + IFNULL(first_pass.expensive_ns_raw, 0) AS 'opcode_cost(arguments)', marginal_estimated_cost.estimate_marginal_ns AS 'opcode_cost(marginal)' FROM first_pass LEFT JOIN marginal_estimated_cost ON first_pass.opcode = marginal_estimated_cost.op"
-compare_marginal <- sqldf(q)
-compare_marginal$'rel diff' <- (compare_marginal$'opcode_cost(arguments)' / compare_marginal$'opcode_cost(marginal)') - 1
+if (!marginal_estimated_cost_empty) {
+  q <- "SELECT first_pass.opcode, first_pass.opcode AS 'reference_opcode', 
+  first_pass.estimate_marginal_ns + IFNULL(first_pass.expensive_ns_raw, 0) AS 'estimate_marginal_ns', 
+  IFNULL(first_pass.arg0_ns_raw, 0) AS 'arg0_ns_raw', IFNULL(first_pass.arg1_ns_raw, 0) AS 'arg1_ns_raw', IFNULL(first_pass.arg2_ns_raw, 0) AS 'arg2_ns_raw', 
+  0 as 'marginal_arg0', 0 as 'marginal_arg1', 0 as 'marginal_arg2' 
+  FROM first_pass"
+  pre_compare_marginal <- sqldf(q)
+  # case specific manual updates
+  pre_compare_marginal[pre_compare_marginal$opcode=='BLS12_G1MSM', c('reference_opcode', 'marginal_arg0')] <- c('BLS12_G1MSM_K2', 1.898)
+  pre_compare_marginal[pre_compare_marginal$opcode=='BLS12_G1MSM_S', c('reference_opcode', 'marginal_arg0')] <- c('BLS12_G1MSM_K2', 1.898)
+  pre_compare_marginal[pre_compare_marginal$opcode=='BLS12_G2MSM', c('reference_opcode', 'marginal_arg0')] <- c('BLS12_G2MSM_K2', 2)
+  pre_compare_marginal[pre_compare_marginal$opcode=='BLS12_G2MSM_S', c('reference_opcode', 'marginal_arg0')] <- c('BLS12_G2MSM_K2', 2)
+  pre_compare_marginal[pre_compare_marginal$opcode=='BLS12_PAIRING_CHECK', 'marginal_arg0'] <- 2
+  
+  q <- "SELECT pre_compare_marginal.opcode, 
+  pre_compare_marginal.estimate_marginal_ns + pre_compare_marginal.arg0_ns_raw * pre_compare_marginal.marginal_arg0 + pre_compare_marginal.arg1_ns_raw * pre_compare_marginal.marginal_arg1 + pre_compare_marginal.arg2_ns_raw * pre_compare_marginal.marginal_arg2 AS 'opcode_cost(arguments)', 
+  marginal_estimated_cost.estimate_marginal_ns AS 'opcode_cost(marginal)' 
+  FROM pre_compare_marginal LEFT JOIN marginal_estimated_cost ON pre_compare_marginal.reference_opcode = marginal_estimated_cost.op"
+  compare_marginal <- sqldf(q)
+  compare_marginal$'rel diff' <- (compare_marginal$'opcode_cost(arguments)' / compare_marginal$'opcode_cost(marginal)') - 1
+}
 ```
 
 ```{r, include = !marginal_estimated_cost_empty}

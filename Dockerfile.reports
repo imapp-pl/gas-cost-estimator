@@ -7,13 +7,13 @@ RUN Rscript -e "install.packages('sqldf')"
 RUN Rscript -e "install.packages('mixtools')"
 RUN Rscript -e "install.packages('zeallot')"
 
+RUN apt -y install python3 python3-dev python3-flask uwsgi uwsgi-plugin-python3
+
 COPY current_gas_cost.csv /reports/current_gas_cost.csv
 COPY common.R /reports/common.R
 COPY measure_marginal_single.Rmd /reports/measure_marginal_single.Rmd
 COPY final_estimation.Rmd /reports/final_estimation.Rmd
 COPY measure_arguments_single.Rmd /reports/measure_arguments_single.Rmd
-
-RUN apt -y install python3 python3-dev python3-flask uwsgi uwsgi-plugin-python3
 
 COPY rest-api/gas-cost-estimator-rest-api.ini /rest-api/gas-cost-estimator-rest-api.ini
 COPY rest-api/gas-cost-estimator-rest-api.py /rest-api/gas-cost-estimator-rest-api.py

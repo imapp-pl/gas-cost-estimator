@@ -373,7 +373,7 @@ class Measurements(object):
         else:
             exec_path = os.path.abspath(exec_path)
 
-        args = [ '--code=' + program.bytecode, '--repeat=100', '--samples=1000' ]
+        args = [ '--code=' + program.bytecode, '--repeat=1000', '--samples=1000' ]
         invocation = [exec_path] + args
 
         results = []
@@ -408,7 +408,7 @@ class Measurements(object):
         if '\'' in program_id or '"' in program_id:
             print('Unsupported character in program id {}'.format(program_id))
         if ',' in program_id:
-            to_append = "\"{},\"".format(program_id)
+            to_append = "\"{}\",".format(program_id)
         else:
             to_append = "{},".format(program_id)
         return [to_append + row for row in instrumenter_result]

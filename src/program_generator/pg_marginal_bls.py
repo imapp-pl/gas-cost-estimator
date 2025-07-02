@@ -97,7 +97,7 @@ def _generate_programs(op_counts, max_op_count, precompile, nominal_gas_cost, se
     for op_count in op_counts:
         # There should always be additional noop at start, even when creating variant for max_op_count
         noop_calls = '858585858585fa50' * (max_op_count - op_count + 1)
-        calls = '858585858585fa50' * op_count
+        calls = '858585858585fa50' * (op_count + 1)
 
         bytecode = single_op_pushes + setup_code + calls + noop_args_pops + noop_calls + args_pops + single_op_pops
         programs.append(Program(bytecode, precompile, op_count, nominal_gas_cost))

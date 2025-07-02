@@ -197,5 +197,5 @@ fi
 touch "${WORKING_DIR}/${OUTPUT_ESTIMATED_COST}"
 touch "${WORKING_DIR}/${OUTPUT_REPORT}"
 
-eval "docker run -it -v ${WORKING_DIR}:/data --rm imapp-pl/gas-cost-estimator/reports:4.0 Rscript -e \"rmarkdown::render('/reports/measure_marginal_single.Rmd', params = list(env = '${EVM}', programs='${PROGRAMS}', results='${RESULTS}', output_estimated_cost='${OUTPUT_ESTIMATED_COST}'${DETAILS_PARAM}), output_file = '/data/${OUTPUT_REPORT}'${QUIET_PARAM})\""
+eval "docker run -it -v ${WORKING_DIR}:/data --rm imapp-pl/gas-cost-estimator/reports:4.1 Rscript -e \"rmarkdown::render('/reports/measure_marginal_single.Rmd', params = list(env = '${EVM}', programs='${PROGRAMS}', results='${RESULTS}', output_estimated_cost='${OUTPUT_ESTIMATED_COST}'${DETAILS_PARAM}), output_file = '/data/${OUTPUT_REPORT}'${QUIET_PARAM})\""
 
