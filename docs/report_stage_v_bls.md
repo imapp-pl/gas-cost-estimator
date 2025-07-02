@@ -282,6 +282,36 @@ ECRecover precompile was selected as the pivot operation for this research. The 
 
 ECRecovery precompile was analysed in the stage 4 of the Gas Cost Estimator project and is discussed in EIP-7904.
 
+According to the final report (that compares the results), assuming ECRecovery precompile results as the benchmark fixed to 3100 gas, the calculated alternative gas is as follows.
+
+| cost element              | current gas | alternative gas | diff % |
+|---------------------------|-------------|-----------------|--------|
+| ECRECOVER                 | 3100        | 3100            | 0      |
+| BLS12_G1ADD               | 375         | 213             | -43.2  |
+| BLS12_G2ADD               | 600         | 402             | -33    |
+| BLS12_G1MSM_ARG0          | 12000       | 8346            | -30.4  |
+| BLS12_G2MSM_ARG0          | 22500       | 15875           | -29.4  |
+| BLS12_PAIRING_CHECK_ARG0  | 32600       | 24149           | -25.5  |
+| BLS12_PAIRING_CHECK_CONST | 37700       | 27942           | -25.8  |
+| BLS12_MAP_FP_TO_G1        | 5500        | 4273            | -22.3  |
+| BLS12_MAP_FP_TO_G2        | 23800       | 14773           | -37.9  |
+
+The calculation comply with the observation stated above: the precompiles costs are well-balanced. 
+That's read: if the benchmark is ECRecovery, then every gas cost should be decreased by ~30%, BLS_G1ADD a bit more.
+
+The stage 4 of Gas Cost Estimator project provided analysis on ECRecovery precompile. The reference values are a large set of arithmetic opcodes. The final calculation discovered that the precompile is substantially underpriced. This is said excerpt from the stage 4 report.
+
+| cost element              | current gas | alternative gas | diff % |
+|---------------------------|-------------|-----------------|--------|
+| ECRECOVER                 | 3100        | 10299           | +232.2 |
+
+That's read: if the benchmark are the arithmetic opcodes, then BLS gas cost should be increased by ~132% (3.322*0.7=2.32).
+
+The EIP-7904 is based on the stage 4 report. It provides a general repricing - in particular substantial decrement of gas cost for the arithmetic opcodes. It is also stated that: assuming the provided costs for the arithmetic opcodes, ECRecovery gas cost should increase by ~20%, but the increase is a little so the price is recommended not to be changed and avoid backward compatibility risks.
+That's read: if the benchmark are EIP-7904 arithmetic opcodes, then BLS gas should be decreased by ~16% (1.2*0.7=0.84).
+
+
+
 ### BLS Tests
 
 Together with the marginal and the arguments courses, a tests driven programs are investigated. Test input data are fetched from [EIP-2537 test vectors](https://github.com/ethereum/EIPs/tree/master/assets/eip-2537). For each test there are provided programs that execute input data in the marginal course favor. Note that each procompile is associated with multiple tests. Then the computation time of invoking the precompile with provided input data is estimated. The goal is to verify if any special or edge cases do not impose a threat. This research is supplementary to the work described above.
