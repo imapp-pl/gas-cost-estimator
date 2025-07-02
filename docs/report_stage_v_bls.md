@@ -149,6 +149,100 @@ This raises the dilemma: whether the results for small arguments should be taken
 
 The third observation is: evmone and nethermind have almost perfect match to the estimated regression. This confirms the discount table. Note that the two evms have higher results for 32-64 arguments. The reason for that is uncertain.
 
+The standard enforces Pippenger’s algorithm. For small arguments, in particular k=1 and k=2, more effective optimisations are possible. Below are graphs for small arguments.
+
+<img src="./report_stage_v_assets/besu_msm_g1_s.png" width="600" alt="Besu BLS12_G1MSM S">
+<img src="./report_stage_v_assets/besu_msm_g2_s.png" width="600" alt="Besu BLS12_G2MSM S">
+<img src="./report_stage_v_assets/evmone_msm_g1_s.png" width="600" alt="Evmone BLS12_G1MSM S">
+<img src="./report_stage_v_assets/evmone_msm_g2_s.png" width="600" alt="Evmone BLS12_G2MSM S">
+<img src="./report_stage_v_assets/erigon_msm_g1_s.png" width="600" alt="Erigon BLS12_G1MSM S">
+<img src="./report_stage_v_assets/erigon_msm_g2_s.png" width="600" alt="Erigon BLS12_G2MSM S">
+<img src="./report_stage_v_assets/geth_msm_g1_s.png" width="600" alt="Geth BLS12_G1MSM S">
+<img src="./report_stage_v_assets/geth_msm_g2_s.png" width="600" alt="Geth BLS12_G2MSM S">
+<img src="./report_stage_v_assets/nethermind_msm_g1_s.png" width="600" alt="Nethermind BLS12_G1MSM S">
+<img src="./report_stage_v_assets/nethermind_msm_g2_s.png" width="600" alt="Nethermind BLS12_G2MSM S">
+<img src="./report_stage_v_assets/revm_msm_g1_s.png" width="600" alt="Revm BLS12_G1MSM S">
+<img src="./report_stage_v_assets/revm_msm_g2_s.png" width="600" alt="Revm BLS12_G2MSM S">
+
+Besu and revm have visible steps. As is stated above, revm requires further investigation. Besu provides optimisations for arguments k=1 and k=2. But other evms have the results in line with the expected curve based on the discount table. Thus, erigon and geth results fit the expected curve independently for the two modes described above.
+
+To verify consistency of the marginal and arguments courses, the results for the small arguments investigation is preferred because they yields better estimations for the arguments k=1 and k=2. Note, that for the further analysis the estimates based on the large arguments are eligible, but at this paragraph it is checked if two applied courses do not diverge.
+We compare the estimated computation time obtained from the arguments course (red dotted line) with the results obtained from the marginal cost.
+
+| EVM | G1MSM k=1 | G1MSM k=2 | G2MSM k=1 | G2MSM k=2 |
+|-----|-----------|-----------|-----------|-----------|
+| besu       | 0.07      | 	1.04     | 	1.59     |	2.09 |
+| erigon     | 0.91      | 	1.01     | 	1.08     |	0.99 |
+| evmone     | 0.80      | 	1.00     | 	0.73     |	0.95 |
+| geth       | 0.96      | 	1.00     | 	1.01     |	1.01 |
+| nethermind | 0.80      | 	0.96     | 	0.72     |	0.93 |
+| revm       | 0.04      | 	0.60     | 	1.48     |	0.61 |
+
+The desired value is 1. The results for k=1 and k=2 in the case of besu and revm are not well estimated by the regression curve even for the small arguments. 
+
+Statistic methods employed to analysis calculate a match to `a+b*k` regression. The point is that the constant cost `a` is assumed and calculated to find the best match, but EIP-2537 formula does not contain the constant cost. For the record, `b` is the argument cost.
+We verify if the constant cost that comes from estimation, can be neglected. For the reference value the argument estimated computation time is picked as it is relatively stable what is discussed above. Note that the argument cost is G1/G2 multiplication cost. The argument gas cost is set according to EIP-2537 gas cost, i.e. 12000 for G1 and 22500 for G2, and the expected gas cost for the constant component is calculated.
+
+| EVM | G1 multiplication | G1 constant | G2 multiplication | G2 constant |
+|-----|-------------------|-------------|-------------------|-------------|
+| besu       | 12000             | 	75825.0    | 	22500            | 	224673.0   |
+| erigon     | 12000             | 	516587.4   | 	22500            | 	989540.0   |   
+| evmone     | 12000             | 	-1197.1    | 	22500            | 	-9092.3    |    
+| geth       | 12000             | 	514251.5   | 	22500            | 	1076676.9  |  
+| nethermind | 12000             | 	49205.8    | 	22500            | 	53870.9    |    
+| revm       | 12000             | 	366227.3   | 	22500            | 	650921.1   |   
+
+For evmone the constant gas cost can be neglected, even -9k gas at the G2 side. For other evms, the G1 side seems to be consistent: except revm, the constant gas cost is around 55k. But as is discussed above, revm needs further investigations. The G2 side is not consistent. The estimated gas cost for the constant component is large or even huge. But note that large arguments means arithmetic of large gas amount. 1M gas (estimated gas cost of the constant component) is relatively small comparing to 10M gas (reference gas cost of BLS12_G2MSM operations with 50 pairs).
+Nevertheless, these gas estimations enforced by the large arguments are unacceptable for the small arguments - a single multiplication, k=1, cannot cost 1M gas. This formulates the dilemma.
+
+The table below presents estimation of the constant component based on the results for the small arguments. The estimated argument computation time for the large arguments is still the reference value. 
+
+| EVM | G1 multiplication (large) | G1 multiplication (small) | G1 constant (small) | G2 multiplication (large) | G2 multiplication (small) | G2 constant (small) |
+|-----|---------------------------|---------------------------|---------------------|---------------------------|---------------------------|---------------------|
+| besu       | 12000                    | 25771.0                  | -25015.7           | 22500                     | 56786.8                  | -21036.8           |
+| erigon     | 12000                    | 52785.1                  | 60600.9            | 22500                     | 95971.9                  | 288404.3           |           
+| evmone     | 12000                    | 11580.0                  | 527.9              | 22500                     | 20396.0                  | 3240.5             |             
+| geth       | 12000                    | 50694.0                  | 77827.8            | 22500                     | 96969.2                  | 318655.9           |           
+| nethermind | 12000                    | 15126.0                  | 7862.5             | 22500                     | 25549.2                  | 9075.7             |             
+| revm       | 12000                    | 138882.1                 | -137938.9          | 22500                     | 152872.2                 | -78966.0           |           
+
+For evmone and nethermind the examination for the small arguments is consistent with the large arguments. For erigon and geth the ratio of the argument cost to the constant cost dropped, it is 1:1 for G1 and 1:3 for G2. But the argument cost increases significantly, it is around 5 times as the reference.
+
+To summarize this part. We can follow the investigation of small arguments or the investigation of large arguments to determine the gas cost of MSM precompiles. Picking any direction may lead to dangerous overpirce or underprice of the other arguments.
+There are consistent estimations of gas cost for the argument component based on the large arguments. But there is no consistency for the constant component of operations.
+For now, it would be best to investigate the cause of the constant cost for some emvs, but it is out of scope of this report.
+It seems that the gas cost should be based on the large arguments from the perspective of network security.
+
+Finally, we verify the approach to the gas cost: the arguments cost is based on the large arguments and the constant cost is nullified. Specifically, we consider only 32-128 arguments and remove the constant cost. The light red dotted line is the calculated regression curve, the red dotted line is the estimated computational time - the regression curve with the constant component subtracted.
+
+<img src="./report_stage_v_assets/besu_msm_g1_pv.png" width="600" alt="Besu BLS12_G1MSM">
+<img src="./report_stage_v_assets/besu_msm_g2_pv.png" width="600" alt="Besu BLS12_G2MSM">
+<img src="./report_stage_v_assets/evmone_msm_g1_pv.png" width="600" alt="Evmone BLS12_G1MSM">
+<img src="./report_stage_v_assets/evmone_msm_g2_pv.png" width="600" alt="Evmone BLS12_G2MSM">
+<img src="./report_stage_v_assets/erigon_msm_g1_pv.png" width="600" alt="Erigon BLS12_G1MSM">
+<img src="./report_stage_v_assets/erigon_msm_g2_pv.png" width="600" alt="Erigon BLS12_G2MSM">
+<img src="./report_stage_v_assets/geth_msm_g1_pv.png" width="600" alt="Geth BLS12_G1MSM">
+<img src="./report_stage_v_assets/geth_msm_g2_pv.png" width="600" alt="Geth BLS12_G2MSM">
+<img src="./report_stage_v_assets/nethermind_msm_g1_pv.png" width="600" alt="Nethermind BLS12_G1MSM">
+<img src="./report_stage_v_assets/nethermind_msm_g2_pv.png" width="600" alt="Nethermind BLS12_G2MSM">
+<img src="./report_stage_v_assets/revm_msm_g1_pv.png" width="600" alt="Revm BLS12_G1MSM">
+<img src="./report_stage_v_assets/revm_msm_g2_pv.png" width="600" alt="Revm BLS12_G2MSM">
+
+To visualize the deviation we calculate the proportion of the measurements and the estimated computation time. This is an assessment of how MSM precompiles are underpriced because of the constant cost nullification.
+
+<img src="./report_stage_v_assets/besu_msm_g1_pv_ratio.png" width="600" alt="Besu BLS12_G1MSM">
+<img src="./report_stage_v_assets/besu_msm_g2_pv_ratio.png" width="600" alt="Besu BLS12_G2MSM">
+<img src="./report_stage_v_assets/evmone_msm_g1_pv_ratio.png" width="600" alt="Evmone BLS12_G1MSM">
+<img src="./report_stage_v_assets/evmone_msm_g2_pv_ratio.png" width="600" alt="Evmone BLS12_G2MSM">
+<img src="./report_stage_v_assets/erigon_msm_g1_pv_ratio.png" width="600" alt="Erigon BLS12_G1MSM">
+<img src="./report_stage_v_assets/erigon_msm_g2_pv_ratio.png" width="600" alt="Erigon BLS12_G2MSM">
+<img src="./report_stage_v_assets/geth_msm_g1_pv_ratio.png" width="600" alt="Geth BLS12_G1MSM">
+<img src="./report_stage_v_assets/geth_msm_g2_pv_ratio.png" width="600" alt="Geth BLS12_G2MSM">
+<img src="./report_stage_v_assets/nethermind_msm_g1_pv_ratio.png" width="600" alt="Nethermind BLS12_G1MSM">
+<img src="./report_stage_v_assets/nethermind_msm_g2_pv_ratio.png" width="600" alt="Nethermind BLS12_G2MSM">
+<img src="./report_stage_v_assets/revm_msm_g1_pv_ratio.png" width="600" alt="Revm BLS12_G1MSM">
+<img src="./report_stage_v_assets/revm_msm_g2_pv_ratio.png" width="600" alt="Revm BLS12_G2MSM">
+
 ### Pairing Check (BLS12\_PAIRING\_CHECK)
 
 The pairing check operation verifies whether a set of pairings on the BLS12-381 curve satisfies a specific condition. The nominal cost formula is:  
@@ -187,6 +281,86 @@ Assuming the argument cost is the reference value, the calculated constant cost 
 ECRecover precompile was selected as the pivot operation for this research. The pivot operation is the reference to verify the gas cost for BLS precompiles against to. Literally, 3100 gas is considered as the cost for ECRecovery operation. So, ECRecovery and BLS precompiles are executed in the set.
 
 ECRecovery precompile was analysed in the stage 4 of the Gas Cost Estimator project and is discussed in EIP-7904.
+
+According to the final report (that compares the results), assuming ECRecovery precompile results as the benchmark fixed to 3100 gas, the calculated alternative gas is as follows.
+
+| cost element              | current gas | alternative gas | diff % |
+|---------------------------|-------------|-----------------|--------|
+| ECRECOVER                 | 3100        | 3100            | 0      |
+| BLS12_G1ADD               | 375         | 213             | -43.2  |
+| BLS12_G2ADD               | 600         | 402             | -33    |
+| BLS12_G1MSM_ARG0          | 12000       | 8346            | -30.4  |
+| BLS12_G2MSM_ARG0          | 22500       | 15875           | -29.4  |
+| BLS12_PAIRING_CHECK_ARG0  | 32600       | 24149           | -25.5  |
+| BLS12_PAIRING_CHECK_CONST | 37700       | 27942           | -25.8  |
+| BLS12_MAP_FP_TO_G1        | 5500        | 4273            | -22.3  |
+| BLS12_MAP_FP_TO_G2        | 23800       | 14773           | -37.9  |
+
+The calculation comply with the observation stated above: the precompiles costs are well-balanced. 
+That's read: if the benchmark is ECRecovery, then every gas cost should be decreased by ~30%, BLS_G1ADD a bit more.
+
+The stage 4 of Gas Cost Estimator project provided analysis on ECRecovery precompile. The reference values are a large set of arithmetic opcodes. The final calculation discovered that the precompile is substantially underpriced. This is said excerpt from the stage 4 report.
+
+| cost element              | current gas | alternative gas | diff % |
+|---------------------------|-------------|-----------------|--------|
+| ECRECOVER                 | 3100        | 10299           | +232.2 |
+
+That's read: if the benchmark are the arithmetic opcodes, then BLS gas cost should be increased by ~132% (3.322*0.7=2.32).
+
+The EIP-7904 is based on the stage 4 report. It provides a general repricing - in particular substantial decrement of gas cost for the arithmetic opcodes. It is also stated that: assuming the provided costs for the arithmetic opcodes, ECRecovery gas cost should increase by ~20%, but the increase is a little so the price is recommended not to be changed and avoid backward compatibility risks.
+That's read: if the benchmark are EIP-7904 arithmetic opcodes, then BLS gas should be decreased by ~16% (1.2*0.7=0.84).
+
+BLS procompiles are well-balanced as stated above. In the graph below ECRecovery is the reference value - ECRecovery is fixed at 3100 gas and BLS precompiles are calculated relatively.
+
+<img src="./report_stage_v_assets/all_add.png" width="600" alt="BLS12_G1ADD vs ECRecovery">
+
+The spread is significant. And the estimates bear a substantial uncertainty. We investigate the situation of ECRecovery itself. Recall the results from the stage 4. In the graph below there is the estimates of ECRecovery with the arithmetic opcodes as the reference.
+
+<img src="./report_stage_v_assets/ecrecovery_stage4.png" width="600" alt="ECRecovery">
+
+The spread is significant. But if we combine these two relations (bls-to-ecrecovery, ecrecovery-to-arithmetic), then there is a relation (bls-to-arithmetic) with a moderate spread. Thus, the final estimates provided in this work are still reliable, but it is better to take the arithmetic opcodes as the reference.
+
+### BLS Tests
+
+Together with the marginal and the arguments courses, a tests driven programs are investigated. Test input data are fetched from [EIP-2537 test vectors](https://github.com/ethereum/EIPs/tree/master/assets/eip-2537). For each test there are provided programs that execute input data in the marginal course favor. Note that each procompile is associated with multiple tests. Then the computation time of invoking the precompile with provided input data is estimated. The goal is to verify if any special or edge cases do not impose a threat. This research is supplementary to the work described above.
+
+Estimated computation time of precompile invocation associated with a test is calculated with the methods provided by the marginal course. The benchmarks are the results obtained in the marginal course. Thus, it is expected then the tests results are comparable to the marginal results.
+
+The vector tests are positive and negative. The estimated computation time may be relatively very low in the case of negative tests. This is expected and sometimes desired. For instance an invocation with an empty input should be very quick. The negative tests have zero gas cost assigned as a reference.
+
+In the graphs below data are scaled so 1.0 is a benchmark - the marginal course results. The interpretation is: if the result is below the reference, it is good, if the result is somewhat above, it is worth to check but not alarming, if it is much above, it is a risk.
+
+<img src="./report_stage_v_assets/relative_ct_bls_tests_g1msm.png" width="600" alt="BLS12_G1MSM">
+<img src="./report_stage_v_assets/relative_ct_bls_tests_g2msm.png" width="600" alt="BLS12_G2MSM">
+<img src="./report_stage_v_assets/relative_ct_bls_tests_pairing_check.png" width="600" alt="BLS12_PAIRNG_CHECK">
+<img src="./report_stage_v_assets/relative_ct_bls_tests_g1map_fp.png" width="600" alt="BLS12_MAP_FP_TO_G1">
+<img src="./report_stage_v_assets/relative_ct_bls_tests_g2map_fp.png" width="600" alt="BLS12_MAP_FP_TO_G2">
+
+The tests: BLS12_G1MSM_bls_g1msm_multiple, BLS12_G1MSM_bls_g1msm_multiple_with_point_at_infinity, BLS12_G2MSM_bls_g2msm_multiple, BLS12_G2MSM_bls_g2msm_multiple_with_point_at_infinity - seem to have very high results for besu. But it is not the case. Please see the MSMs section above. For the arguments k > 2, besu yields super-linear estimated computation time compared to k=2 case. And that is consistent with the results for these test. So any other discussion is directed to the MSMs part.
+Other tests worth to be noted are: BLS12_G1MSM_bls_g1msm_random\*g1_unnormalized_scalar, BLS12_G1MSM_bls_g1msm_random\*p1_unnormalized_scalar, BLS12_G2MSM_bls_g2msm_random\*g2_unnormalized_scalar, BLS12_G2MSM_bls_g2msm_random\*p2_unnormalized_scalar. Most evms report higher than expected results when multiplying by an unnormalized scalar. But the excess is moderate and in the opinion of authors it is safe. Still worth to be verified by teams.
+
+<img src="./report_stage_v_assets/relative_ct_bls_tests_g1add.png" width="600" alt="BLS12_G1ADD">
+<img src="./report_stage_v_assets/relative_ct_bls_tests_g2add.png" width="600" alt="BLS12_G2ADD">
+
+For BLS12_G1ADD and BLS12_G2ADD two evms have high results, they are besu and geth. 
+
+Check the detailed tests report to explain why besu has excessive results. This is an example graph that present the regression analysis for the test BLS12_G1ADD_bls_g1add_g1+p1.
+
+<img src="./report_stage_v_assets/besu_g1add_g1_p1.png" width="600" alt="besu BLS12_G1ADD_bls_g1add_g1+p1">
+
+The correlation is visible but for the purpose of this work it is quite weak. Please check graphs for other tests. The measurements for op_count=0 impact on the estimated computation time - the regression - make it higher. Recall that the reference value is the estimated computation time for G1ADD and G2ADD respectively obtained in the marginal course. So here is the graph for the regression analysis of the reference value.
+
+<img src="./report_stage_v_assets/besu_g1add.png" width="600" alt="besu BLS12_G1ADD">
+
+Here is the step for op_count=0. But the impact of the measurement for op_count=1 on the regression is lesser since there is much more measurements for op_count>0. Note that even for op_count=0 an evm instance is warmed up, and it is not the case that for op_count>0 an evm instance bears additional computation cost related to some initialization.
+
+Conclusion: in case of besu, the high results for tests are caused by the step at op_count=0, and this step needs an explanation, not the tests.
+
+The correlation is strong enough in the case of geth, so the results are reliable. See the graph below as an example.
+
+<img src="./report_stage_v_assets/geth_g1add_g1_p1.png" width="600" alt="geth BLS12_G1ADD_bls_g1add_g1+p1">
+
+Conclusion: in case of geth and BLS12_G1ADD, the results for some tests are 2 times higher than the reference value. For instance BLS12_G1ADD_bls_g1add_empty_input - this one is quite interesting because other evms have very low results. It is advised to investigate the situation.
 
 ## Conclusions
 

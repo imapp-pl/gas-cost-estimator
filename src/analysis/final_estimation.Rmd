@@ -2,11 +2,11 @@
 title: "Gas Cost Estimator: comparison of obtained estimates, alternative gas cost schedule"
 output: html_document
 params:
-  estimate_files: "/home/lukaszglen/sources/imapp5/local2/reports-2025.06.09/estimated_cost_marginal_bls_tests_besu.csv,/home/lukaszglen/sources/imapp5/local2/reports-2025.06.09/estimated_cost_marginal_bls_tests_erigon.csv,/home/lukaszglen/sources/imapp5/local2/reports-2025.06.09/estimated_cost_marginal_bls_tests_evmone.csv,/home/lukaszglen/sources/imapp5/local2/reports-2025.06.09/estimated_cost_marginal_bls_tests_geth.csv,/home/lukaszglen/sources/imapp5/local2/reports-2025.06.09/estimated_cost_marginal_bls_tests_nethermind.csv,/home/lukaszglen/sources/imapp5/local2/reports-2025.06.09/estimated_cost_marginal_bls_tests_revm.csv,/home/lukaszglen/sources/imapp5/local2/reports-2025.06.09/estimated_cost_marginal_bls_besu.csv,/home/lukaszglen/sources/imapp5/local2/reports-2025.06.09/estimated_cost_marginal_bls_erigon.csv,/home/lukaszglen/sources/imapp5/local2/reports-2025.06.09/estimated_cost_marginal_bls_evmone.csv,/home/lukaszglen/sources/imapp5/local2/reports-2025.06.09/estimated_cost_marginal_bls_geth.csv,/home/lukaszglen/sources/imapp5/local2/reports-2025.06.09/estimated_cost_marginal_bls_nethermind.csv,/home/lukaszglen/sources/imapp5/local2/reports-2025.06.09/estimated_cost_marginal_bls_revm.csv"
-  current_gas_cost: "/home/lukaszglen/sources/imapp5/local2/reports-2025.06.09/current_gas_cost_bls_tests.csv"
-  output_comparison_file: "final_gas_schedule_comparison.csv"
+  estimate_files: "/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_arithmetic_besu.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_arithmetic_erigon.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_arithmetic_ethereumjs.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_arithmetic_evmone.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_arithmetic_geth.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_arithmetic_nethermind.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_arithmetic_revm.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_create_besu.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_more_besu.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_more_erigon.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_more_ethereumjs.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_more_evmone.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_more_geth.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_more_nethermind.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_more_revm.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_precompiles_besu.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_precompiles_erigon.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_precompiles_ethereumjs.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_precompiles_evmone.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_precompiles_geth.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_precompiles_nethermind.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_arguments_precompiles_revm.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_create_besu.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_create_erigon.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_create_ethereumjs.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_create_evmone.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_create_geth.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_create_nethermind.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_create_revm.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_full_besu.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_full_erigon.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_full_ethereumjs.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_full_evmone.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_full_geth.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_full_nethermind.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_full_revm.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_mem_besu.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_mem_erigon.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_mem_ethereumjs.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_mem_evmone.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_mem_geth.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_mem_nethermind.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_mem_revm.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_precompiles_besu.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_precompiles_erigon.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_precompiles_evmone.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_precompiles_geth.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_precompiles_nethermind.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_precompiles_revm.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_stop_besu.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_stop_erigon.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_stop_ethereumjs.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_stop_geth.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_stop_revm.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_t_besu.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_t_erigon.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_t_ethereumjs.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_t_evmone.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_t_geth.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_t_nethermind.csv,/home/lukaszglen/sources/imapp5/local/reports-12.01.2025/estimated_cost_marginal_t_revm.csv"
+  current_gas_cost: "/home/lukaszglen/sources/imapp5/gas-cost-estimator/src/analysis/current_gas_cost.csv"
+  output_comparison_file: ""
   metric: "l1"
-  details: "1"
+  details: "103"
 ---
 
 ```{r, setup, include=FALSE}
@@ -291,6 +291,7 @@ if (details_arg == 100) {
 ```
 
 ```{r fig.width=15, fig.height=10, include=(details_arg == 101)}
+# BLS precompiles
 if (details_arg == 101) {
   rel_ops <- c('BLS12_G1ADD', 'BLS12_G2ADD', 'BLS12_G1MSM_ARG0', 'BLS12_G2MSM_ARG0', 'BLS12_PAIRING_CHECK_ARG0', 'BLS12_PAIRING_CHECK_ARGC', 'BLS12_MAP_FP_TO_G1', 'BLS12_MAP_FP_TO_G2')
   rel_ops_tab <- data.frame(opcode=rel_ops)
@@ -322,6 +323,7 @@ if (details_arg == 101) {
 ```
 
 ```{r fig.width=15, fig.height=10, include=(details_arg == 102)}
+# BLS tests
 if (details_arg == 102) {
   groups_for_graphs <- list( list(c(1,2), 'BLS12_G1ADD'), list(c(3,4), 'BLS12_G2ADD'), list(c(5,6), 'BLS12_G1MSM_K2'), list(c(7,8), 'BLS12_G2MSM_K2'), list(c(9,10), 'BLS12_PAIRING_CHECK'), list(c(11,12), 'BLS12_MAP_FP_TO_G1'), list(c(13,14), 'BLS12_MAP_FP_TO_G2') )
   for (groups_for_graph in groups_for_graphs) {
@@ -349,6 +351,40 @@ ORDER BY e1.op")
     title(main=paste("Relative computational time", groups_for_graph[[2]]))
     legend(1, max_cost * 1.3, c(all_envs, "EIP-2357 gas cost reference"), fill=c(env_colors[1:length(all_envs)], 'grey'), cex=1)
   }
+}
+```
+
+```{r fig.width=15, fig.height=10, include=(details_arg == 102)}
+# (details_arg == 103)
+# precompiles 0x1 - 0xa
+if (details_arg == 103) {
+#  rel_ops <- c('ECRECOVER', 'SHA2-256', 'RIPEMD-160', 'IDENTITY', 'MODEXP', 'ECADD', 'ECMUL', 'ECPAIRING79000', 'ECPAIRING113000', 'ECPAIRING181000', 'ECPAIRING317000', 'BLAKE2F', 'POINTEVAL')
+  rel_ops <- c('ECRECOVER', 'SHA2-256', 'RIPEMD-160', 'IDENTITY', 'MODEXP', 'ECADD', 'ECMUL', 'ECPAIRING79000', 'ECPAIRING113000', 'ECPAIRING181000', 'ECPAIRING317000', 'BLAKE2F', 'POINTEVAL')
+  rel_ops_tab <- data.frame(opcode=rel_ops)
+
+  q <- "SELECT estimated_cost.op, estimated_cost.estimate_marginal_ns/current_gas_cost.constant_current_gas AS cost, estimated_cost.env
+  FROM estimated_cost JOIN current_gas_cost ON estimated_cost.op = current_gas_cost.opcode
+  WHERE estimated_cost.op IN rel_ops_tab AND estimated_cost.env != 'ethereumjs'"
+  rel_ops_cost <- sqldf(q)
+
+  q <- "SELECT rel_ops_cost.op, rel_ops_cost.cost/a.avg_cost AS cost, rel_ops_cost.env 
+  FROM rel_ops_cost JOIN (SELECT t.env, AVG(t.cost) AS avg_cost FROM rel_ops_cost t GROUP BY t.env) a ON rel_ops_cost.env = a.env
+  ORDER BY rel_ops_cost.op"
+  rel_ops_scaled <- sqldf(q)
+
+  rel_ops_tab$cost <- 1
+  rel_ops_tab <- rel_ops_tab[order(rel_ops_tab$opcode),]
+
+  max_cost = max(rel_ops_scaled$cost)
+  min_cost = min(rel_ops_scaled$cost)
+  par(mar=c(12, 4, 4, 2) + 0.1) # default is c(5, 4, 4, 2) + 0.1
+  plot(rel_ops_tab$cost, col='grey', xaxt='n', ylim=c(min_cost * 0.9, max_cost * 1.5), xlab="", ylab="cost", las=2)
+  axis(1, at=1:nrow(rel_ops_tab), labels=rel_ops_tab$opcode, las=2, lwd=0.1, tck=1)
+  for (i in 1:length(all_envs)) {
+    points(rel_ops_scaled[which(rel_ops_scaled$env == all_envs[i]), 'cost'], col=env_colors[i], bg=env_colors[i], xaxt='n', pch=21)
+  }
+  title(main="Relative computational time")
+  legend(1, max_cost * 1.5, c(all_envs, "Reference value"), fill=c(env_colors[1:length(all_envs)], 'grey'), cex=1)
 }
 ```
 
