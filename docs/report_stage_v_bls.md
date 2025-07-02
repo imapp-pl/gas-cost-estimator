@@ -310,7 +310,15 @@ That's read: if the benchmark are the arithmetic opcodes, then BLS gas cost shou
 The EIP-7904 is based on the stage 4 report. It provides a general repricing - in particular substantial decrement of gas cost for the arithmetic opcodes. It is also stated that: assuming the provided costs for the arithmetic opcodes, ECRecovery gas cost should increase by ~20%, but the increase is a little so the price is recommended not to be changed and avoid backward compatibility risks.
 That's read: if the benchmark are EIP-7904 arithmetic opcodes, then BLS gas should be decreased by ~16% (1.2*0.7=0.84).
 
+BLS procompiles are well-balanced as stated above. In the graph below ECRecovery is the reference value - ECRecovery is fixed at 3100 gas and BLS precompiles are calculated relatively.
 
+<img src="./report_stage_v_assets/all_add.png" width="600" alt="BLS12_G1ADD vs ECRecovery">
+
+The spread is significant. And the estimates bear a substantial uncertainty. We investigate the situation of ECRecovery itself. Recall the results from the stage 4. In the graph below there is the estimates of ECRecovery with the arithmetic opcodes as the reference.
+
+<img src="./report_stage_v_assets/ecrecovery_stage4.png" width="600" alt="ECRecovery">
+
+The spread is significant. But if we combine these two relations (bls-to-ecrecovery, ecrecovery-to-arithmetic), then there is a relation (bls-to-arithmetic) with a moderate spread. Thus, the final estimates provided in this work are still reliable, but it is better to take the arithmetic opcodes as the reference.
 
 ### BLS Tests
 
