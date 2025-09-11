@@ -1,5 +1,3 @@
-op,estimate_marginal_ns,estimate_marginal_ns_stderr,env
-MSTORE,1.29309181818182,0.166686458405853,evmone
-MSTORE_COLD,4.08208,0.141698897307832,evmone
-MCOPY,4.05461545454545,0.283484872094163,evmone
-MCOPY_COLD,4.84622545454545,0.249951442916375,evmone
+version https://git-lfs.github.com/spec/v1
+oid sha256:db6e0ba6149c14f90ee99c638fddcd68eba71dd6fd988e6e71674a041b1796ab
+size 251
