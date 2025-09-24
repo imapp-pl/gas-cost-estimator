@@ -140,3 +140,16 @@ To stop the service run
 ```shell
 docker stop gas-cost-estimator-rest-api
 ```
+
+## GUI - reports
+If you have docker installed on your machine. you can use a web app to generate reports.
+
+To build the app, run:
+```shell
+./build_gui.sh
+```
+The script build a docker image with the app. Run it: 
+```shell
+./run_gui.sh path_to_directory_with_programs_and_results
+```
+This starts a Python Flask app at http://127.0.0.1:5000

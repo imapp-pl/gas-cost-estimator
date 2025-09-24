@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Step 2</title>
+</head>
+<body>
+    <div id="loadingMessage" style="display:none;">GENERATING REPORT...</div>
+    <div id="generateForm">
+        <h3>Select files</h3>
+        <form method="POST" action="/FINAL">
+            <select id="paths" name="paths" multiple>
+                {% for path in paths %}
+                    <option value="{{ path }}">
+                        {{ path }}
+                    </option>
+                {% endfor %}
+            </select>
+            <button type="submit" id="generateBtn">Generate report</button>
+        </form>
+    </div>
+    <script>
+        document.getElementById('generateBtn').addEventListener('click', function() {
+            // Show the loading message
+            const loadingMessage = document.getElementById('loadingMessage');
+            loadingMessage.style.display = 'block';
+            const generateForm = document.getElementById('generateForm');
+            generateForm.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
